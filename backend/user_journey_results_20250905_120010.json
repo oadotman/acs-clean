@@ -1,0 +1,852 @@
+{
+  "timestamp": "2025-09-05T12:00:10.227734",
+  "personas_tested": 5,
+  "journeys_completed": 5,
+  "total_interactions": 63,
+  "success_rate": 93.3,
+  "personas": {
+    "Sarah (Agency Owner)": {
+      "user_type": "agency_owner",
+      "subscription": "pro",
+      "experience_level": "expert",
+      "total_interactions": 13,
+      "successful_interactions": 13,
+      "success_rate": 100.0,
+      "pain_points": [],
+      "journey_data": [
+        {
+          "timestamp": "2025-09-05T12:00:10.228416",
+          "tool": "landing_page",
+          "action": "view_value_proposition",
+          "success": true,
+          "details": {
+            "time_spent": "2 minutes",
+            "elements_viewed": [
+              "hero_section",
+              "features",
+              "pricing",
+              "testimonials"
+            ]
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228440",
+          "tool": "auth",
+          "action": "paid_signup",
+          "success": true,
+          "details": {
+            "plan_selected": "pro",
+            "payment_method": "stripe"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228456",
+          "tool": "dashboard",
+          "action": "view_dashboard",
+          "success": true,
+          "details": {
+            "tools_visible": 9,
+            "tutorial_offered": true,
+            "tutorial_completed": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228585",
+          "tool": "ad_input",
+          "action": "enter_ad_content",
+          "success": true,
+          "details": {
+            "headline_length": 51,
+            "body_length": 147,
+            "platform_selected": "linkedin"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228594",
+          "tool": "ad_analysis",
+          "action": "generate_results",
+          "success": true,
+          "details": {
+            "analysis_time": "3 seconds",
+            "overall_score": 72.5,
+            "detailed_breakdown": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228599",
+          "tool": "readability_analyzer",
+          "action": "view_clarity_score",
+          "success": true,
+          "details": {
+            "score_displayed": true,
+            "recommendations_shown": true,
+            "user_understood": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228604",
+          "tool": "cta_analyzer",
+          "action": "view_cta_suggestions",
+          "success": true,
+          "details": {
+            "suggestions_count": 3,
+            "suggestions_relevant": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228608",
+          "tool": "platform_optimization",
+          "action": "view_platform_fit",
+          "success": true,
+          "details": {
+            "platform_score": 85,
+            "platform_specific_tips": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228705",
+          "tool": "competitor_analysis",
+          "action": "add_competitor_ads",
+          "success": true,
+          "details": {
+            "competitors_added": 2,
+            "analysis_depth": "detailed"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228720",
+          "tool": "ai_generator",
+          "action": "generate_alternatives",
+          "success": true,
+          "details": {
+            "alternatives_generated": 4,
+            "variation_types": [
+              "persuasive",
+              "emotional",
+              "stats_heavy",
+              "platform_optimized"
+            ],
+            "user_satisfaction": "high"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228822",
+          "tool": "analytics_dashboard",
+          "action": "view_performance_metrics",
+          "success": true,
+          "details": {
+            "metrics_displayed": [
+              "total_analyses",
+              "avg_score_improvement",
+              "platform_performance"
+            ],
+            "insights_valuable": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228837",
+          "tool": "pdf_reports",
+          "action": "generate_client_report",
+          "success": true,
+          "details": {
+            "report_generated": true,
+            "customization_level": "high",
+            "client_presentation_ready": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.228949",
+          "tool": "subscription",
+          "action": "manage_existing_subscription",
+          "success": true,
+          "details": {
+            "current_plan": "pro",
+            "usage_tracking": true,
+            "satisfaction_level": "high"
+          }
+        }
+      ],
+      "top_successes": [
+        "landing_page: view_value_proposition",
+        "auth: paid_signup",
+        "dashboard: view_dashboard"
+      ],
+      "top_pain_points": []
+    },
+    "Mike (Freelancer)": {
+      "user_type": "freelancer",
+      "subscription": "basic",
+      "experience_level": "intermediate",
+      "total_interactions": 13,
+      "successful_interactions": 13,
+      "success_rate": 100.0,
+      "pain_points": [],
+      "journey_data": [
+        {
+          "timestamp": "2025-09-05T12:00:10.229536",
+          "tool": "landing_page",
+          "action": "view_value_proposition",
+          "success": true,
+          "details": {
+            "time_spent": "2 minutes",
+            "elements_viewed": [
+              "hero_section",
+              "features",
+              "pricing",
+              "testimonials"
+            ]
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.229553",
+          "tool": "auth",
+          "action": "paid_signup",
+          "success": true,
+          "details": {
+            "plan_selected": "basic",
+            "payment_method": "stripe"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.229561",
+          "tool": "dashboard",
+          "action": "view_dashboard",
+          "success": true,
+          "details": {
+            "tools_visible": 9,
+            "tutorial_offered": true,
+            "tutorial_completed": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.229660",
+          "tool": "ad_input",
+          "action": "enter_ad_content",
+          "success": true,
+          "details": {
+            "headline_length": 29,
+            "body_length": 102,
+            "platform_selected": "facebook"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.229689",
+          "tool": "ad_analysis",
+          "action": "generate_results",
+          "success": true,
+          "details": {
+            "analysis_time": "3 seconds",
+            "overall_score": 72.5,
+            "detailed_breakdown": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.229706",
+          "tool": "readability_analyzer",
+          "action": "view_clarity_score",
+          "success": true,
+          "details": {
+            "score_displayed": true,
+            "recommendations_shown": true,
+            "user_understood": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.229716",
+          "tool": "cta_analyzer",
+          "action": "view_cta_suggestions",
+          "success": true,
+          "details": {
+            "suggestions_count": 3,
+            "suggestions_relevant": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.229720",
+          "tool": "platform_optimization",
+          "action": "view_platform_fit",
+          "success": true,
+          "details": {
+            "platform_score": 85,
+            "platform_specific_tips": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.229826",
+          "tool": "competitor_analysis",
+          "action": "add_competitor_ads",
+          "success": true,
+          "details": {
+            "competitors_added": 2,
+            "analysis_depth": "basic"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.229841",
+          "tool": "ai_generator",
+          "action": "generate_alternatives",
+          "success": true,
+          "details": {
+            "alternatives_generated": 4,
+            "variation_types": [
+              "persuasive",
+              "emotional",
+              "stats_heavy",
+              "platform_optimized"
+            ],
+            "user_satisfaction": "high"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.229941",
+          "tool": "analytics_dashboard",
+          "action": "view_performance_metrics",
+          "success": true,
+          "details": {
+            "metrics_displayed": [
+              "total_analyses",
+              "avg_score_improvement",
+              "platform_performance"
+            ],
+            "insights_valuable": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.229957",
+          "tool": "pdf_reports",
+          "action": "generate_client_report",
+          "success": true,
+          "details": {
+            "report_generated": true,
+            "customization_level": "basic",
+            "client_presentation_ready": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.230057",
+          "tool": "subscription",
+          "action": "manage_existing_subscription",
+          "success": true,
+          "details": {
+            "current_plan": "basic",
+            "usage_tracking": true,
+            "satisfaction_level": "high"
+          }
+        }
+      ],
+      "top_successes": [
+        "landing_page: view_value_proposition",
+        "auth: paid_signup",
+        "dashboard: view_dashboard"
+      ],
+      "top_pain_points": []
+    },
+    "Lisa (SMB Owner)": {
+      "user_type": "smb_owner",
+      "subscription": "free",
+      "experience_level": "beginner",
+      "total_interactions": 12,
+      "successful_interactions": 10,
+      "success_rate": 83.3,
+      "pain_points": [
+        "competitor_analysis: view_upgrade_prompt",
+        "pdf_reports: view_upgrade_prompt"
+      ],
+      "journey_data": [
+        {
+          "timestamp": "2025-09-05T12:00:10.230627",
+          "tool": "landing_page",
+          "action": "view_value_proposition",
+          "success": true,
+          "details": {
+            "time_spent": "2 minutes",
+            "elements_viewed": [
+              "hero_section",
+              "features",
+              "pricing",
+              "testimonials"
+            ]
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.230644",
+          "tool": "auth",
+          "action": "free_signup",
+          "success": true,
+          "details": {
+            "fields_completed": [
+              "email",
+              "password",
+              "name"
+            ],
+            "time_to_complete": "45 seconds"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.230652",
+          "tool": "dashboard",
+          "action": "view_dashboard",
+          "success": true,
+          "details": {
+            "tools_visible": 9,
+            "tutorial_offered": true,
+            "tutorial_completed": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.230750",
+          "tool": "ad_input",
+          "action": "enter_ad_content",
+          "success": true,
+          "details": {
+            "headline_length": 20,
+            "body_length": 47,
+            "platform_selected": "facebook"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.230759",
+          "tool": "ad_analysis",
+          "action": "generate_results",
+          "success": true,
+          "details": {
+            "analysis_time": "3 seconds",
+            "overall_score": 72.5,
+            "detailed_breakdown": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.230764",
+          "tool": "readability_analyzer",
+          "action": "view_clarity_score",
+          "success": true,
+          "details": {
+            "score_displayed": true,
+            "recommendations_shown": true,
+            "user_understood": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.230768",
+          "tool": "cta_analyzer",
+          "action": "view_cta_suggestions",
+          "success": true,
+          "details": {
+            "suggestions_count": 3,
+            "suggestions_relevant": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.230772",
+          "tool": "platform_optimization",
+          "action": "view_platform_fit",
+          "success": true,
+          "details": {
+            "platform_score": 85,
+            "platform_specific_tips": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.230954",
+          "tool": "competitor_analysis",
+          "action": "view_upgrade_prompt",
+          "success": false,
+          "details": {
+            "feature_locked": true,
+            "upgrade_cta_shown": true,
+            "user_considered_upgrade": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231065",
+          "tool": "analytics_dashboard",
+          "action": "view_performance_metrics",
+          "success": true,
+          "details": {
+            "metrics_displayed": [
+              "total_analyses",
+              "avg_score_improvement",
+              "platform_performance"
+            ],
+            "insights_valuable": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231078",
+          "tool": "pdf_reports",
+          "action": "view_upgrade_prompt",
+          "success": false,
+          "details": {
+            "feature_locked": true,
+            "upgrade_intent": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231170",
+          "tool": "subscription",
+          "action": "consider_upgrade",
+          "success": true,
+          "details": {
+            "upgrade_likelihood": 0.2,
+            "primary_motivator": "price_sensitive",
+            "plan_preference": "still_free"
+          }
+        }
+      ],
+      "top_successes": [
+        "landing_page: view_value_proposition",
+        "auth: free_signup",
+        "dashboard: view_dashboard"
+      ],
+      "top_pain_points": [
+        "competitor_analysis: view_upgrade_prompt",
+        "pdf_reports: view_upgrade_prompt"
+      ]
+    },
+    "David (Corporate Marketer)": {
+      "user_type": "marketer",
+      "subscription": "basic",
+      "experience_level": "intermediate",
+      "total_interactions": 13,
+      "successful_interactions": 13,
+      "success_rate": 100.0,
+      "pain_points": [],
+      "journey_data": [
+        {
+          "timestamp": "2025-09-05T12:00:10.231624",
+          "tool": "landing_page",
+          "action": "view_value_proposition",
+          "success": true,
+          "details": {
+            "time_spent": "2 minutes",
+            "elements_viewed": [
+              "hero_section",
+              "features",
+              "pricing",
+              "testimonials"
+            ]
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231643",
+          "tool": "auth",
+          "action": "paid_signup",
+          "success": true,
+          "details": {
+            "plan_selected": "basic",
+            "payment_method": "stripe"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231652",
+          "tool": "dashboard",
+          "action": "view_dashboard",
+          "success": true,
+          "details": {
+            "tools_visible": 9,
+            "tutorial_offered": true,
+            "tutorial_completed": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231767",
+          "tool": "ad_input",
+          "action": "enter_ad_content",
+          "success": true,
+          "details": {
+            "headline_length": 29,
+            "body_length": 102,
+            "platform_selected": "facebook"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231780",
+          "tool": "ad_analysis",
+          "action": "generate_results",
+          "success": true,
+          "details": {
+            "analysis_time": "3 seconds",
+            "overall_score": 72.5,
+            "detailed_breakdown": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231789",
+          "tool": "readability_analyzer",
+          "action": "view_clarity_score",
+          "success": true,
+          "details": {
+            "score_displayed": true,
+            "recommendations_shown": true,
+            "user_understood": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231796",
+          "tool": "cta_analyzer",
+          "action": "view_cta_suggestions",
+          "success": true,
+          "details": {
+            "suggestions_count": 3,
+            "suggestions_relevant": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231803",
+          "tool": "platform_optimization",
+          "action": "view_platform_fit",
+          "success": true,
+          "details": {
+            "platform_score": 85,
+            "platform_specific_tips": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231922",
+          "tool": "competitor_analysis",
+          "action": "add_competitor_ads",
+          "success": true,
+          "details": {
+            "competitors_added": 2,
+            "analysis_depth": "basic"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.231936",
+          "tool": "ai_generator",
+          "action": "generate_alternatives",
+          "success": true,
+          "details": {
+            "alternatives_generated": 4,
+            "variation_types": [
+              "persuasive",
+              "emotional",
+              "stats_heavy",
+              "platform_optimized"
+            ],
+            "user_satisfaction": "high"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.232127",
+          "tool": "analytics_dashboard",
+          "action": "view_performance_metrics",
+          "success": true,
+          "details": {
+            "metrics_displayed": [
+              "total_analyses",
+              "avg_score_improvement",
+              "platform_performance"
+            ],
+            "insights_valuable": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.232160",
+          "tool": "pdf_reports",
+          "action": "generate_client_report",
+          "success": true,
+          "details": {
+            "report_generated": true,
+            "customization_level": "basic",
+            "client_presentation_ready": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.232370",
+          "tool": "subscription",
+          "action": "manage_existing_subscription",
+          "success": true,
+          "details": {
+            "current_plan": "basic",
+            "usage_tracking": true,
+            "satisfaction_level": "high"
+          }
+        }
+      ],
+      "top_successes": [
+        "landing_page: view_value_proposition",
+        "auth: paid_signup",
+        "dashboard: view_dashboard"
+      ],
+      "top_pain_points": []
+    },
+    "Emma (Startup Founder)": {
+      "user_type": "smb_owner",
+      "subscription": "free",
+      "experience_level": "beginner",
+      "total_interactions": 12,
+      "successful_interactions": 10,
+      "success_rate": 83.3,
+      "pain_points": [
+        "competitor_analysis: view_upgrade_prompt",
+        "pdf_reports: view_upgrade_prompt"
+      ],
+      "journey_data": [
+        {
+          "timestamp": "2025-09-05T12:00:10.233309",
+          "tool": "landing_page",
+          "action": "view_value_proposition",
+          "success": true,
+          "details": {
+            "time_spent": "2 minutes",
+            "elements_viewed": [
+              "hero_section",
+              "features",
+              "pricing",
+              "testimonials"
+            ]
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.233330",
+          "tool": "auth",
+          "action": "free_signup",
+          "success": true,
+          "details": {
+            "fields_completed": [
+              "email",
+              "password",
+              "name"
+            ],
+            "time_to_complete": "45 seconds"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.233341",
+          "tool": "dashboard",
+          "action": "view_dashboard",
+          "success": true,
+          "details": {
+            "tools_visible": 9,
+            "tutorial_offered": true,
+            "tutorial_completed": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.233483",
+          "tool": "ad_input",
+          "action": "enter_ad_content",
+          "success": true,
+          "details": {
+            "headline_length": 20,
+            "body_length": 47,
+            "platform_selected": "facebook"
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.233497",
+          "tool": "ad_analysis",
+          "action": "generate_results",
+          "success": true,
+          "details": {
+            "analysis_time": "3 seconds",
+            "overall_score": 72.5,
+            "detailed_breakdown": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.233511",
+          "tool": "readability_analyzer",
+          "action": "view_clarity_score",
+          "success": true,
+          "details": {
+            "score_displayed": true,
+            "recommendations_shown": true,
+            "user_understood": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.233520",
+          "tool": "cta_analyzer",
+          "action": "view_cta_suggestions",
+          "success": true,
+          "details": {
+            "suggestions_count": 3,
+            "suggestions_relevant": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.233524",
+          "tool": "platform_optimization",
+          "action": "view_platform_fit",
+          "success": true,
+          "details": {
+            "platform_score": 85,
+            "platform_specific_tips": true
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.233627",
+          "tool": "competitor_analysis",
+          "action": "view_upgrade_prompt",
+          "success": false,
+          "details": {
+            "feature_locked": true,
+            "upgrade_cta_shown": true,
+            "user_considered_upgrade": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.233795",
+          "tool": "analytics_dashboard",
+          "action": "view_performance_metrics",
+          "success": true,
+          "details": {
+            "metrics_displayed": [
+              "total_analyses",
+              "avg_score_improvement",
+              "platform_performance"
+            ],
+            "insights_valuable": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.233808",
+          "tool": "pdf_reports",
+          "action": "view_upgrade_prompt",
+          "success": false,
+          "details": {
+            "feature_locked": true,
+            "upgrade_intent": false
+          }
+        },
+        {
+          "timestamp": "2025-09-05T12:00:10.233921",
+          "tool": "subscription",
+          "action": "consider_upgrade",
+          "success": true,
+          "details": {
+            "upgrade_likelihood": 0.2,
+            "primary_motivator": "price_sensitive",
+            "plan_preference": "still_free"
+          }
+        }
+      ],
+      "top_successes": [
+        "landing_page: view_value_proposition",
+        "auth: free_signup",
+        "dashboard: view_dashboard"
+      ],
+      "top_pain_points": [
+        "competitor_analysis: view_upgrade_prompt",
+        "pdf_reports: view_upgrade_prompt"
+      ]
+    }
+  },
+  "critical_findings": [
+    {
+      "issue": "competitor_analysis: view_upgrade_prompt",
+      "frequency": 2,
+      "severity": "medium",
+      "affected_personas": 2
+    },
+    {
+      "issue": "pdf_reports: view_upgrade_prompt",
+      "frequency": 2,
+      "severity": "medium",
+      "affected_personas": 2
+    }
+  ],
+  "recommendations": []
+}

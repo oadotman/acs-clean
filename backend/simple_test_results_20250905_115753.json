@@ -1,0 +1,178 @@
+{
+  "timestamp": "2025-09-05T11:57:34.737368",
+  "test_results": {
+    "readability_flesch": {
+      "success": true,
+      "details": {
+        "flesch_score": 30.53000000000003,
+        "grade_level": 10.740000000000002,
+        "text_length": 44
+      },
+      "timestamp": "2025-09-05T11:57:39.734905"
+    },
+    "cta_analyzer_logic": {
+      "success": true,
+      "details": {
+        "test_cases": 5,
+        "results": [
+          {
+            "cta": "Get Started Now",
+            "expected": "strong_with_urgency",
+            "has_strong": true,
+            "has_weak": false,
+            "has_urgency": true,
+            "score": 90
+          },
+          {
+            "cta": "Learn More",
+            "expected": "weak_without_urgency",
+            "has_strong": false,
+            "has_weak": true,
+            "has_urgency": false,
+            "score": 35
+          },
+          {
+            "cta": "Claim Your Free Trial Today",
+            "expected": "strong_with_urgency",
+            "has_strong": true,
+            "has_weak": false,
+            "has_urgency": true,
+            "score": 90
+          },
+          {
+            "cta": "Click Here",
+            "expected": "weak_without_urgency",
+            "has_strong": false,
+            "has_weak": false,
+            "has_urgency": false,
+            "score": 50
+          },
+          {
+            "cta": "Start Free Trial",
+            "expected": "strong_without_urgency",
+            "has_strong": true,
+            "has_weak": false,
+            "has_urgency": false,
+            "score": 75
+          }
+        ]
+      },
+      "timestamp": "2025-09-05T11:57:39.735268"
+    },
+    "platform_optimization_logic": {
+      "success": false,
+      "details": {
+        "test_cases": 4,
+        "results": [
+          {
+            "platform": "facebook",
+            "calculated_score": 75,
+            "expected_range": [
+              80,
+              100
+            ],
+            "meets_expectation": false
+          },
+          {
+            "platform": "google",
+            "calculated_score": 100,
+            "expected_range": [
+              85,
+              100
+            ],
+            "meets_expectation": true
+          },
+          {
+            "platform": "linkedin",
+            "calculated_score": 90,
+            "expected_range": [
+              80,
+              100
+            ],
+            "meets_expectation": true
+          },
+          {
+            "platform": "tiktok",
+            "calculated_score": 100,
+            "expected_range": [
+              85,
+              100
+            ],
+            "meets_expectation": true
+          }
+        ],
+        "all_passed": false
+      },
+      "timestamp": "2025-09-05T11:57:39.735741"
+    },
+    "scoring_weights_logic": {
+      "success": true,
+      "details": {
+        "weight_sum": 1.0,
+        "weights_valid": true,
+        "calculation_results": [
+          {
+            "input_scores": {
+              "clarity": 80,
+              "persuasion": 75,
+              "emotion": 70,
+              "cta": 85,
+              "platform_fit": 90
+            },
+            "calculated_overall": 79.0,
+            "in_valid_range": true
+          },
+          {
+            "input_scores": {
+              "clarity": 60,
+              "persuasion": 50,
+              "emotion": 40,
+              "cta": 45,
+              "platform_fit": 55
+            },
+            "calculated_overall": 49.2,
+            "in_valid_range": true
+          },
+          {
+            "input_scores": {
+              "clarity": 95,
+              "persuasion": 90,
+              "emotion": 85,
+              "cta": 95,
+              "platform_fit": 100
+            },
+            "calculated_overall": 92.2,
+            "in_valid_range": true
+          }
+        ],
+        "all_calculations_valid": true
+      },
+      "timestamp": "2025-09-05T11:57:39.736991"
+    },
+    "api_structure_validation": {
+      "success": false,
+      "details": {},
+      "timestamp": "2025-09-05T11:57:53.253858"
+    }
+  },
+  "issues_found": [
+    {
+      "test": "platform_optimization",
+      "severity": "medium",
+      "description": "Platform scoring failed for: ['facebook']"
+    },
+    {
+      "test": "api_structure",
+      "severity": "critical",
+      "description": "Cannot import API models: No module named 'torch'"
+    }
+  ],
+  "summary": {
+    "total_tests": 5,
+    "successful_tests": 3,
+    "failed_tests": 2,
+    "success_rate": 60.0,
+    "total_issues": 2,
+    "critical_issues": 1
+  }
+}

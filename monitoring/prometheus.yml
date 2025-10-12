@@ -1,0 +1,156 @@
+# ================================
+# 📊 Prometheus Configuration - AdCopySurge Production
+# ================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'adcopysurge-production'
+    environment: 'production'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Load alerting rules once and periodically evaluate them
+# rule_files:
+#   - "alert_rules.yml"
+
+# Scrape configurations
+scrape_configs:
+  # ================================
+  # 🎯 Prometheus Self-Monitoring
+  # ================================
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # ================================
+  # 🔧 Backend API Monitoring
+  # ================================
+  - job_name: 'adcopysurge-backend'
+    static_configs:
+      - targets: ['backend:8000']
+    scrape_interval: 15s
+    metrics_path: /api/metrics
+    scrape_timeout: 10s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: backend:8000
+
+  # ================================
+  # 🎨 Frontend Monitoring (if metrics enabled)
+  # ================================
+  - job_name: 'adcopysurge-frontend'
+    static_configs:
+      - targets: ['frontend:3000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+  # ================================
+  # 📦 Redis Monitoring
+  # ================================
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 15s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+  # ================================
+  # 🔄 Celery Worker Monitoring
+  # ================================
+  - job_name: 'celery-worker'
+    static_configs:
+      - targets: ['celery-worker:5555']  # Flower monitoring port
+    scrape_interval: 30s
+    metrics_path: /api/workers
+    scrape_timeout: 10s
+
+  # ================================
+  # 🌐 Nginx Monitoring
+  # ================================
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    scrape_interval: 30s
+    metrics_path: /nginx_status
+    scrape_timeout: 10s
+
+  # ================================
+  # 🖥️ System Monitoring (Node Exporter)
+  # ================================
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:9100']  # If node_exporter is installed on host
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+
+  # ================================
+  # 🗄️ Database Monitoring (PostgreSQL)
+  # ================================
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres_exporter:9187']
+  #   scrape_interval: 30s
+  #   metrics_path: /metrics
+  #   scrape_timeout: 10s
+
+  # ================================
+  # 🔍 Blackbox Probing (External Health Checks)
+  # ================================
+  # - job_name: 'blackbox'
+  #   metrics_path: /probe
+  #   params:
+  #     module: [http_2xx]
+  #   static_configs:
+  #     - targets:
+  #       - https://adcopysurge.com
+  #       - https://api.adcopysurge.com/api/health
+  #   relabel_configs:
+  #     - source_labels: [__address__]
+  #       target_label: __param_target
+  #     - source_labels: [__param_target]
+  #       target_label: instance
+  #     - target_label: __address__
+  #       replacement: blackbox-exporter:9115
+
+  # ================================
+  # 🏷️ Custom Application Metrics
+  # ================================
+  - job_name: 'adcopysurge-custom-metrics'
+    static_configs:
+      - targets: ['backend:8000']
+    scrape_interval: 15s
+    metrics_path: /api/metrics/custom
+    scrape_timeout: 10s
+    honor_timestamps: true
+    params:
+      format: ['prometheus']
+    metric_relabel_configs:
+      # Filter out sensitive metrics if needed
+      - source_labels: [__name__]
+        regex: 'sensitive_.*'
+        action: drop
+
+# ================================
+# 📈 Recording Rules (Optional)
+# ================================
+# These can be moved to separate rule files
+# rule_files:
+# - "recording_rules.yml"

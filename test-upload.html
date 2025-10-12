@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Upload</title>
+</head>
+<body>
+    <h1>Test File Upload API</h1>
+    <form id="testForm">
+        <input type="file" id="fileInput" accept=".txt,.csv,.pdf,.doc,.docx">
+        <button type="submit">Test Upload</button>
+    </form>
+    
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('testForm').onsubmit = async function(e) {
+            e.preventDefault();
+            
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('platform', 'facebook');
+            formData.append('user_id', 'test-user');
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Uploading...';
+            
+            try {
+                // Test direct API call
+                const response = await fetch('/api/ads/parse-file', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.text();
+                resultDiv.innerHTML = `<pre>Status: ${response.status}\nResponse: ${result}</pre>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<pre>Error: ${error.message}</pre>`;
+            }
+        };
+    </script>
+</body>
+</html>

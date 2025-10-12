@@ -1,0 +1,118 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.pnpm-debug.log*
+
+# React Build
+frontend/build/
+frontend/dist/
+
+# Environment Variables - CRITICAL: Never commit these
+.env
+.env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+.env.backup
+backend/.env*
+frontend/.env*
+
+# Secrets and Credentials
+secrets/
+*.key
+*.pem
+*.p12
+*.keystore
+**/config/secrets/*
+credentials.json
+service-account.json
+
+# Database
+*.db
+*.sqlite3
+database/data/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Large generated files
+codebase_manifest.json
+
+# Temporary files
+tmp/
+temp/
+
+# Coverage reports
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Docker
+.docker/
+
+# Deployment
+.vercel
+.netlify
+
+# SECURITY: Docker Compose with Secrets - NEVER COMMIT
+docker-compose.datalix.yml
+docker-compose.production.yml
+docker-compose.*.yml
+
+# SECURITY: Environment Files with Secrets
+.env.datalix*
+.env.production*
+.env.local*
+backend/.env.production*
+frontend/.env.production*
+
+# SECURITY: Deployment Scripts with Hardcoded Values
+deploy-to-datalix.sh
+deploy-with-secrets.sh

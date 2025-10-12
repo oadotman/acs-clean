@@ -1,0 +1,8 @@
+# Netlify redirects file for AdCopySurge SPA
+# This file ensures that all routes are handled by React Router
+
+# API routes should be redirected to the backend - Datalix VPS backend
+/api/* https://api.adcopysurge.com/api/:splat 200
+
+# All other routes should serve the main index.html for React Router to handle
+/* /index.html 200

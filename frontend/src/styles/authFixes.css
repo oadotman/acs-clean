@@ -1,0 +1,43 @@
+/* Fix text visibility on Login and Register pages - Light theme */
+/* These styles are scoped to auth pages only via the data-auth-page attribute */
+
+/* Ensure all text fields have dark text - ONLY on auth pages */
+[data-auth-page] .MuiTextField-root .MuiInputBase-input {
+  color: #1a1a1a !important;
+}
+
+/* Ensure labels are visible with proper contrast */
+[data-auth-page] .MuiTextField-root .MuiInputLabel-root {
+  color: rgba(26, 26, 26, 0.7) !important;
+}
+
+[data-auth-page] .MuiTextField-root .MuiInputLabel-root.Mui-focused {
+  color: #667eea !important;
+}
+
+/* Fix placeholder text */
+[data-auth-page] .MuiTextField-root .MuiInputBase-input::placeholder {
+  color: rgba(26, 26, 26, 0.5) !important;
+  opacity: 1 !important;
+}
+
+/* Fix the input background - clean white */
+[data-auth-page] .MuiTextField-root .MuiOutlinedInput-root {
+  background-color: #ffffff !important;
+}
+
+/* Fix icons in input fields */
+[data-auth-page] .MuiTextField-root .MuiInputAdornment-root {
+  color: rgba(26, 26, 26, 0.6) !important;
+}
+
+/* Fix checkbox labels */
+[data-auth-page] .MuiFormControlLabel-label {
+  color: #1a1a1a !important;
+}
+
+/* Fix all links in auth forms */
+[data-auth-page] a,
+[data-auth-page] .MuiLink-root {
+  color: #667eea !important;
+}

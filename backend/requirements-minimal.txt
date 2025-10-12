@@ -1,0 +1,36 @@
+# Minimal requirements for MVP launch - install AI packages later
+# FastAPI and server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.13.0
+psycopg2-binary==2.9.9
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-decouple==3.8
+
+# HTTP requests
+httpx==0.25.2
+requests==2.31.0
+
+# Payment Processing - Will add back after MVP
+# paddle-billing==1.0.1
+
+# CORS (using built-in FastAPI CORSMiddleware)
+# fastapi-cors==0.0.6
+
+# Validation
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Monitoring and Logging
+structlog==23.2.0
+colorama==0.4.6
+
+# Background tasks
+redis==5.0.1

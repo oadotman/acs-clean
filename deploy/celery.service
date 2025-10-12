@@ -1,0 +1,31 @@
+[Unit]
+Description=AdCopySurge Celery Worker
+After=network.target redis.service
+Requires=redis.service
+
+[Service]
+Type=forking
+User=www-data
+Group=www-data
+WorkingDirectory=/home/deploy/adcopysurge/backend
+Environment=PATH=/home/deploy/adcopysurge/backend/venv/bin
+EnvironmentFile=/home/deploy/adcopysurge/.env
+ExecStart=/home/deploy/adcopysurge/backend/venv/bin/celery -A app.celery_app worker --loglevel=info --concurrency=2 --detach --pidfile=/run/adcopysurge/celery.pid --logfile=/var/log/adcopysurge/celery.log
+ExecStop=/home/deploy/adcopysurge/backend/venv/bin/celery -A app.celery_app control shutdown
+ExecReload=/home/deploy/adcopysurge/backend/venv/bin/celery -A app.celery_app control reload
+PIDFile=/run/adcopysurge/celery.pid
+Restart=always
+RestartSec=3
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/run/adcopysurge /var/log/adcopysurge /tmp
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target

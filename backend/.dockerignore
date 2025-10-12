@@ -1,0 +1,122 @@
+# AdCopySurge Backend .dockerignore
+# This file reduces Docker image size and build time
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+CHANGELOG*
+README*
+
+# Development files
+.env
+.env.local
+.env.development
+.env.example
+*.log
+logs/
+*.sqlite
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Deployment files (not needed in container)
+railway.toml
+nixpacks.toml
+.railway/
+Dockerfile*
+docker-compose*.yml
+deployment/
+scripts/
+
+# Local development
+temp/
+uploads/
+static_files/
+
+# Railway-specific files
+start-railway.sh
+gunicorn-railway.conf.py
+requirements-railway.txt
+
+# Other platforms
+render.yaml
+vercel.json
+netlify.toml
+
+# Buildpack detection prevention
+.tool-versions
+.mise.toml
+.mise.local.toml
+.python-version
+.nvmrc
+runtime.txt
+requirements.txt
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

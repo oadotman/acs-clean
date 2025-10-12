@@ -1,0 +1,126 @@
+{
+  "timestamp": "2025-09-15T14:01:39.866396",
+  "base_url": "http://localhost:8000",
+  "tests": {
+    "config_secret": {
+      "status": "PASS",
+      "message": "SECRET_KEY properly configured",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:40.277017"
+    },
+    "config_database": {
+      "status": "PASS",
+      "message": "DATABASE_URL configured",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:40.284422"
+    },
+    "config_version": {
+      "status": "PASS",
+      "message": "Version configured: 1.0.0",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:40.287065"
+    },
+    "config_node_env": {
+      "status": "PASS",
+      "message": "NODE_ENV configured: development",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:40.288810"
+    },
+    "config_blog": {
+      "status": "PASS",
+      "message": "Blog enabled: True",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:40.290111"
+    },
+    "import_main": {
+      "status": "PASS",
+      "message": "Main application imported successfully",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:49.439504"
+    },
+    "import_blog": {
+      "status": "PASS",
+      "message": "Blog router imported successfully",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:49.439672"
+    },
+    "import_auth": {
+      "status": "PASS",
+      "message": "Authentication imports successful",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:49.439790"
+    },
+    "import_models": {
+      "status": "PASS",
+      "message": "Model imports successful",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:49.439908"
+    },
+    "celery_general": {
+      "status": "FAIL",
+      "message": "Celery test failed: 'await' outside async function (tasks.py, line 61)",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:49.771881"
+    },
+    "health_main": {
+      "status": "FAIL",
+      "message": "Health check failed: 500",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:50.093355"
+    },
+    "health_ready": {
+      "status": "FAIL",
+      "message": "Readiness probe exception: ",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:50.119441"
+    },
+    "health_live": {
+      "status": "PASS",
+      "message": "Liveness probe passed",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:50.384415"
+    },
+    "api_root": {
+      "status": "PASS",
+      "message": "Root endpoint: AdCopySurge API is running",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:50.387791"
+    },
+    "api_docs": {
+      "status": "PASS",
+      "message": "API documentation accessible",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:50.391211"
+    },
+    "blog_list": {
+      "status": "PASS",
+      "message": "Blog listing returned 1 posts",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:50.402241"
+    },
+    "blog_categories": {
+      "status": "PASS",
+      "message": "Blog categories returned 4 categories",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:50.405286"
+    },
+    "blog_popular": {
+      "status": "FAIL",
+      "message": "Popular posts failed: 500",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:50.418317"
+    },
+    "blog_post_detail": {
+      "status": "FAIL",
+      "message": "Blog post detail failed: 500",
+      "details": {},
+      "timestamp": "2025-09-15T14:01:50.478473"
+    }
+  },
+  "summary": {
+    "total": 19,
+    "passed": 14,
+    "failed": 5,
+    "warnings": 0
+  }
+}

@@ -1,0 +1,150 @@
+# AdCopySurge Security Monitoring & Alerting Requirements
+# Core monitoring and incident response dependencies
+
+# Core system monitoring
+psutil>=5.9.0
+redis>=4.5.0
+schedule>=1.2.0
+
+# Email and notifications
+smtplib2>=0.2.0
+requests>=2.31.0
+
+# Data handling and logging
+python-dateutil>=2.8.2
+pytz>=2023.3
+
+# Security monitoring specific
+geoip2>=4.7.0
+maxminddb>=2.2.0
+cryptography>=41.0.0
+
+# Dashboard and visualization (optional)
+flask>=2.3.0
+flask-cors>=4.0.0
+flask-socketio>=5.3.0
+plotly>=5.15.0
+dash>=2.12.0
+dash-bootstrap-components>=1.4.0
+
+# Data analysis and metrics
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# API integrations
+python-slack-sdk>=3.21.0
+pagerduty-api>=3.0.2
+jira>=3.5.0
+
+# File watching and parsing
+watchdog>=3.0.0
+python-dateutil>=2.8.2
+regex>=2023.6.3
+
+# Configuration management
+pyyaml>=6.0
+toml>=0.10.2
+python-dotenv>=1.0.0
+
+# Testing and development
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+black>=23.7.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Performance monitoring
+prometheus-client>=0.17.0
+statsd>=4.0.0
+
+# Network analysis
+scapy>=2.5.0
+netaddr>=0.8.0
+ipaddress>=1.0.23
+
+# Database drivers (if needed)
+psycopg2-binary>=2.9.0
+pymongo>=4.4.0
+elasticsearch>=8.8.0
+
+# Async support
+aiohttp>=3.8.0
+asyncio>=3.4.3
+uvloop>=0.17.0
+
+# Process management
+supervisor>=4.2.0
+systemd-python>=235
+
+# Time series data
+influxdb-client>=1.36.0
+grafana-api>=1.0.3
+
+# Machine learning for anomaly detection
+tensorflow>=2.13.0
+torch>=2.0.0
+
+# Additional security tools
+python-nmap>=0.7.1
+dnspython>=2.4.0
+pycryptodome>=3.18.0
+
+# Log parsing and analysis
+python-logstash>=0.4.8
+elasticsearch-dsl>=8.8.0
+loguru>=0.7.0
+
+# Web scraping for threat intelligence
+beautifulsoup4>=4.12.0
+scrapy>=2.10.0
+
+# Data validation
+marshmallow>=3.20.0
+cerberus>=1.3.4
+
+# Caching
+diskcache>=5.6.0
+cachetools>=5.3.0
+
+# Rate limiting
+slowapi>=0.1.8
+limits>=3.5.0
+
+# Geographic data
+geopy>=2.3.0
+folium>=0.14.0
+
+# Image processing for captcha/OCR
+pillow>=10.0.0
+pytesseract>=0.3.10
+
+# PDF processing for reports
+reportlab>=4.0.4
+weasyprint>=59.0
+
+# Excel report generation
+openpyxl>=3.1.0
+xlsxwriter>=3.1.0
+
+# HTTP client improvements
+httpx>=0.24.0
+urllib3>=2.0.0
+
+# JSON processing
+orjson>=3.9.0
+ujson>=5.8.0
+
+# Compressed data handling
+lz4>=4.3.0
+zstandard>=0.21.0
+
+# Environment and configuration
+environs>=9.5.0
+click>=8.1.0
+
+# Development and debugging
+ipdb>=0.13.0
+rich>=13.4.0
+tabulate>=0.9.0

@@ -1,0 +1,29 @@
+[Unit]
+Description=AdCopySurge Health Monitor
+After=network.target adcopysurge.service
+Wants=network.target
+Requires=adcopysurge.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/adcopysurge/deployment/monitoring
+Environment=PATH=/var/www/adcopysurge/backend/venv/bin
+Environment=PYTHONPATH=/var/www/adcopysurge/deployment/monitoring
+EnvironmentFile=/var/www/adcopysurge/backend/.env
+ExecStart=/var/www/adcopysurge/backend/venv/bin/python health_check.py
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=adcopysurge-monitor
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/log/adcopysurge
+
+[Install]
+WantedBy=multi-user.target

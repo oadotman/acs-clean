@@ -1,0 +1,38 @@
+# Exclude everything by default, then include only what we need
+*
+
+# Include only backend source code
+!backend/
+
+# Exclude development files from backend
+backend/.env*
+backend/.git/
+backend/*.log
+backend/logs/
+backend/.venv/
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/**/*.pyc
+backend/.pytest_cache/
+backend/node_modules/
+backend/*.sqlite
+backend/*.db
+backend/.DS_Store
+backend/Thumbs.db
+
+# Exclude specific large directories
+frontend/
+docs/
+.git/
+.github/
+.vscode/
+.idea/
+node_modules/
+tests/
+scripts/
+content/
+database/
+deployment/
+infra/

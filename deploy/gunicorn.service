@@ -1,0 +1,32 @@
+[Unit]
+Description=AdCopySurge FastAPI Backend with Gunicorn
+After=network.target
+Requires=redis.service
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/home/deploy/adcopysurge/backend
+Environment=PATH=/home/deploy/adcopysurge/backend/venv/bin
+EnvironmentFile=/home/deploy/adcopysurge/.env
+ExecStart=/home/deploy/adcopysurge/backend/venv/bin/gunicorn main:app --worker-class uvicorn.workers.UvicornWorker --workers 4 --bind unix:/run/adcopysurge/gunicorn.sock --timeout 30 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50 --preload --access-logfile /var/log/adcopysurge/access.log --error-logfile /var/log/adcopysurge/error.log --log-level info
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=always
+RestartSec=3
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/run/adcopysurge /var/log/adcopysurge /tmp
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+# Production deployment for AdCopySurge (FastAPI + Uvicorn + Nginx)
+
+# 1) Copy this file to /etc/systemd/system/adcopysurge.service
+# 2) Run: sudo systemctl daemon-reload
+# 3) Run: sudo systemctl enable adcopysurge
+# 4) Run: sudo systemctl start adcopysurge
+
+[Unit]
+Description=AdCopySurge API (Uvicorn)
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/adcopysurge/backend
+Environment="ENVIRONMENT=production"
+# Load environment file generated from your .env (no quotes around values)
+EnvironmentFile=/opt/adcopysurge/backend/.env
+ExecStart=/opt/adcopysurge/venv/bin/python -m uvicorn main_production:app --host 0.0.0.0 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

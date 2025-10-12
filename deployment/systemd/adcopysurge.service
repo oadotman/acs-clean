@@ -1,0 +1,44 @@
+[Unit]
+Description=AdCopySurge API - AI-Powered Ad Copy Analysis Platform
+Documentation=https://github.com/yourusername/adcopysurge
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+RuntimeDirectory=adcopysurge
+RuntimeDirectoryMode=755
+WorkingDirectory=/var/www/adcopysurge/backend
+Environment=PATH=/var/www/adcopysurge/backend/venv/bin
+Environment=PYTHONPATH=/var/www/adcopysurge/backend
+EnvironmentFile=/var/www/adcopysurge/backend/.env
+ExecStart=/var/www/adcopysurge/backend/venv/bin/gunicorn main_production:app -c gunicorn.conf.py
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+RestartSec=2
+Restart=always
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/adcopysurge /run/adcopysurge /tmp
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+MemoryDenyWriteExecute=false  # Disabled for Python/ML libraries
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+PrivateDevices=true
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

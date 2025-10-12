@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- IMMEDIATE Wallet Blocking - Must be first script -->
+    <script>
+      // Ultra-early wallet blocking - runs immediately
+      (function() {
+        'use strict';
+        
+        // Block before any extension can inject
+        const blockEthereum = () => {
+          if (window.ethereum) {
+            console.log('🚫 IMMEDIATE: Blocking ethereum at script load');
+            window.ethereum = undefined;
+          }
+          if (window.web3) {
+            console.log('🚫 IMMEDIATE: Blocking web3 at script load');
+            window.web3 = undefined;
+          }
+        };
+        
+        blockEthereum();
+        
+        // Override Object.defineProperty to prevent re-creation
+        const originalDefineProperty = Object.defineProperty;
+        Object.defineProperty = function(obj, prop, descriptor) {
+          if (obj === window && (prop === 'ethereum' || prop === 'web3' || prop === 'metamask')) {
+            console.log(`🚫 IMMEDIATE: Blocked attempt to define ${prop}`);
+            return obj;
+          }
+          return originalDefineProperty.call(this, obj, prop, descriptor);
+        };
+        
+        // Monitor for any attempts to set wallet objects
+        ['ethereum', 'web3', 'metamask', '__METAMASK_PROVIDER__'].forEach(prop => {
+          let value = undefined;
+          Object.defineProperty(window, prop, {
+            get: () => {
+              console.log(`🚫 IMMEDIATE: Blocked access to ${prop}`);
+              return undefined;
+            },
+            set: (newValue) => {
+              console.log(`🚫 IMMEDIATE: Blocked attempt to set ${prop}`);
+              return false;
+            },
+            configurable: false
+          });
+        });
+        
+        console.log('✅ IMMEDIATE: Ultra-early wallet blocking active');
+      })();
+    </script>
+    
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="AdCopySurge - Advanced marketing intelligence platform with 9 specialized tools for ad copy analysis and optimization"
+    />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:8000 https://api.supabase.co https://*.supabase.co; img-src 'self' data: https:; object-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; manifest-src 'self';" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta name="disable-wallet-extensions" content="true" />
+    <meta name="no-metamask" content="true" />
+    <meta name="ethereum-provider" content="disabled" />
+    <meta name="web3-provider" content="disabled" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <title>AdCopySurge - Marketing Intelligence Suite</title>
+    
+    <!-- Enhanced MetaMask and Wallet Blocking -->
+    <script>
+      // Ultra-comprehensive wallet connection prevention
+      (function() {
+        console.log('🚫 AdCopySurge: Enhanced wallet blocking initiated');
+        
+        // Store original objects to prevent recreation
+        const originalEthereum = window.ethereum;
+        const originalWeb3 = window.web3;
+        
+        // Enhanced wallet blocking function
+        const blockWallets = () => {
+          try {
+            // Block ethereum object completely
+            if (window.ethereum) {
+              console.log('🚫 Blocking ethereum object');
+              
+              // Override all ethereum methods before removing
+              const blockMethod = (name) => {
+                if (window.ethereum[name]) {
+                  window.ethereum[name] = () => {
+                    console.log(`AdCopySurge: ${name} method blocked`);
+                    return Promise.reject(new Error(`${name} disabled for AdCopySurge`));
+                  };
+                }
+              };
+              
+              ['connect', 'request', 'send', 'sendAsync', 'enable'].forEach(blockMethod);
+              
+              // Make ethereum object non-functional
+              Object.defineProperty(window, 'ethereum', {
+                value: undefined,
+                writable: false,
+                configurable: false
+              });
+            }
+            
+            // Block web3 object
+            if (window.web3) {
+              console.log('🚫 Blocking web3 object');
+              Object.defineProperty(window, 'web3', {
+                value: undefined,
+                writable: false,
+                configurable: false
+              });
+            }
+            
+            // Block common wallet globals
+            const walletGlobals = ['connect', 'ethereum', 'web3', '__METAMASK_PROVIDER__', 'metamask'];
+            walletGlobals.forEach(global => {
+              if (window[global]) {
+                console.log(`🚫 Blocking ${global}`);
+                try {
+                  Object.defineProperty(window, global, {
+                    value: undefined,
+                    writable: false,
+                    configurable: false
+                  });
+                } catch (e) {
+                  window[global] = undefined;
+                }
+              }
+            });
+            
+            // Prevent provider detection events
+            if (window.addEventListener) {
+              const originalAddEventListener = window.addEventListener;
+              window.addEventListener = function(type, listener, options) {
+                if (type === 'ethereum#initialized' || type === 'eip6963:requestProvider') {
+                  console.log(`🚫 Blocked wallet event: ${type}`);
+                  return;
+                }
+                return originalAddEventListener.call(this, type, listener, options);
+              };
+            }
+            
+            // Block EIP-6963 provider discovery
+            if (window.dispatchEvent) {
+              const originalDispatchEvent = window.dispatchEvent;
+              window.dispatchEvent = function(event) {
+                if (event.type && event.type.includes('eip6963')) {
+                  console.log(`🚫 Blocked EIP-6963 event: ${event.type}`);
+                  return false;
+                }
+                return originalDispatchEvent.call(this, event);
+              };
+            }
+            
+          } catch (e) {
+            console.log('Wallet blocking applied with warnings:', e.message);
+          }
+        };
+        
+        // Continuous monitoring and blocking
+        const monitorAndBlock = () => {
+          blockWallets();
+          
+          // Monitor for ethereum object recreation
+          if (window.ethereum && window.ethereum !== originalEthereum) {
+            console.log('🚫 Ethereum object recreated, blocking again');
+            blockWallets();
+          }
+        };
+        
+        // Apply blocking immediately and repeatedly
+        blockWallets();
+        
+        // Monitor continuously with MutationObserver if available
+        if (window.MutationObserver) {
+          const observer = new MutationObserver(monitorAndBlock);
+          observer.observe(document, { childList: true, subtree: true });
+        }
+        
+        // Apply blocking at various intervals
+        const intervals = [50, 100, 250, 500, 1000, 2000, 5000];
+        intervals.forEach(delay => {
+          setTimeout(monitorAndBlock, delay);
+        });
+        
+        // Event-based blocking
+        ['DOMContentLoaded', 'load', 'readystatechange'].forEach(event => {
+          document.addEventListener(event, monitorAndBlock);
+        });
+        
+        // Global error handler for wallet connection attempts
+        window.addEventListener('error', (event) => {
+          if (event.message && event.message.includes('MetaMask')) {
+            console.log('🚫 Caught and suppressed MetaMask error');
+            event.preventDefault();
+            return false;
+          }
+        });
+        
+        // Promise rejection handler for wallet connection attempts
+        window.addEventListener('unhandledrejection', (event) => {
+          if (event.reason && (event.reason.message || '').includes('MetaMask')) {
+            console.log('🚫 Caught and suppressed MetaMask promise rejection');
+            event.preventDefault();
+            return false;
+          }
+        });
+        
+        console.log('✅ Enhanced wallet blocking system activated');
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
