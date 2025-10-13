@@ -152,7 +152,6 @@ const AffiliateProgram = () => {
         <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" useFlexGap>
           <Chip label="Content Creators" color="warning" />
           <Chip label="Marketing Influencers" color="warning" />
-          <Chip label="Business Bloggers" color="warning" />
           <Chip label="Course Creators" color="warning" />
           <Chip label="Newsletter Writers" color="warning" />
           <Chip label="Social Media Managers" color="warning" />

@@ -43,6 +43,9 @@ raw_env = [
     "PYTHONUNBUFFERED=1",
 ]
 
+# Application module
+# Gunicorn will look for 'app' in backend/main.py
+
 # Worker process callbacks
 def on_starting(server):
     server.log.info("Starting AdCopySurge API server")

@@ -111,20 +111,4 @@ async def get_current_user_dep(token: str = Depends(oauth2_scheme), db: Session 
     return user
 
 
-async def require_admin(current_user: User = Depends(get_current_user_dep)) -> User:
-    """Require admin role for blog management"""
-    # For now, we'll use email-based admin check
-    # In production, you'd want to add an is_admin field to the User model
-    admin_emails = [
-        "admin@adcopysurge.com",
-        "blog@adcopysurge.com",
-        # Add more admin emails as needed
-    ]
-    
-    if current_user.email not in admin_emails:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    
-    return current_user
+# Admin functionality removed - no longer using blog system

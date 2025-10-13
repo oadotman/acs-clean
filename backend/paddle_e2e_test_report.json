@@ -1,0 +1,110 @@
+{
+  "timestamp": "2025-10-13T10:21:21.842305",
+  "total_tests": 9,
+  "passed": 6,
+  "failed": 3,
+  "pass_rate": 66.66666666666666,
+  "results": [
+    {
+      "test": "Setup",
+      "passed": true,
+      "message": "Test environment initialized",
+      "details": {},
+      "timestamp": "2025-10-13T10:21:10.450087"
+    },
+    {
+      "test": "Configuration",
+      "passed": false,
+      "message": "Missing required settings: PADDLE_VENDOR_ID, PADDLE_API_KEY",
+      "details": {
+        "missing_settings": [
+          "PADDLE_VENDOR_ID",
+          "PADDLE_API_KEY"
+        ]
+      },
+      "timestamp": "2025-10-13T10:21:10.450474"
+    },
+    {
+      "test": "Service Init",
+      "passed": false,
+      "message": "Vendor ID not loaded",
+      "details": {},
+      "timestamp": "2025-10-13T10:21:10.451866"
+    },
+    {
+      "test": "Subscription Limits",
+      "passed": true,
+      "message": "All tier limits configured correctly",
+      "details": {},
+      "timestamp": "2025-10-13T10:21:10.452696"
+    },
+    {
+      "test": "Plan Mapping",
+      "passed": true,
+      "message": "All plan mappings work correctly",
+      "details": {},
+      "timestamp": "2025-10-13T10:21:10.453619"
+    },
+    {
+      "test": "Checkout Link",
+      "passed": true,
+      "message": "Expected failure with test credentials (correct behavior)",
+      "details": {
+        "error": "Paddle API error: You don't have permission to access this resource"
+      },
+      "timestamp": "2025-10-13T10:21:13.088629"
+    },
+    {
+      "test": "Webhook Processing",
+      "passed": true,
+      "message": "Webhook processing works correctly",
+      "details": {},
+      "timestamp": "2025-10-13T10:21:13.093879"
+    },
+    {
+      "test": "Usage Limits",
+      "passed": false,
+      "message": "Unlimited tier should always allow analysis",
+      "details": {},
+      "timestamp": "2025-10-13T10:21:13.095452"
+    },
+    {
+      "test": "API Endpoints",
+      "passed": true,
+      "message": "All required Paddle endpoints exist",
+      "details": {},
+      "timestamp": "2025-10-13T10:21:21.841980"
+    }
+  ],
+  "summary": {
+    "ready_for_integration": false,
+    "critical_failures": [
+      {
+        "test": "Configuration",
+        "passed": false,
+        "message": "Missing required settings: PADDLE_VENDOR_ID, PADDLE_API_KEY",
+        "details": {
+          "missing_settings": [
+            "PADDLE_VENDOR_ID",
+            "PADDLE_API_KEY"
+          ]
+        },
+        "timestamp": "2025-10-13T10:21:10.450474"
+      },
+      {
+        "test": "Service Init",
+        "passed": false,
+        "message": "Vendor ID not loaded",
+        "details": {},
+        "timestamp": "2025-10-13T10:21:10.451866"
+      }
+    ],
+    "recommendations": [
+      "Configure Paddle environment variables in .env file",
+      "Get credentials from your Paddle dashboard",
+      "Fix failing tests before proceeding",
+      "Verify Paddle account setup is complete",
+      "Check environment variable configuration"
+    ]
+  }
+}

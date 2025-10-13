@@ -1,138 +1,294 @@
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer
-from fastapi.staticfiles import StaticFiles
+import os
+import sys
+import time
+import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
+from tenacity import retry, wait_fixed, stop_after_attempt
+
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi.responses import JSONResponse, Response
 import uvicorn
+
+# Import application modules
 from app.api import auth, ads, analytics, subscriptions
-from app.api.creative import router as creative_router
-from app.api.health_fixed import router as health_router
-from app.api.v1.auth_status import router as auth_status_router
-from api.integrations import router as integrations_router
+from app.api.whitelabel import router as whitelabel_router
+from app.api.credits_simple import router as credits_router
 from app.core.config import settings
+from app.core.database import engine, Base
 from app.core.logging import setup_logging, get_logger
-
-# SECURITY: Import security middleware
-from app.middleware.rate_limiting import add_rate_limiting_middleware
-from app.middleware.csrf_protection import add_csrf_protection_middleware
-from app.middleware.security_headers import (
-    add_security_headers_middleware,
-    add_security_reporting_middleware,
-    add_content_security_middleware
-)
-
-# Import enhanced components
-try:
-    from app.core.database_enhanced import create_all_tables
-except ImportError:
-    # Fallback to original database
-    from app.core.database import engine, Base
-    def create_all_tables():
-        if engine:
-            Base.metadata.create_all(bind=engine)
-
-try:
-    from app.core.error_handlers import setup_error_handling
-except ImportError:
-    setup_error_handling = None
 
 # Setup logging first
 setup_logging()
 logger = get_logger(__name__)
 
-# Import blog router conditionally
-blog_router = None
-if settings.ENABLE_BLOG:
+
+@retry(
+    wait=wait_fixed(3),
+    stop=stop_after_attempt(5),
+    reraise=True
+)
+def initialize_database():
+    """Initialize database with retry logic for Railway"""
     try:
-        from app.blog import router as blog_module
-        blog_router = blog_module.router
-        logger.info("Blog router imported successfully")
-    except ImportError as e:
-        logger.warning(f"Blog router import failed: {e}")
-else:
-    logger.info("Blog functionality disabled via settings")
+        logger.info("Creating/verifying database tables...")
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created/verified successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        # Test basic connection
+        try:
+            with engine.connect() as conn:
+                from sqlalchemy import text
+                result = conn.execute(text("SELECT version()"))
+                logger.info(f"Database connection test successful: {result.scalar()}")
+        except Exception as conn_e:
+            logger.error(f"Database connection test failed: {conn_e}")
+        raise
 
-# Logging is now set up above
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events with retry logic for Railway"""
+    # Startup
+    logger.info("Starting AdCopySurge API...")
+    
+    startup_errors = []
+    
+    # Initialize database with retries
+    try:
+        logger.info("Initializing database connection...")
+        initialize_database()
+        logger.info("Database initialization completed")
+    except Exception as e:
+        error_msg = f"Critical: Database initialization failed after retries: {e}"
+        logger.error(error_msg)
+        startup_errors.append(error_msg)
+        # Database is critical - fail fast
+        sys.exit(1)
+    
+    # Download NLTK data (non-critical)
+    try:
+        import nltk
+        nltk.download('punkt', quiet=True)
+        nltk.download('stopwords', quiet=True)
+        logger.info("NLTK data initialized")
+    except Exception as e:
+        logger.warning(f"NLTK data download failed (non-critical): {e}")
+        startup_errors.append(f"NLTK warning: {e}")
+    
+    # Initialize Redis connection if configured (non-critical)
+    if settings.REDIS_URL and settings.REDIS_URL != "redis://localhost:6379":
+        try:
+            import redis
+            redis_client = redis.from_url(settings.REDIS_URL)
+            redis_client.ping()
+            logger.info("Redis connection verified")
+        except Exception as e:
+            logger.warning(f"Redis connection failed (non-critical): {e}")
+            startup_errors.append(f"Redis warning: {e}")
+    
+    if startup_errors:
+        logger.warning(f"Startup completed with {len(startup_errors)} warnings")
+        for error in startup_errors:
+            logger.warning(f"  - {error}")
+    else:
+        logger.info("Application startup completed successfully")
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down AdCopySurge API...")
 
-# Create database tables (enhanced version)
-try:
-    create_all_tables()
-except Exception as e:
-    logger.warning(f"Database table creation skipped: {e}")
 
-# SECURITY: Conditionally disable API documentation in production
-docs_url = None if settings.ENVIRONMENT == "production" else "/api/docs"
-redoc_url = None if settings.ENVIRONMENT == "production" else "/api/redoc"
-
+# Create FastAPI app with lifespan
 app = FastAPI(
     title="AdCopySurge API",
     description="AI-powered ad copy analysis and optimization platform",
-    version="1.0.0",
-    docs_url=docs_url,
-    redoc_url=redoc_url
+    version=settings.APP_VERSION,
+    docs_url="/api/docs" if settings.DEBUG else None,
+    redoc_url="/api/redoc" if settings.DEBUG else None,
+    openapi_url="/api/openapi.json" if settings.DEBUG else None,
+    lifespan=lifespan
 )
 
-# Setup global error handling
-if setup_error_handling:
-    setup_error_handling(app, enable_debug=settings.DEBUG)
-    logger.info("Global error handling enabled")
+# Security Middleware (in production)
+if not settings.DEBUG:
+    # Force HTTPS in production
+    app.add_middleware(HTTPSRedirectMiddleware)
+    
+    # Trusted hosts
+    app.add_middleware(
+        TrustedHostMiddleware, 
+        allowed_hosts=["api.adcopysurge.com", "*.adcopysurge.com"]
+    )
 
-# SECURITY: Add comprehensive security middleware (order matters)
-add_content_security_middleware(app)        # First - validate incoming content
-add_security_headers_middleware(app)         # Add security headers to all responses
-add_security_reporting_middleware(app)       # Handle security violation reports
-add_csrf_protection_middleware(app)          # CSRF protection for state-changing requests
-add_rate_limiting_middleware(app)            # Rate limiting (after auth to get user context)
-
-# CORS middleware with proper origin handling
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,  # Use CORS_ORIGINS instead of ALLOWED_HOSTS
+    allow_origins=settings.ALLOWED_HOSTS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
-    expose_headers=["*"]
+    expose_headers=["X-Total-Count", "X-Request-ID"],
 )
 
-# Include routers
-app.include_router(health_router, tags=["monitoring"])  # Health checks at root level
-app.include_router(auth_status_router, prefix="/api", tags=["authentication"])  # Enhanced auth status
+
+# Security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    start_time = time.time()
+    
+    response = await call_next(request)
+    
+    # Add security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    
+    if not settings.DEBUG:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self' https://api.openai.com"
+        )
+    
+    # Add request timing
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    
+    return response
+
+
+# Health check endpoints
+@app.get("/health")
+async def health_check():
+    """Basic health check"""
+    return {"status": "healthy", "timestamp": time.time()}
+
+
+@app.get("/healthz")
+async def kubernetes_health_check():
+    """Kubernetes-style health check with dependencies"""
+    health_status = {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "version": settings.APP_VERSION,
+        "checks": {}
+    }
+    
+    # Check database
+    try:
+        # Simple database check with proper SQL syntax
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT 1 as test"))
+            test_value = result.scalar()
+            if test_value == 1:
+                health_status["checks"]["database"] = "healthy"
+            else:
+                health_status["checks"]["database"] = f"unexpected_result: {test_value}"
+                health_status["status"] = "unhealthy"
+    except Exception as e:
+        health_status["checks"]["database"] = f"unhealthy: {str(e)}"
+        health_status["status"] = "unhealthy"
+    
+    # Check Redis (if configured)
+    if settings.REDIS_URL and settings.REDIS_URL != "redis://localhost:6379":
+        try:
+            import redis
+            redis_client = redis.from_url(settings.REDIS_URL)
+            redis_client.ping()
+            health_status["checks"]["redis"] = "healthy"
+        except Exception as e:
+            health_status["checks"]["redis"] = f"unhealthy: {str(e)}"
+            # Redis is not critical, don't mark as unhealthy
+    
+    # Check OpenAI API (if configured)
+    if settings.OPENAI_API_KEY:
+        health_status["checks"]["openai"] = "configured"
+    else:
+        health_status["checks"]["openai"] = "not_configured"
+    
+    
+    status_code = 200 if health_status["status"] == "healthy" else 503
+    return JSONResponse(content=health_status, status_code=status_code)
+
+
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Prometheus metrics endpoint"""
+    try:
+        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    except ImportError:
+        return {"error": "Prometheus client not installed"}
+
+
+# Include API routes
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(ads.router, prefix="/api/ads", tags=["ad-analysis"])
-app.include_router(creative_router, prefix="/api/creative", tags=["creative-controls"])  # Phase 4-7 Creative Controls
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
-app.include_router(integrations_router, prefix="/api", tags=["integrations"])
+app.include_router(whitelabel_router, prefix="/api/whitelabel", tags=["white-label"])
+app.include_router(credits_router, prefix="/api", tags=["credits"])
 
-# Include blog router if enabled and available
-if blog_router is not None:
-    app.include_router(blog_router, prefix="/api/blog", tags=["blog"])
-    logger.info("Blog router included with prefix /api/blog")
-else:
-    logger.info("Blog router not included - disabled or import failed")
+
 
 @app.get("/")
 async def root():
-    return {"message": "AdCopySurge API is running", "version": "1.0.0"}
+    """Root endpoint"""
+    return {
+        "message": "AdCopySurge API is running",
+        "version": settings.VERSION,
+        "docs": "/api/docs" if settings.DEBUG else None,
+        "health": "/health"
+    }
 
-# Health endpoints now handled by health.router
 
-# Static files are served by Netlify in production
-# Keep this for local development only
-if settings.DEBUG and not settings.is_vps:
-    static_files_path = Path(__file__).parent / "../frontend/build"
-    if static_files_path.exists():
-        app.mount("/static", StaticFiles(directory=str(static_files_path)), name="static")
-        logger.info("Static file serving enabled for local development")
-    else:
-        logger.info("Frontend build directory not found - static serving disabled")
-else:
-    logger.info("Static file serving disabled - frontend served by Netlify")
+# Custom exception handlers
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "Resource not found",
+            "path": str(request.url.path),
+            "method": request.method
+        }
+    )
+
+
+@app.exception_handler(500)
+async def internal_error_handler(request: Request, exc: Exception):
+    logger.error(f"Internal server error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal server error",
+            "request_id": getattr(request.state, "request_id", None)
+        }
+    )
+
 
 if __name__ == "__main__":
+    # This is for development only
+    # In production, use gunicorn/uvicorn with proper configuration
     uvicorn.run(
-        "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG
+        "main_production:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=False,
+        log_level="info",
+        access_log=True,
+        server_header=False,
+        date_header=False
     )

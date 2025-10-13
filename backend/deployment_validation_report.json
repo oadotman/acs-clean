@@ -1,0 +1,35 @@
+{
+  "deployment_ready": true,
+  "total_checks": 23,
+  "passed": 19,
+  "warnings": 4,
+  "issues": 0,
+  "critical_issues": [],
+  "warnings_list": [
+    "Using Python 3.13.1, target VPS uses 3.11",
+    ".env file exists - ensure it's not committed to version control",
+    "Multiple requirements files found: ['requirements-compatible.txt', 'requirements-minimal.txt', 'requirements-old.txt', 'requirements-production.txt', 'requirements-python37-fixed.txt', 'requirements.txt']",
+    "Consider consolidating to single requirements.txt"
+  ],
+  "passed_checks": [
+    "Main application imports successfully",
+    "FastAPI app found: AdCopySurge API",
+    "requirements.txt exists",
+    "Found 62 packages in requirements.txt",
+    "Critical package found: fastapi",
+    "Critical package found: uvicorn",
+    "Critical package found: gunicorn",
+    "Critical package found: sqlalchemy",
+    "Critical package found: pydantic",
+    "gunicorn.conf.py exists",
+    "Gunicorn bind configuration found",
+    "Gunicorn workers configuration found",
+    "__init__.py found: app\\__init__.py",
+    "__init__.py found: app\\api\\__init__.py",
+    "__init__.py found: app\\core\\__init__.py",
+    "__init__.py found: app\\models\\__init__.py",
+    ".env.example found",
+    "No blog references in main.py",
+    "Frontend Supabase client found"
+  ]
+}

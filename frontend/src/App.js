@@ -74,14 +74,9 @@ import './utils/supabaseDebug';
 import walletBlocker from './utils/walletBlocker';
 import NoWallet from './components/NoWallet';
 
-// Blog
-import { BlogProvider } from './contexts/BlogContext';
 
 // Settings
 import { SettingsProvider } from './contexts/SettingsContext';
-import Blog from './pages/Blog';
-import BlogPost from './pages/BlogPost';
-import BlogCategory from './pages/BlogCategory';
 
 // Agency Pages
 import AgencyIntegrations from './pages/agency/Integrations';
@@ -473,7 +468,6 @@ function App() {
             <CssBaseline />
             <SettingsProvider>
               <AuthProvider>
-                <BlogProvider>
                 <Router>
               <Routes>
                 {/* Public Routes */}
@@ -490,11 +484,6 @@ function App() {
                 <Route path="/resources/tutorials" element={<LegacyAppLayout><TutorialsGuides /></LegacyAppLayout>} />
                 <Route path="/resources/case-studies" element={<LegacyAppLayout><CaseStudies /></LegacyAppLayout>} />
                 <Route path="/resources/videos" element={<LegacyAppLayout><div>Videos - Coming Soon</div></LegacyAppLayout>} />
-                <Route path="/resources/blog" element={<Navigate to="/blog" replace />} />
-                <Route path="/blog" element={<LegacyAppLayout><Blog /></LegacyAppLayout>} />
-                <Route path="/blog/:slug" element={<LegacyAppLayout><BlogPost /></LegacyAppLayout>} />
-                <Route path="/blog/category/:category" element={<LegacyAppLayout><BlogCategory /></LegacyAppLayout>} />
-                <Route path="/blog/tag/:tag" element={<LegacyAppLayout><BlogCategory /></LegacyAppLayout>} />
                 
                 {/* Legal and Company Pages */}
                 <Route path="/privacy" element={<LegacyAppLayout><Privacy /></LegacyAppLayout>} />
@@ -554,7 +543,6 @@ function App() {
                 </Routes>
                 <Toaster position="top-right" />
               </Router>
-              </BlogProvider>
             </AuthProvider>
           </SettingsProvider>
         </ThemeModeProvider>

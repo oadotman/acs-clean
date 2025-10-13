@@ -24,8 +24,8 @@ class PaddleService:
     def __init__(self, db: Session):
         self.db = db
         self.vendor_id = settings.PADDLE_VENDOR_ID
-        self.auth_code = settings.PADDLE_AUTH_CODE
-        self.public_key = settings.PADDLE_PUBLIC_KEY
+        self.auth_code = settings.PADDLE_API_KEY
+        self.public_key = settings.PADDLE_WEBHOOK_SECRET
         self.api_url = settings.PADDLE_API_URL
         self.environment = settings.PADDLE_ENVIRONMENT
         
@@ -430,9 +430,13 @@ class PaddleService:
         
         limits = self._get_subscription_limits(user.subscription_tier)
         
+        # Handle unlimited plans (-1 means unlimited)
+        monthly_limit = limits['monthly_limit']
+        can_analyze = monthly_limit == -1 or user.monthly_analyses < monthly_limit
+        
         return {
             'current_usage': user.monthly_analyses,
-            'limit': limits['monthly_limit'],
-            'can_analyze': user.monthly_analyses < limits['monthly_limit'],
+            'limit': monthly_limit,
+            'can_analyze': can_analyze,
             'tier': user.subscription_tier.value
         }

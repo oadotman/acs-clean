@@ -5,13 +5,13 @@ This repository previously had multiple FastAPI entrypoints. To eliminate confus
 - Production (VPS, Nginx, systemd)
   - Command: uvicorn main_production:app --host 0.0.0.0 --port 8000 --workers 2
   - File: backend/main_production.py (canonical production app)
-  - Features: strict security headers, CORS/TrustedHost for prod, health/metrics endpoints, blog router mounted at /api/blog.
+  - Features: strict security headers, CORS/TrustedHost for prod, health/metrics endpoints.
   - The systemd unit (backend/deploy/adcopysurge.service) points here.
 
 - Development (local dev with auto-reload)
   - Command: uvicorn main:app --reload
   - File: backend/main.py (dev/staging app)
-  - Features: friendly CORS for localhost, conditional blog router, dev docs enabled.
+  - Features: friendly CORS for localhost, dev docs enabled.
 
 Dev-only file (do NOT use in production)
 - backend/main_launch_ready.py
@@ -29,11 +29,6 @@ Environment variables (minimum for production)
 - ENVIRONMENT=production
 - SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET
 - ALLOWED_HOSTS or CORS_ORIGINS (if serving cross-origin)
-- BLOG_CONTENT_DIR (optional; defaults to content/blog)
-
-Blog system
-- Backend serves markdown posts from BLOG_CONTENT_DIR (/opt/adcopysurge/backend/content/blog in prod).
-- Frontend uses relative /api/blog in production via Nginx.
 
 Notes
 - For Windows local dev, you can still run: python -m uvicorn main:app --reload

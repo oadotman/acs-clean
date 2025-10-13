@@ -93,7 +93,6 @@ const Footer = () => {
     { label: 'Getting Started', to: '/resources/getting-started' },
     { label: 'Tutorials & Guides', to: '/resources/tutorials' },
     { label: 'Case Studies', to: '/resources/case-studies' },
-    { label: 'Blog', to: '/blog' }
   ];
 
   const companyLinks = [

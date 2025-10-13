@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
+import whiteLabelApiService from '../services/whiteLabelApiService';
 
 const WhiteLabelContext = createContext();
 
@@ -55,11 +56,62 @@ export const WhiteLabelProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Load settings from backend on initialization
+  useEffect(() => {
+    const loadSettingsFromBackend = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Check if backend API is available
+        const apiHealth = await whiteLabelApiService.checkApiHealth();
+        
+        if (apiHealth.available) {
+          // Try to load settings from backend
+          const result = await whiteLabelApiService.loadSettings();
+          
+          if (result.success && result.data) {
+            // Transform backend data to frontend format
+            const backendSettings = {
+              companyName: result.data.company_name || DEFAULT_SETTINGS.companyName,
+              customDomain: result.data.custom_domain || DEFAULT_SETTINGS.customDomain,
+              customSupportEmail: result.data.custom_support_email || DEFAULT_SETTINGS.customSupportEmail,
+              primaryColor: result.data.primary_color || DEFAULT_SETTINGS.primaryColor,
+              secondaryColor: result.data.secondary_color || DEFAULT_SETTINGS.secondaryColor,
+              accentColor: result.data.accent_color || DEFAULT_SETTINGS.accentColor,
+              hideOriginalBranding: result.data.hide_original_branding || DEFAULT_SETTINGS.hideOriginalBranding,
+              removePoweredBy: result.data.remove_powered_by || DEFAULT_SETTINGS.removePoweredBy,
+              customLoginPage: result.data.custom_login_page || DEFAULT_SETTINGS.customLoginPage,
+              sslEnabled: result.data.ssl_enabled || DEFAULT_SETTINGS.sslEnabled,
+              enabled: result.data.enabled || DEFAULT_SETTINGS.enabled,
+              setupCompleted: result.data.setup_completed || DEFAULT_SETTINGS.setupCompleted
+            };
+            
+            // Merge with localStorage settings and backend settings
+            setSettings(prev => ({ ...prev, ...backendSettings }));
+            console.log('Ἲ8 White-label settings loaded from backend');
+          } else {
+            console.log('Ἲ8 No backend settings found, using localStorage/defaults');
+          }
+        } else {
+          console.log('Ἲ8 Backend API unavailable, using localStorage settings');
+        }
+      } catch (error) {
+        console.error('Failed to load settings from backend:', error);
+        // Continue with localStorage settings
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Only run once on mount
+    loadSettingsFromBackend();
+  }, []);
+
   // Persist settings to localStorage whenever they change
   useEffect(() => {
     try {
       localStorage.setItem('whiteLabel-settings', JSON.stringify(settings));
-      console.log('🎨 White-label settings saved to localStorage');
+      console.log('Ἲ8 White-label settings saved to localStorage');
     } catch (error) {
       console.error('Failed to save white-label settings:', error);
     }
@@ -133,13 +185,33 @@ export const WhiteLabelProvider = ({ children }) => {
   // Handle logo upload
   const handleLogoUpload = async (file) => {
     try {
-      const logoData = await uploadFile(file, 'logo');
-      updateSetting('customLogo', logoData);
-      toast.success('Logo uploaded successfully!');
+      setIsLoading(true);
+      
+      // Check if backend API is available
+      const apiHealth = await whiteLabelApiService.checkApiHealth();
+      
+      if (apiHealth.available) {
+        // Use backend API
+        const result = await whiteLabelApiService.uploadLogo(file);
+        
+        if (result.success) {
+          updateSetting('customLogo', result.data.url);
+          toast.success('Logo uploaded successfully!');
+        } else {
+          throw new Error(result.error);
+        }
+      } else {
+        // Fallback to client-side processing
+        const logoData = await uploadFile(file, 'logo');
+        updateSetting('customLogo', logoData);
+        toast.success('Logo uploaded successfully! (Note: Using local storage)');
+      }
     } catch (error) {
       console.error('Logo upload failed:', error);
       toast.error(error.message);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -169,10 +241,82 @@ export const WhiteLabelProvider = ({ children }) => {
     }
   };
 
-  // Validate domain format
-  const validateDomain = (domain) => {
-    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.([a-zA-Z]{2,})$/;
-    return domainRegex.test(domain);
+  // Validate domain
+  const validateDomain = async (domain) => {
+    try {
+      setIsLoading(true);
+      
+      // Check if backend API is available
+      const apiHealth = await whiteLabelApiService.checkApiHealth();
+      
+      if (apiHealth.available) {
+        // Use backend API for domain validation
+        const result = await whiteLabelApiService.validateDomain(domain);
+        
+        if (result.success) {
+          console.log('✅ Domain validated:', domain);
+          toast.success('Domain validated successfully!');
+          return { valid: true, domain };
+        } else {
+          throw new Error(result.error);
+        }
+      } else {
+        // Fallback to client-side validation
+        const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.([a-zA-Z]{2,})$/;
+        
+        if (!domainRegex.test(domain)) {
+          throw new Error('Invalid domain format');
+        }
+        
+        // Simulate DNS check
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        console.log('✅ Domain validated (client-side):', domain);
+        toast.success('Domain validated successfully! (Note: Using client-side validation)');
+        return { valid: true, domain };
+      }
+    } catch (error) {
+      console.error('Domain validation failed:', error);
+      toast.error(error.message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Test email sending
+  const testEmail = async (email) => {
+    try {
+      setIsLoading(true);
+      
+      // Check if backend API is available
+      const apiHealth = await whiteLabelApiService.checkApiHealth();
+      
+      if (apiHealth.available) {
+        // Use backend API to send test email
+        const result = await whiteLabelApiService.testEmail(email);
+        
+        if (result.success) {
+          console.log('✉ Test email sent to:', email);
+          toast.success(`Test email sent to ${email}`);
+          return { success: true };
+        } else {
+          throw new Error(result.error);
+        }
+      } else {
+        // Simulate sending email (fallback)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('✉ Test email simulated to:', email);
+        toast.success(`Test email simulated to ${email} (backend unavailable)`);
+        return { success: true };
+      }
+    } catch (error) {
+      console.error('Failed to send test email:', error);
+      toast.error('Failed to send test email');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Setup wizard navigation
@@ -214,15 +358,38 @@ export const WhiteLabelProvider = ({ children }) => {
     try {
       setIsLoading(true);
       
-      // In production, this would save to backend API
-      // For now, we just ensure localStorage is updated
-      localStorage.setItem('whiteLabel-settings', JSON.stringify(settings));
+      // Check if backend API is available
+      const apiHealth = await whiteLabelApiService.checkApiHealth();
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      console.log('✅ White-label settings saved successfully');
-      return { success: true };
+      if (apiHealth.available) {
+        // Save to backend API
+        const result = await whiteLabelApiService.saveSettings({
+          company_name: settings.companyName,
+          custom_domain: settings.customDomain,
+          custom_support_email: settings.customSupportEmail,
+          primary_color: settings.primaryColor,
+          secondary_color: settings.secondaryColor,
+          accent_color: settings.accentColor,
+          hide_original_branding: settings.hideOriginalBranding,
+          remove_powered_by: settings.removePoweredBy,
+          custom_login_page: settings.customLoginPage,
+          ssl_enabled: settings.sslEnabled
+        });
+        
+        if (result.success) {
+          // Also save to localStorage as backup
+          localStorage.setItem('whiteLabel-settings', JSON.stringify(settings));
+          console.log('✅ White-label settings saved to backend and localStorage');
+          return { success: true };
+        } else {
+          throw new Error(result.error);
+        }
+      } else {
+        // Fallback to localStorage only
+        localStorage.setItem('whiteLabel-settings', JSON.stringify(settings));
+        console.log('✅ White-label settings saved to localStorage (backend unavailable)');
+        return { success: true };
+      }
     } catch (error) {
       console.error('Failed to save white-label settings:', error);
       setError(error.message);
@@ -279,8 +446,9 @@ export const WhiteLabelProvider = ({ children }) => {
     prevStep,
     completeSetup,
     
-    // Validation
+    // Validation and testing
     validateDomain,
+    testEmail,
     isMinimumSetupComplete,
     
     // Computed values

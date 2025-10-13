@@ -36,7 +36,6 @@ import {
   Business as CaseStudiesIcon,
   Code as ApiIcon,
   VideoLibrary as VideoIcon,
-  Article as BlogIcon
 } from '@mui/icons-material';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useCallback, useEffect } from 'react';
@@ -132,12 +131,6 @@ const Navbar = ({ onSidebarToggle, showSidebarToggle = false }) => {
       icon: <VideoIcon sx={{ fontSize: '1.2rem' }} />,
       to: '/resources/videos'
     },
-    {
-      label: 'Blog',
-      description: 'Marketing insights and product updates',
-      icon: <BlogIcon sx={{ fontSize: '1.2rem' }} />,
-      to: '/blog'
-    }
   ];
 
   const getSubscriptionColor = (tier) => {

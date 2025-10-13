@@ -224,43 +224,8 @@ async def health_check():
         }
         logger.warning(f"Memory check failed: {e}")
 
-    # 4. Blog service health check
-    try:
-        if getattr(settings, "ENABLE_BLOG", True):
-            try:
-                from app.blog.services.blog_service import BlogService
-                blog_service = BlogService(
-                    getattr(settings, "BLOG_CONTENT_DIR", "content/blog"),
-                    getattr(settings, "BLOG_GRACEFUL_DEGRADATION", True)
-                )
-                blog_health = blog_service.get_health_status()
-                blog_status = ComponentState.HEALTHY if blog_health["healthy"] else ComponentState.DEGRADED
-                health_status["checks"]["blog_service"] = {
-                    "status": blog_status,
-                    "message": blog_health.get("error_message", "Blog service operational"),
-                    "dependencies": blog_health.get("dependencies", {})
-                }
-                if blog_status == ComponentState.DEGRADED and overall_health == ComponentState.HEALTHY:
-                    overall_health = ComponentState.DEGRADED
-            except Exception as e:
-                health_status["checks"]["blog_service"] = {
-                    "status": ComponentState.DOWN,
-                    "message": f"Blog service check failed: {str(e)[:100]}"
-                }
-                logger.warning(f"Blog service health check failed: {e}")
-        else:
-            health_status["checks"]["blog_service"] = {
-                "status": ComponentState.DISABLED,
-                "message": "Blog functionality disabled via configuration"
-            }
-    except Exception as e:
-        health_status["checks"]["blog_service"] = {
-            "status": ComponentState.UNKNOWN,
-            "message": f"Blog service check error: {str(e)[:50]}"
-        }
-        logger.warning(f"Blog service health check error: {e}")
 
-    # 5. Enhanced Supabase authentication health check
+    # 4. Enhanced Supabase authentication health check
     try:
         try:
             from app.api.v1.auth_status import auth_health_check
@@ -306,7 +271,7 @@ async def health_check():
         }
         logger.warning(f"Authentication check error: {e}")
 
-    # 6. Check critical environment variables
+    # 5. Check critical environment variables
     try:
         critical_vars = ["SECRET_KEY"]  # Removed DATABASE_URL since it may not be required
         missing_vars = []

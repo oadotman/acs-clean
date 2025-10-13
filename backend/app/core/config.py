@@ -138,11 +138,6 @@ class Settings(BaseSettings):
     ENABLE_COMPETITOR_ANALYSIS: bool = Field(default=False, description="Enable competitor analysis")
     ENABLE_PDF_REPORTS: bool = Field(default=True, description="Enable PDF report generation")
     ENABLE_RATE_LIMITING: bool = Field(default=True, description="Enable API rate limiting")
-    ENABLE_BLOG: bool = Field(default=True, description="Enable blog functionality")
-    
-    # Blog Configuration
-    BLOG_CONTENT_DIR: str = Field(default="content/blog", description="Blog content directory path")
-    BLOG_GRACEFUL_DEGRADATION: bool = Field(default=True, description="Enable graceful degradation for blog errors")
     
     # Business Configuration
     BASIC_PLAN_PRICE: int = Field(default=49, description="Basic plan price in USD")

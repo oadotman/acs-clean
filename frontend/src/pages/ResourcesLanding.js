@@ -20,7 +20,6 @@ import {
   School as TutorialsIcon,
   Business as CaseStudiesIcon,
   VideoLibrary as VideoIcon,
-  Article as BlogIcon,
   Event as WebinarIcon,
   Download as DownloadIcon,
   Search as SearchIcon,
@@ -85,16 +84,6 @@ const ResourcesLanding = () => {
       badge: 'Visual',
       items: ['Product Demos', 'Feature Tutorials', 'Webinar Recordings', 'Expert Interviews']
     },
-    {
-      title: 'Blog & Insights',
-      description: 'Latest marketing trends, product updates, and industry insights from our experts.',
-      icon: <BlogIcon sx={{ fontSize: 40 }} />,
-      color: 'info.main',
-      bgColor: 'info.light',
-      link: '/blog',
-      badge: 'Fresh',
-      items: ['Marketing Trends', 'Product Updates', 'Industry Reports', 'Expert Opinions']
-    }
   ];
 
   const featuredResources = [
