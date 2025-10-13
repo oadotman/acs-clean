@@ -110,25 +110,25 @@ const navigationSections = [
         children: [
           {
             id: 'integrations',
-            label: '🤝 Integrations',
+            label: 'Integrations',
             path: '/agency/integrations',
             icon: IntegrationsIcon
           },
           {
             id: 'team-management',
-            label: '👥 Team Management',
+            label: 'Team Management',
             path: '/agency/team',
             icon: TeamIcon
           },
           {
             id: 'reports-branding',
-            label: '📊 Reports & Branding',
+            label: 'Reports & Branding',
             path: '/agency/reports',
             icon: AgencyReportsIcon
           },
           {
             id: 'white-label',
-            label: '🏷️ White Label Settings',
+            label: 'White Label Settings',
             path: '/agency/white-label',
             icon: WhiteLabelIcon
           }

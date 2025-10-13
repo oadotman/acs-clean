@@ -18,7 +18,7 @@ import { useAuth } from '../services/authContext';
 import paddleService from '../services/paddleService';
 import creditsService from '../services/creditsService';
 import { getUserCredits } from '../utils/creditSystem';
-import { SUBSCRIPTION_TIERS } from '../constants/plans';
+import { SUBSCRIPTION_TIERS, PLAN_LIMITS } from '../constants/plans';
 import toast from 'react-hot-toast';
 
 const CreditsWidget = ({ collapsed = false }) => {

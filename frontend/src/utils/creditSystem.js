@@ -73,7 +73,28 @@ export const getUserCredits = async (userId) => {
   try {
     console.log('💳 Getting user credits for:', userId);
     
-    // Try to get credits from Supabase
+    // Try to use the new safe function first
+    try {
+      const { data, error } = await supabase.rpc('get_user_credits_safe', {
+        p_user_id: userId
+      });
+      
+      if (!error && data) {
+        console.log('✅ Retrieved user credits via safe function:', data);
+        return {
+          credits: data.credits || 0,
+          monthlyAllowance: data.monthlyallowance || 0,
+          lastReset: data.lastreset,
+          totalUsed: data.totalused || 0,
+          bonusCredits: data.bonuscredits || 0,
+          subscriptionTier: data.subscriptiontier || SUBSCRIPTION_TIERS.FREE
+        };
+      }
+    } catch (funcError) {
+      console.warn('⚠️ Safe function failed, trying direct access:', funcError);
+    }
+    
+    // Fallback to direct table access
     const { data, error } = await supabase
       .from('user_credits')
       .select('*')
