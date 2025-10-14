@@ -27,7 +27,7 @@ const Terms = () => {
           {/* Introduction */}
           <Typography variant="body1" sx={{ mb: 4, fontSize: '1.1rem', lineHeight: 1.7 }}>
             Welcome to AdCopySurge. These Terms of Service ("Terms") govern your use of our marketing intelligence platform 
-            and services provided by AdCopySurge Inc. ("Company", "we", "us", or "our").
+            and services provided by Nikola Innovations Limited ("Company", "we", "us", or "our").
           </Typography>
 
           <Typography variant="body1" sx={{ mb: 4, fontSize: '1.1rem', lineHeight: 1.7 }}>
@@ -82,23 +82,54 @@ const Terms = () => {
           </Typography>
           <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }}>
             Our service offers both free and paid subscription tiers. Paid subscriptions are billed monthly or annually as selected. 
-            All fees are non-refundable except as required by law or as explicitly stated in our refund policy. We reserve the right 
+            All fees are subject to our 30-day money-back guarantee as outlined in our refund policy below. We reserve the right 
             to change our pricing with 30 days' notice to existing subscribers.
           </Typography>
 
-          {/* Section 5 */}
+          {/* Section 5 - Refund Policy */}
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
-            5. Intellectual Property Rights
+            5. Refund Policy - 30-Day Money-Back Guarantee
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.7 }}>
+            We offer a 30-day money-back guarantee for all paid subscription plans:
+          </Typography>
+          <Box component="ul" sx={{ pl: 3, mb: 2 }}>
+            <li><Typography variant="body1" sx={{ mb: 1 }}>You can request a full refund within 30 days of your initial subscription purchase</Typography></li>
+            <li><Typography variant="body1" sx={{ mb: 1 }}>Refunds are available for first-time subscribers to a particular plan tier</Typography></li>
+            <li><Typography variant="body1" sx={{ mb: 1 }}>The refund covers the current billing period only</Typography></li>
+            <li><Typography variant="body1" sx={{ mb: 1 }}>Refund requests must be submitted via email to support@adcopysurge.com</Typography></li>
+          </Box>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            Refund Process
+          </Typography>
+          <Box component="ul" sx={{ pl: 3, mb: 2 }}>
+            <li><Typography variant="body1" sx={{ mb: 1 }}>Refunds will be processed within 5-10 business days</Typography></li>
+            <li><Typography variant="body1" sx={{ mb: 1 }}>Refunds will be issued to the original payment method</Typography></li>
+            <li><Typography variant="body1" sx={{ mb: 1 }}>Upon refund approval, your account will be downgraded to the free plan</Typography></li>
+            <li><Typography variant="body1" sx={{ mb: 1 }}>You will retain access to your data and can re-subscribe at any time</Typography></li>
+          </Box>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            Refund Exclusions
+          </Typography>
+          <Box component="ul" sx={{ pl: 3, mb: 4 }}>
+            <li><Typography variant="body1" sx={{ mb: 1 }}>Add-on services and one-time purchases are non-refundable</Typography></li>
+            <li><Typography variant="body1" sx={{ mb: 1 }}>Accounts terminated for violations of these Terms are not eligible for refunds</Typography></li>
+            <li><Typography variant="body1" sx={{ mb: 1 }}>Subsequent renewals of the same plan tier are subject to standard terms</Typography></li>
+          </Box>
+
+          {/* Section 6 */}
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
+            6. Intellectual Property Rights
           </Typography>
           <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }}>
-            The AdCopySurge platform, including all content, features, and functionality, is owned by AdCopySurge Inc. 
+            The AdCopySurge platform, including all content, features, and functionality, is owned by Nikola Innovations Limited 
             and is protected by copyright, trademark, and other intellectual property laws. You retain ownership of your campaign data 
             and content, but grant us a limited license to process and analyze it to provide our services.
           </Typography>
 
-          {/* Section 6 */}
+          {/* Section 7 */}
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
-            6. Data Privacy and Security
+            7. Data Privacy and Security
           </Typography>
           <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }}>
             We take data privacy seriously and are committed to protecting your information. Our data practices are governed by our 
@@ -106,9 +137,9 @@ const Terms = () => {
             to protect your data and comply with applicable data protection regulations including GDPR and CCPA.
           </Typography>
 
-          {/* Section 7 */}
+          {/* Section 8 */}
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
-            7. Prohibited Uses
+            8. Prohibited Uses
           </Typography>
           <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.7 }}>
             You may not use our service to:
@@ -121,9 +152,9 @@ const Terms = () => {
             <li><Typography variant="body1" sx={{ mb: 1 }}>Interfere with or disrupt the service or servers</Typography></li>
           </Box>
 
-          {/* Section 8 */}
+          {/* Section 9 */}
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
-            8. Service Availability and Modifications
+            9. Service Availability and Modifications
           </Typography>
           <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }}>
             We strive to maintain high service availability but cannot guarantee uninterrupted access. We may modify, suspend, 
@@ -131,19 +162,19 @@ const Terms = () => {
             advance notice of significant changes that may affect your use of the service.
           </Typography>
 
-          {/* Section 9 */}
+          {/* Section 10 */}
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
-            9. Limitation of Liability
+            10. Limitation of Liability
           </Typography>
           <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }}>
-            TO THE MAXIMUM EXTENT PERMITTED BY LAW, ADCOPYSURGE INC. SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, 
+            TO THE MAXIMUM EXTENT PERMITTED BY LAW, NIKOLA INNOVATIONS LIMITED SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, 
             SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR REVENUES, WHETHER INCURRED DIRECTLY OR INDIRECTLY, 
             OR ANY LOSS OF DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES RESULTING FROM YOUR USE OF THE SERVICE.
           </Typography>
 
-          {/* Section 10 */}
+          {/* Section 11 */}
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
-            10. Termination
+            11. Termination
           </Typography>
           <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }}>
             Either party may terminate this agreement at any time. Upon termination, your access to the service will cease, 
@@ -151,41 +182,44 @@ const Terms = () => {
             that by their nature should survive termination will remain in effect.
           </Typography>
 
-          {/* Section 11 */}
+          {/* Section 12 */}
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
-            11. Changes to Terms
+            12. Changes to Terms
           </Typography>
           <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }}>
             We may update these Terms from time to time. We will notify users of significant changes by email or through the service. 
             Your continued use of the service after such modifications constitutes acceptance of the updated Terms.
           </Typography>
 
-          {/* Section 12 */}
+          {/* Section 13 */}
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
-            12. Governing Law
+            13. Governing Law
           </Typography>
           <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }}>
-            These Terms are governed by and construed in accordance with the laws of the State of California, USA, without regard to its 
+            These Terms are governed by and construed in accordance with the laws of the Federal Republic of Nigeria, without regard to its 
             conflict of law principles. Any disputes arising from these Terms or your use of the service will be resolved 
-            through binding arbitration or in the courts of California, USA.
+            through binding arbitration or in the courts of Nigeria.
           </Typography>
 
           {/* Contact */}
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
-            13. Contact Information
+            14. Contact Information
           </Typography>
           <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }}>
             If you have questions about these Terms, please contact us at:
           </Typography>
           <Box sx={{ pl: 2, mb: 4 }}>
             <Typography variant="body1" sx={{ mb: 1 }}>
-              Email: legal@adcopysurge.com
+              Email: support@adcopysurge.com
             </Typography>
             <Typography variant="body1" sx={{ mb: 1 }}>
-              Address: AdCopySurge Inc.
+              Phone: +234 810 674 0579
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              Address: Nikola Innovations Limited
             </Typography>
             <Typography variant="body1">
-              123 Market Street, Suite 400, San Francisco, CA 94105, USA
+              45, Sobo Arobiodu Street, Ikeja GRA, Lagos, Nigeria
             </Typography>
           </Box>
 

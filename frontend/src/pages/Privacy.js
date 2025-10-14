@@ -35,7 +35,7 @@ const Privacy = () => {
         <Paper elevation={1} sx={{ p: 4 }}>
           {/* Introduction */}
           <Typography variant="body1" sx={{ mb: 4, fontSize: '1.1rem', lineHeight: 1.7 }}>
-            This Privacy Policy describes how AdCopySurge Inc. ("we," "us," or "our") collects, uses, and shares 
+            This Privacy Policy describes how Nikola Innovations Limited ("we," "us," or "our") collects, uses, and shares 
             information about you when you use our AdCopySurge platform and services.
           </Typography>
 
@@ -198,16 +198,19 @@ const Privacy = () => {
           </Typography>
           <Box sx={{ pl: 2, mb: 4 }}>
             <Typography variant="body1" sx={{ mb: 1 }}>
-              <strong>Email:</strong> privacy@adcopysurge.com
+              <strong>Email:</strong> support@adcopysurge.com
             </Typography>
             <Typography variant="body1" sx={{ mb: 1 }}>
-              <strong>Address:</strong> AdCopySurge Inc.
+              <strong>Phone:</strong> +234 810 674 0579
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              <strong>Address:</strong> Nikola Innovations Limited
             </Typography>
             <Typography variant="body1" sx={{ mb: 2 }}>
-              123 Market Street, Suite 400, San Francisco, CA 94105, USA
+              45, Sobo Arobiodu Street, Ikeja GRA, Lagos, Nigeria
             </Typography>
             <Typography variant="body1">
-              <strong>Data Protection Officer:</strong> dpo@adcopysurge.com
+              <strong>Data Protection Officer:</strong> support@adcopysurge.com
             </Typography>
           </Box>
 
