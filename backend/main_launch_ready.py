@@ -322,10 +322,83 @@ async def comprehensive_analyze_ad(request: dict):
             brand_voice_analysis = tool_results.get('brand_voice_engine', {})
             legal_analysis = tool_results.get('legal_risk_scanner', {})
             
-            # Get improved copy from ROI or A/B test generator
+            # Extract A/B/C variants from ab_test_generator
+            abc_variants = []
+            if ab_test_analysis and hasattr(ab_test_analysis, 'variations'):
+                raw_variations = ab_test_analysis.variations
+                # Filter for strategic A/B/C variants (variant_a, variant_b, variant_c)
+                for var in raw_variations:
+                    if var.get('id') in ['variant_a', 'variant_b', 'variant_c']:
+                        abc_variants.append({
+                            'id': var.get('id'),
+                            'type': var.get('type'),
+                            'variant_label': var.get('variant_label'),
+                            'variant_name': var.get('variant_name'),
+                            'variant_description': var.get('variant_description'),
+                            'headline': var.get('headline'),
+                            'body_text': var.get('body_text'),
+                            'cta': var.get('cta'),
+                            'best_for': var.get('best_for', []),
+                            'target_audience': var.get('target_audience'),
+                            'emotional_trigger': var.get('emotional_trigger'),
+                            'psychological_framework': var.get('psychological_framework'),
+                            'copy': f"{var.get('headline')}\n\n{var.get('body_text')}\n\n{var.get('cta')}"
+                        })
+            
+            # If no A/B/C variants, create default ones
+            if len(abc_variants) == 0:
+                abc_variants = [
+                    {
+                        'id': 'variant_a',
+                        'type': 'benefit_focused',
+                        'variant_label': 'VERSION A',
+                        'variant_name': 'Benefit-Focused',
+                        'variant_description': 'Appeals to aspirations and desired outcomes',
+                        'headline': 'Achieve Your Goals Faster',
+                        'body_text': 'Our proven solution delivers results. Join successful users transforming their outcomes.',
+                        'cta': 'Start Achieving Results',
+                        'best_for': ['Solution-seekers', 'Warm leads', 'Known problems'],
+                        'target_audience': 'Users who understand their problem and are actively seeking solutions',
+                        'emotional_trigger': 'Desire for improvement and achievement',
+                        'psychological_framework': 'aspiration',
+                        'copy': 'Achieve Your Goals Faster\n\nOur proven solution delivers results. Join successful users transforming their outcomes.\n\nStart Achieving Results'
+                    },
+                    {
+                        'id': 'variant_b',
+                        'type': 'problem_focused',
+                        'variant_label': 'VERSION B',
+                        'variant_name': 'Problem-Focused',
+                        'variant_description': 'Identifies with pain points and frustrations',
+                        'headline': 'Tired of Wasting Time? Fix It Now',
+                        'body_text': 'Stop struggling. Our solution addresses your pain points and delivers fast relief.',
+                        'cta': 'Solve This Problem Now',
+                        'best_for': ['Pain-aware audiences', 'High urgency', 'Immediate solutions'],
+                        'target_audience': 'Users experiencing acute pain points who need urgent relief',
+                        'emotional_trigger': 'Fear of continued struggle',
+                        'psychological_framework': 'pain_avoidance',
+                        'copy': 'Tired of Wasting Time? Fix It Now\n\nStop struggling. Our solution addresses your pain points and delivers fast relief.\n\nSolve This Problem Now'
+                    },
+                    {
+                        'id': 'variant_c',
+                        'type': 'story_driven',
+                        'variant_label': 'VERSION C',
+                        'variant_name': 'Story-Driven',
+                        'variant_description': 'Creates emotional connection through narrative',
+                        'headline': 'How Professionals Achieved Success',
+                        'body_text': 'Sarah faced challenges. Then she found our solution. Her transformation was remarkable.',
+                        'cta': 'Start Your Story',
+                        'best_for': ['Building trust', 'Cold traffic', 'Brand awareness'],
+                        'target_audience': 'New users who need trust-building',
+                        'emotional_trigger': 'Empathy and relatable stories',
+                        'psychological_framework': 'narrative_connection',
+                        'copy': 'How Professionals Achieved Success\n\nSarah faced challenges. Then she found our solution. Her transformation was remarkable.\n\nStart Your Story'
+                    }
+                ]
+            
+            # Get improved copy from ROI or first A/B/C variant
             improved_copy = (
                 roi_analysis.get('premium_copy') or 
-                ab_test_analysis.get('variations', [{}])[0].get('copy') or
+                (abc_variants[0]['copy'] if abc_variants else None) or
                 ad_copy.replace('Learn More', 'Get Started Now').replace('Click Here', 'Start Free Trial')
             )
             
@@ -362,7 +435,8 @@ async def comprehensive_analyze_ad(request: dict):
                 "triggers": psychology_analysis.get('triggered_principles', [])
             },
             "abTests": {
-                "variations": ab_test_analysis.get('variations', result.alternatives if result else [])
+                "variations": ab_test_analysis.get('variations', result.alternatives if result else []),
+                "abc_variants": abc_variants  # Strategic A/B/C test variants
             },
             "roi": {
                 "segment": roi_analysis.get('target_segment', 'Mass market'),

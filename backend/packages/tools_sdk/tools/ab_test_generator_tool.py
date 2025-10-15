@@ -217,8 +217,168 @@ class ABTestGeneratorToolRunner(ToolRunner):
             'staged_testing': 'Sequential testing with early winners'
         }
     
+    def _generate_strategic_abc_variants(self, base_copy: Dict, elements: Dict, goals: Dict) -> List[Dict[str, Any]]:
+        """Generate 3 strategic A/B/C test variants with distinct psychological angles"""
+        
+        # VERSION A: Benefit-Focused (Appeals to aspirations and desired outcomes)
+        variant_a = {
+            'id': 'variant_a',
+            'type': 'benefit_focused',
+            'variant_label': 'VERSION A',
+            'variant_name': 'Benefit-Focused',
+            'variant_description': 'Appeals to aspirations and desired outcomes',
+            'headline': self._create_benefit_headline(base_copy, elements),
+            'body_text': self._create_benefit_body(base_copy, elements),
+            'cta': self._create_benefit_cta(elements),
+            'psychological_framework': 'aspiration',
+            'best_for': [
+                'Solution-seekers',
+                'Warm leads',
+                'Known problems'
+            ],
+            'target_audience': 'Users who understand their problem and are actively seeking solutions',
+            'emotional_trigger': 'Desire for improvement and achievement',
+            'hypothesis': 'Benefit-focused messaging will resonate with users who have clear goals',
+            'traffic_allocation': 33,
+            'expected_performance': 'high',
+            'test_priority': 'high'
+        }
+        
+        # VERSION B: Problem-Focused (Identifies with pain points and frustrations)
+        variant_b = {
+            'id': 'variant_b',
+            'type': 'problem_focused',
+            'variant_label': 'VERSION B',
+            'variant_name': 'Problem-Focused',
+            'variant_description': 'Identifies with pain points and frustrations',
+            'headline': self._create_problem_headline(base_copy, elements),
+            'body_text': self._create_problem_body(base_copy, elements),
+            'cta': self._create_problem_cta(elements),
+            'psychological_framework': 'pain_avoidance',
+            'best_for': [
+                'Pain-aware audiences',
+                'High urgency',
+                'Immediate solutions'
+            ],
+            'target_audience': 'Users experiencing acute pain points who need urgent relief',
+            'emotional_trigger': 'Fear of continued struggle and frustration',
+            'hypothesis': 'Problem-focused messaging will convert users in pain faster',
+            'traffic_allocation': 33,
+            'expected_performance': 'high',
+            'test_priority': 'high'
+        }
+        
+        # VERSION C: Story-Driven (Creates emotional connection through narrative)
+        variant_c = {
+            'id': 'variant_c',
+            'type': 'story_driven',
+            'variant_label': 'VERSION C',
+            'variant_name': 'Story-Driven',
+            'variant_description': 'Creates emotional connection through narrative',
+            'headline': self._create_story_headline(base_copy, elements),
+            'body_text': self._create_story_body(base_copy, elements),
+            'cta': self._create_story_cta(elements),
+            'psychological_framework': 'narrative_connection',
+            'best_for': [
+                'Building trust',
+                'Cold traffic',
+                'Brand awareness'
+            ],
+            'target_audience': 'New users who need trust-building before purchase',
+            'emotional_trigger': 'Empathy and relatable transformation stories',
+            'hypothesis': 'Story-driven messaging will build trust with cold audiences',
+            'traffic_allocation': 34,
+            'expected_performance': 'medium',
+            'test_priority': 'medium'
+        }
+        
+        return [variant_a, variant_b, variant_c]
+    
+    def _create_benefit_headline(self, base_copy: Dict, elements: Dict) -> str:
+        """Create benefit-focused headline"""
+        benefit = elements.get('benefit', 'transform your results')
+        outcome = elements.get('outcome', 'success')
+        timeframe = elements.get('timeframe', 'days')
+        
+        templates = [
+            f"Achieve {outcome} in {timeframe}",
+            f"Get {benefit} - Starting Today",
+            f"Unlock {outcome} with Proven Methods",
+            f"Transform Your Results: {benefit}"
+        ]
+        return random.choice(templates)
+    
+    def _create_benefit_body(self, base_copy: Dict, elements: Dict) -> str:
+        """Create benefit-focused body text"""
+        benefit = elements.get('benefit', 'better results')
+        return f"Discover how to achieve {benefit}. Our proven solution delivers real results. Join successful users who've transformed their outcomes. Start seeing results immediately."
+    
+    def _create_benefit_cta(self, elements: Dict) -> str:
+        """Create benefit-focused CTA"""
+        return random.choice([
+            "Start Achieving Results",
+            "Get Your Solution Now",
+            "Unlock Your Success",
+            "Begin Your Transformation"
+        ])
+    
+    def _create_problem_headline(self, base_copy: Dict, elements: Dict) -> str:
+        """Create problem-focused headline"""
+        pain_point = elements.get('pain_point', 'struggling')
+        problem = elements.get('problem', 'challenges')
+        
+        templates = [
+            f"Tired of {pain_point}? There's a Solution",
+            f"Stop {problem} - Fix It Today",
+            f"Still {pain_point}? Here's Why",
+            f"End {problem} Once and For All"
+        ]
+        return random.choice(templates)
+    
+    def _create_problem_body(self, base_copy: Dict, elements: Dict) -> str:
+        """Create problem-focused body text"""
+        pain_point = elements.get('pain_point', 'these challenges')
+        return f"If you're experiencing {pain_point}, you're not alone. The frustration ends now. Our solution directly addresses your biggest pain points and delivers fast relief. No more {pain_point}."
+    
+    def _create_problem_cta(self, elements: Dict) -> str:
+        """Create problem-focused CTA"""
+        return random.choice([
+            "Solve This Problem Now",
+            "End Your Frustration",
+            "Fix This Today",
+            "Stop Struggling Now"
+        ])
+    
+    def _create_story_headline(self, base_copy: Dict, elements: Dict) -> str:
+        """Create story-driven headline"""
+        audience = elements.get('audience', 'people')
+        outcome = elements.get('outcome', 'success')
+        
+        templates = [
+            f"How {audience} Achieved {outcome}",
+            f"From Struggle to {outcome}: A Real Story",
+            f"Meet Someone Who Transformed Their Results",
+            f"The Journey to {outcome}"
+        ]
+        return random.choice(templates)
+    
+    def _create_story_body(self, base_copy: Dict, elements: Dict) -> str:
+        """Create story-driven body text"""
+        audience = elements.get('audience', 'users')
+        outcome = elements.get('outcome', 'amazing results')
+        return f"Like many {audience}, Sarah faced real challenges. Then she discovered our solution. Her transformation was remarkable. Now she enjoys {outcome} daily. Her story could be yours."
+    
+    def _create_story_cta(self, elements: Dict) -> str:
+        """Create story-driven CTA"""
+        return random.choice([
+            "Start Your Story",
+            "Begin Your Journey",
+            "Join Their Success",
+            "Write Your Success Story"
+        ])
+    
     async def run(self, input_data: ToolInput) -> ToolOutput:
-        """Generate A/B test variations with hypotheses"""
+        """Generate A/B/C strategic test variations"""
         start_time = time.time()
         
         try:
@@ -231,30 +391,35 @@ class ABTestGeneratorToolRunner(ToolRunner):
             
             # Parse campaign goals and priorities from additional data
             campaign_goals = self._extract_campaign_goals(input_data)
+            elements = self._extract_copy_elements(base_copy)
+            
+            # Generate 3 STRATEGIC A/B/C variants
+            variations = self._generate_strategic_abc_variants(base_copy, elements, campaign_goals)
+            
+            # FALLBACK: Also generate traditional variations for backward compatibility
+            traditional_variations = []
             testing_priorities = self._extract_testing_priorities(input_data)
             audience_insights = self._extract_audience_insights(input_data)
             
             # Generate control version (original copy)
             control_variation = self._create_control_variation(base_copy)
-            
-            # Generate test variations
-            variations = [control_variation]
+            traditional_variations.append(control_variation)
             
             # Create variations based on testing priorities
             if 'headline' in testing_priorities:
-                variations.extend(self._generate_headline_variations(base_copy, campaign_goals, 3))
+                traditional_variations.extend(self._generate_headline_variations(base_copy, campaign_goals, 3))
             
             if 'psychological_angle' in testing_priorities:
-                variations.extend(self._generate_psychology_variations(base_copy, campaign_goals, 3))
+                traditional_variations.extend(self._generate_psychology_variations(base_copy, campaign_goals, 3))
             
             if 'cta' in testing_priorities:
-                variations.extend(self._generate_cta_variations(base_copy, campaign_goals, 2))
+                traditional_variations.extend(self._generate_cta_variations(base_copy, campaign_goals, 2))
             
             # Ensure we have 5-10 variations total
-            while len(variations) < 5:
-                variations.extend(self._generate_additional_variations(base_copy, campaign_goals, 1))
+            while len(traditional_variations) < 5:
+                traditional_variations.extend(self._generate_additional_variations(base_copy, campaign_goals, 1))
             
-            variations = variations[:10]  # Cap at 10 variations
+            traditional_variations = traditional_variations[:10]  # Cap at 10 variations
             
             # Generate testing hypotheses for each variation
             for i, variation in enumerate(variations):
