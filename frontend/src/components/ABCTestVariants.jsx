@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, TrendingUp, AlertCircle, Users } from 'lucide-react';
+import { ContentCopy, CheckCircle, TrendingUp, ErrorOutline, People } from '@mui/icons-material';
 
 const ABCTestVariants = ({ variants = [] }) => {
   const [copiedId, setCopiedId] = useState(null);
@@ -30,13 +30,13 @@ const ABCTestVariants = ({ variants = [] }) => {
   const getVariantIcon = (type) => {
     switch (type) {
       case 'benefit_focused':
-        return <TrendingUp className="w-5 h-5" />;
+        return <TrendingUp sx={{ fontSize: 20 }} />;
       case 'problem_focused':
-        return <AlertCircle className="w-5 h-5" />;
+        return <ErrorOutline sx={{ fontSize: 20 }} />;
       case 'story_driven':
-        return <Users className="w-5 h-5" />;
+        return <People sx={{ fontSize: 20 }} />;
       default:
-        return <TrendingUp className="w-5 h-5" />;
+        return <TrendingUp sx={{ fontSize: 20 }} />;
     }
   };
 
@@ -79,9 +79,9 @@ const ABCTestVariants = ({ variants = [] }) => {
                   title="Copy variant"
                 >
                   {copiedId === variant.id ? (
-                    <Check className="w-4 h-4 text-white" />
+                    <CheckCircle sx={{ fontSize: 16, color: 'white' }} />
                   ) : (
-                    <Copy className="w-4 h-4 text-white" />
+                    <ContentCopy sx={{ fontSize: 16, color: 'white' }} />
                   )}
                 </button>
               </div>
