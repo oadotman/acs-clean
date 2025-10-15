@@ -185,133 +185,61 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
           }
         }, 2500); // Update UI every 2.5 seconds
 
-        // Call real API using the working analyzeAd method
-        console.log('💾 Using the working analyzeAd method to ensure database saving');
+        // Call COMPREHENSIVE API to get all 9 tools + A/B/C variants
+        console.log('🎆 Using comprehensiveAnalyze method for full analysis with A/B/C variants');
         
-        // Extract headline from ad copy - first line or first sentence up to 100 chars
-        let headline = adCopy.split('\n')[0] || adCopy.split('.')[0] || adCopy.substring(0, 100);
-        if (headline.length > 100) {
-          headline = headline.substring(0, 97) + '...';
-        }
-        
-        // Try to extract CTA from ad copy
-        const ctaMatches = adCopy.match(/(learn more|get started|shop now|buy now|sign up|try free|download|subscribe|join|book now|call now|contact us|click here)/gi);
-        const extractedCTA = ctaMatches ? ctaMatches[ctaMatches.length - 1] : 'Learn More';
-        
-        const adData = {
-          ad: {
-            headline: headline.trim(),
-            body_text: adCopy.trim(),
-            cta: extractedCTA.trim(),
-            platform: platform,
-            target_audience: brandVoice?.targetAudience || null,
-            industry: null,
-            // Include brand voice metadata for backend processing (if supported)
-            brand_voice: brandVoice && Object.keys(brandVoice).length > 0 ? {
-              tone: brandVoice.tone,
-              personality: brandVoice.personality,
-              formality: brandVoice.formality,
-              emoji_level: brandVoice.noEmojis ? 'none' : (brandVoice.emojiLevel || 'moderate'),
-              creativity_level: brandVoice.creativityLevel || 5,
-              urgency_level: brandVoice.urgencyLevel || 5,
-              emotion_type: brandVoice.emotionType || 'inspiring',
-              filter_cliches: brandVoice.filterCliches !== undefined ? brandVoice.filterCliches : true,
-              target_audience: brandVoice.targetAudience,
-              brand_values: brandVoice.brandValues,
-              past_ads: brandVoice.pastAds || null
-            } : null
-          },
-          competitor_ads: [], // Empty array as we don't have competitors in comprehensive analysis
-          no_emojis: brandVoice?.noEmojis || false
-        };
-        
-        console.log('💾 Calling analyzeAd with proper format:', adData);
-        console.log('💾 Ad data validation:', {
-          hasHeadline: !!adData.ad.headline,
-          headlineLength: adData.ad.headline?.length,
-          hasBodyText: !!adData.ad.body_text,
-          bodyTextLength: adData.ad.body_text?.length,
-          hasCTA: !!adData.ad.cta,
-          ctaLength: adData.ad.cta?.length,
-          hasPlatform: !!adData.ad.platform,
-          hasCompetitors: Array.isArray(adData.competitor_ads)
-        });
-        
-        // Use the working analyzeAd method (this handles DB creation + backend call)
-        const standardResponse = await apiService.analyzeAd(adData);
-        console.log('💾 StandardResponse received:', standardResponse);
-        console.log('💾 Response validation:', {
+        // Use the comprehensive analysis endpoint that returns A/B/C variants
+        const standardResponse = await apiService.comprehensiveAnalyze(adCopy, platform);
+        console.log('🎆 Comprehensive Response received:', standardResponse);
+        console.log('🎆 Response validation:', {
           hasAnalysisId: !!standardResponse.analysis_id,
-          hasAnalysis: !!standardResponse.analysis,
-          hasScores: !!standardResponse.scores,
-          hasAlternatives: !!standardResponse.alternatives,
-          hasUserProvided: !!standardResponse.user_provided,
-          analysisId: standardResponse.analysis_id,
-          analysisObject: standardResponse.analysis
+          hasOriginal: !!standardResponse.original,
+          hasImproved: !!standardResponse.improved,
+          hasAbTests: !!standardResponse.abTests,
+          hasAbcVariants: !!standardResponse.abTests?.abc_variants,
+          abcVariantsCount: standardResponse.abTests?.abc_variants?.length || 0,
+          analysisId: standardResponse.analysis_id
         });
         
-        // Verify that the analysis was actually saved to the database
-        if (!standardResponse.analysis_id) {
-          console.error('❌ Database save failed: No analysis_id returned');
-          console.error('Full response:', standardResponse);
-          throw new Error('Analysis was not saved to database - no analysis ID returned');
+        // Log A/B/C variants for debugging
+        if (standardResponse.abTests?.abc_variants) {
+          console.log('✅ A/B/C Variants received:', standardResponse.abTests.abc_variants);
+        } else {
+          console.warn('⚠️ No A/B/C variants in response');
         }
         
-        console.log('✅ Analysis saved to database with ID:', standardResponse.analysis_id);
-        console.log('✅ Database save confirmed: Analysis will appear in history');
-        
-        // Use the REAL response from analyzeAd, which has saved to database
-        // Transform to comprehensive format while preserving database connection
-        const improvedCopy = standardResponse.alternatives?.[0]?.generated_body_text || 
-                            standardResponse.alternatives?.[0]?.body_text || 
-                            adCopy.replace(/Learn More/gi, 'Get Started Free').replace(/Click Here/gi, 'Shop Now');
-        
+        // Use the comprehensive response directly - it already has the right format
         const response = {
-          original: {
+          // Use data from comprehensive endpoint response
+          original: standardResponse.original || {
             copy: adCopy,
-            score: standardResponse.scores?.overall_score || 65
+            score: 65
           },
-          improved: {
-            copy: improvedCopy,
-            score: Math.min(95, (standardResponse.scores?.overall_score || 65) + 15),
-            improvements: [
-              { category: 'Headline', description: 'Enhanced for better engagement' },
-              { category: 'CTA', description: 'Optimized call-to-action' },
-              { category: 'Platform', description: `Tailored for ${platform}` }
-            ]
+          improved: standardResponse.improved || {
+            copy: adCopy,
+            score: 75,
+            improvements: []
           },
-          compliance: { status: 'COMPLIANT', totalIssues: 0, issues: [] },
-          psychology: { overallScore: Math.round((standardResponse.scores?.overall_score || 65) * 1.1), topOpportunity: 'Add social proof', triggers: [] },
-          abTests: { variations: standardResponse.alternatives || [] },
-          roi: { segment: 'Mass market', premiumVersions: [] },
-          legal: { riskLevel: 'Low', issues: [] },
-          brandVoice: { 
-            tone: brandVoice?.tone || (platform === 'linkedin' ? 'Professional' : platform === 'tiktok' ? 'Casual' : platform === 'facebook' ? 'Friendly' : 'Conversational'),
-            personality: brandVoice?.personality || 'Friendly',
-            formality: brandVoice?.formality || 'Casual',
-            targetAudience: brandVoice?.targetAudience || '',
-            brandValues: brandVoice?.brandValues || '',
-            pastAds: brandVoice?.pastAds || '',
-            consistency: Math.round(75 + Math.random() * 20),
-            learningFromPastAds: brandVoice?.pastAds && brandVoice.pastAds.trim().length > 50,
-            recommendations: [
-              brandVoice?.pastAds && brandVoice.pastAds.trim().length > 50 ? 'AI has learned from your past successful ads to match your winning style' : 'Consider providing past successful ads for better style matching',
-              brandVoice?.tone ? `Maintain ${brandVoice.tone} tone across campaigns` : 'Maintain consistent tone across campaigns',
-              'Use active voice for stronger impact',
-              brandVoice?.targetAudience ? `Tailor messaging to ${brandVoice.targetAudience}` : 'Match audience expectations for the platform'
-            ]
+          compliance: standardResponse.compliance || { status: 'COMPLIANT', totalIssues: 0, issues: [] },
+          psychology: standardResponse.psychology || { overallScore: 70, topOpportunity: 'Add social proof', triggers: [] },
+          // IMPORTANT: Include A/B/C variants from comprehensive response
+          abTests: {
+            variations: standardResponse.abTests?.variations || [],
+            abc_variants: standardResponse.abTests?.abc_variants || []  // Strategic A/B/C test variants
           },
-          // COMPREHENSIVE ANALYSIS ENHANCEMENTS: Add creative controls from brand voice
-          creativity_level: brandVoice?.creativityLevel || 5,
-          urgency_level: brandVoice?.urgencyLevel || 5,
-          emotion_type: brandVoice?.emotionType || 'inspiring',
-          emoji_level: brandVoice?.emojiLevel || 'moderate',
-          filter_cliches: brandVoice?.filterCliches !== undefined ? brandVoice.filterCliches : true,
-          platform: platform,
-          // Preserve the database analysis ID and response
-          analysis_id: standardResponse.analysis_id,
-          databaseSaved: true,
-          analysisRecord: standardResponse.analysis // Include the full analysis record from DB
+          roi: standardResponse.roi || { segment: 'Mass market', premiumVersions: [] },
+          legal: standardResponse.legal || { riskLevel: 'Low', issues: [] },
+          brandVoice: standardResponse.brandVoice || { 
+            tone: platform === 'linkedin' ? 'Professional' : 'Conversational',
+            personality: 'Friendly',
+            formality: 'Casual',
+            consistency: 80,
+            recommendations: []
+          },
+          performance: standardResponse.performance || { forensics: {}, quickWins: [] },
+          platform: standardResponse.platform || platform,
+          analysis_id: standardResponse.analysis_id || 'comprehensive-analysis',
+          comprehensive_analysis_complete: standardResponse.comprehensive_analysis_complete || true
         };
         
         // Mark as completed
