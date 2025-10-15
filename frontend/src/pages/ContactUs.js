@@ -69,13 +69,13 @@ const ContactUs = () => {
     {
       icon: <Phone />,
       title: 'Call Us',
-      details: '+1 (555) 123-4567',
-      description: 'Mon-Fri 9AM-6PM PST'
+      details: '+2348106740579',
+      description: 'Mon-Fri 9AM-6PM WAT'
     },
     {
       icon: <LocationOn />,
       title: 'Visit Us',
-      details: 'San Francisco, CA',
+      details: 'Lagos',
       description: 'Schedule an in-person meeting'
     },
     {

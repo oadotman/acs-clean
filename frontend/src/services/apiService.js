@@ -14,9 +14,18 @@ class ApiService {
     console.log('🚑 Raw REACT_APP_API_URL:', JSON.stringify(process.env.REACT_APP_API_URL));
     
     // API URL configuration for development and production
-    const envApiUrl = process.env.REACT_APP_API_URL;
+    let envApiUrl = process.env.REACT_APP_API_URL;
     const envBaseUrl = process.env.REACT_APP_API_BASE_URL;
     const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Clean up environment variables to remove any malformed content
+    if (envApiUrl && typeof envApiUrl === 'string') {
+      // Remove any 'EOF' strings or other malformed content
+      envApiUrl = envApiUrl.replace(/'EOF'/g, '').replace(/EOF/g, '').replace(/[^\w\d:\/\.-]/g, '');
+      if (!envApiUrl.startsWith('http')) {
+        envApiUrl = null;
+      }
+    }
     
     if (isProduction) {
       // In production (Datalix VPS), use relative URLs since frontend and backend are on same server
@@ -24,24 +33,89 @@ class ApiService {
       console.log('🏭 Production mode: Using relative API URL for same-server deployment');
     } else {
       // In development, ALWAYS use full localhost URL for proper authentication
-      this.baseURL = envApiUrl || 
-                     (envBaseUrl ? envBaseUrl + '/api' : null) || 
-                     'http://localhost:8000/api';
-      console.log('🔧 Development mode: Using full URL for authentication compatibility');
+      // Force localhost URL to avoid environment variable issues
+      this.baseURL = 'http://localhost:8000/api';
+      console.log('🔧 Development mode: Using hardcoded localhost URL to avoid env issues');
       console.log('🔗 Development baseURL:', this.baseURL);
     }
     
-    // Clean up URL if it has double slashes
-    this.baseURL = this.baseURL.replace(/([^:])\/{2,}/g, '$1/');
+    // Clean up URL if it has double slashes or malformed content
+    this.baseURL = this.baseURL.replace(/([^:])\/{2,}/g, '$1/').replace(/'EOF'/g, '').replace(/EOF/g, '');
     
     console.log('🚀 API Service initialized with baseURL:', this.baseURL);
     console.log('🚑 Final check - baseURL starts with http:', this.baseURL.startsWith('http'));
-    this.client = axios.create({
+    
+    // Validate the final URL
+    try {
+      new URL(this.baseURL + '/test');
+      console.log('✅ URL validation passed');
+    } catch (urlError) {
+      console.error('❌ URL validation failed:', urlError);
+      this.baseURL = 'http://localhost:8000/api'; // Fallback to safe default
+      console.log('🔄 Using fallback baseURL:', this.baseURL);
+    }
+    // Create separate client for AI operations with longer timeout
+    this.aiClient = axios.create({
       baseURL: this.baseURL,
-      timeout: 30000, // Increased timeout for AI processing
+      timeout: 120000, // 2 minutes for AI operations
       headers: {
         'Content-Type': 'application/json',
-  },
+      }
+    });
+
+    this.client = axios.create({
+      baseURL: this.baseURL,
+      timeout: 30000, // Regular timeout for non-AI operations
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    // Setup interceptors for both clients
+    const setupInterceptors = (client, clientName) => {
+      // Request interceptor to add Supabase auth token
+      client.interceptors.request.use(
+        async (config) => {
+          try {
+            // Get current session for authentication
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) {
+              config.headers['Authorization'] = `Bearer ${session.access_token}`;
+              console.log(`🔐 Added auth token to ${clientName} request`);
+            } else {
+              console.log(`⚠️ Making unauthenticated ${clientName} request`);
+            }
+          } catch (authError) {
+            console.warn(`⚠️ Could not get auth session for ${clientName}:`, authError.message);
+          }
+          
+          console.log(`🔗 Making ${clientName} API request to:`, config.baseURL + config.url);
+          return config;
+        },
+        (error) => Promise.reject(error)
+      );
+
+      // Response interceptor for error handling
+      client.interceptors.response.use(
+        (response) => response.data,
+        (error) => {
+          if (error.code === 'ECONNABORTED') {
+            console.error(`⏰ ${clientName} request timed out:`, error.message);
+          }
+          if (error.response?.status === 401) {
+            // Token expired or invalid - redirect to login
+            supabase.auth.signOut();
+            window.location.href = '/login';
+          }
+          return Promise.reject(error);
+        }
+      );
+    };
+
+    // Setup interceptors for both clients
+    setupInterceptors(this.client, 'Standard');
+    setupInterceptors(this.aiClient, 'AI');
+  }
 
   // Integration endpoints
   async createIntegration(userId, integrationData) {
@@ -60,7 +134,7 @@ class ApiService {
     }
 
     return response.json();
-  },
+  }
 
   async getUserIntegrations(userId) {
     const response = await fetch(`${this.baseURL}/integrations/user/${userId}`, {
@@ -74,7 +148,7 @@ class ApiService {
     }
 
     return response.json();
-  },
+  }
 
   async updateIntegration(integrationId, updateData) {
     const response = await fetch(`${this.baseURL}/integrations/${integrationId}`, {
@@ -92,7 +166,7 @@ class ApiService {
     }
 
     return response.json();
-  },
+  }
 
   async deleteIntegration(integrationId) {
     const response = await fetch(`${this.baseURL}/integrations/${integrationId}`, {
@@ -108,7 +182,7 @@ class ApiService {
     }
 
     return response.json();
-  },
+  }
 
   async testIntegration(integrationId) {
     const response = await fetch(`${this.baseURL}/integrations/${integrationId}/test`, {
@@ -124,7 +198,7 @@ class ApiService {
     }
 
     return response.json();
-  },
+  }
 
   async sendToIntegrations(userId, eventType, data) {
     const response = await fetch(`${this.baseURL}/integrations/send-to-integrations`, {
@@ -145,54 +219,11 @@ class ApiService {
     }
 
     return response.json();
-  },
+  }
 
   getAuthToken() {
     // Get token from localStorage or auth service
     return localStorage.getItem('auth_token') || 'dummy_token_for_dev';
-  }
-    });
-
-    // Request interceptor to add Supabase auth token
-    this.client.interceptors.request.use(
-      async (config) => {
-        try {
-          // Get current session for authentication
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.access_token) {
-            config.headers['Authorization'] = `Bearer ${session.access_token}`;
-            console.log('🔐 Added auth token to request');
-          } else {
-            console.log('⚠️ Making unauthenticated request');
-          }
-        } catch (authError) {
-          console.warn('⚠️ Could not get auth session:', authError.message);
-        }
-        
-        console.log('🔗 Making API request to:', config.baseURL + config.url);
-        console.log('🔧 Full config:', {
-          url: config.url,
-          baseURL: config.baseURL,
-          method: config.method,
-          fullURL: config.baseURL + config.url
-        });
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response) => response.data,
-      (error) => {
-        if (error.response?.status === 401) {
-          // Token expired or invalid - redirect to login
-          supabase.auth.signOut();
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
-    );
   }
 
   setAuthToken(token) {
@@ -264,7 +295,7 @@ class ApiService {
       //   throw new Error(`Analysis limit reached. ${quota.remaining || 0} analyses remaining.`);
       // }
 
-      const response = await this.client.post('/ads/comprehensive-analyze', {
+      const response = await this.aiClient.post('/ads/comprehensive-analyze', {
         ad_copy: adCopy,
         platform: platform,
         user_id: user.id
@@ -299,11 +330,9 @@ class ApiService {
         user_id: 'debug-user' // Temporary for testing
       };
 
-      console.log('🤖 ApiService: Sending request to backend...', aiRequest);
+      console.log('🤖 ApiService: Sending request to backend with extended timeout...', aiRequest);
       
-      const aiResponse = await this.client.post('/ads/analyze', aiRequest, {
-        timeout: 30000
-      });
+      const aiResponse = await this.aiClient.post('/ads/analyze', aiRequest);
       
       console.log('✅ ApiService: AI analysis completed successfully', aiResponse);
 
@@ -320,8 +349,15 @@ class ApiService {
       console.error('❌ ApiService: Error details:', {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        code: error.code
       });
+      
+      // Handle timeout specifically
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Analysis is taking longer than expected. Our AI is working hard on your request. Please try again.');
+      }
+      
       throw new Error(`Analysis failed: ${error.response?.data?.detail || error.message}`);
     }
   }
@@ -394,7 +430,7 @@ class ApiService {
       //   throw new Error(`Analysis limit reached. ${quota.remaining || 0} analyses remaining.`);
       // }
       
-      return this.client.post('/tools/compliance-checker', {
+      return this.aiClient.post('/tools/compliance-checker', {
         ...data,
         user_id: user.id
       });
@@ -417,7 +453,7 @@ class ApiService {
       //   throw new Error(`Generation limit reached. ${quota.remaining || 0} generations remaining.`);
       // }
       
-      return this.client.post('/tools/roi-generator', {
+      return this.aiClient.post('/tools/roi-generator', {
         ...data,
         user_id: user.id
       });
@@ -440,7 +476,7 @@ class ApiService {
       //   throw new Error(`Generation limit reached. ${quota.remaining || 0} generations remaining.`);
       // }
       
-      return this.client.post('/tools/ab-test-generator', {
+      return this.aiClient.post('/tools/ab-test-generator', {
         ...data,
         user_id: user.id
       });
@@ -463,7 +499,7 @@ class ApiService {
       //   throw new Error(`Optimization limit reached. ${quota.remaining || 0} optimizations remaining.`);
       // }
       
-      return this.client.post('/tools/industry-optimizer', {
+      return this.aiClient.post('/tools/industry-optimizer', {
         ...data,
         user_id: user.id
       });
@@ -486,7 +522,7 @@ class ApiService {
       //   throw new Error(`Analysis limit reached. ${quota.remaining || 0} analyses remaining.`);
       // }
       
-      return this.client.post('/tools/performance-forensics', {
+      return this.aiClient.post('/tools/performance-forensics', {
         ...data,
         user_id: user.id
       });
@@ -509,7 +545,7 @@ class ApiService {
       //   throw new Error(`Analysis limit reached. ${quota.remaining || 0} analyses remaining.`);
       // }
       
-      return this.client.post('/tools/psychology-scorer', {
+      return this.aiClient.post('/tools/psychology-scorer', {
         ...data,
         user_id: user.id
       });
@@ -532,7 +568,7 @@ class ApiService {
       //   throw new Error(`Analysis limit reached. ${quota.remaining || 0} analyses remaining.`);
       // }
       
-      return this.client.post('/tools/brand-voice-engine', {
+      return this.aiClient.post('/tools/brand-voice-engine', {
         ...data,
         user_id: user.id
       });
@@ -555,7 +591,7 @@ class ApiService {
       //   throw new Error(`Analysis limit reached. ${quota.remaining || 0} analyses remaining.`);
       // }
       
-      return this.client.post('/tools/legal-risk-scanner', {
+      return this.aiClient.post('/tools/legal-risk-scanner', {
         ...data,
         user_id: user.id
       });
@@ -574,7 +610,7 @@ class ApiService {
       if (!session?.user) throw new Error('User not authenticated');
       const user = session.user;
       
-      return this.client.post('/ads/parse', {
+      return this.aiClient.post('/ads/parse', {
         text,
         platform,
         user_id: user.id
@@ -638,7 +674,7 @@ class ApiService {
       //   throw new Error(`Generation limit reached. ${quota.remaining || 0} generations remaining.`);
       // }
       
-      return this.client.post('/ads/generate', {
+      return this.aiClient.post('/ads/generate', {
         ...data,
         user_id: user.id
       });
@@ -661,7 +697,7 @@ class ApiService {
       
       // Use batch endpoint if multiple ads, otherwise single endpoint
       if (adsCount > 1) {
-        return this.client.post('/ads/analyze/batch', {
+        return this.aiClient.post('/ads/analyze/batch', {
           ...data,
           user_id: user.id
         });
@@ -693,7 +729,7 @@ class ApiService {
       //   throw new Error(`Generation limit reached. ${quota.remaining || 0} generations remaining.`);
       // }
       
-      return this.client.post('/ads/generate-variations', {
+      return this.aiClient.post('/ads/generate-variations', {
         ...data,
         user_id: user.id
       });
@@ -718,7 +754,7 @@ class ApiService {
       //   throw new Error(`Insufficient generation quota. Need ${adsCount} generations, ${quota.remaining || 0} remaining.`);
       // }
       
-      return this.client.post('/ads/generate-variations/batch', {
+      return this.aiClient.post('/ads/generate-variations/batch', {
         ...data,
         user_id: user.id
       });
@@ -741,7 +777,7 @@ class ApiService {
       //   throw new Error(`Generation limit reached. ${quota.remaining || 0} generations remaining.`);
       // }
       
-      return this.client.post('/ads/generate-and-analyze', {
+      return this.aiClient.post('/ads/generate-and-analyze', {
         ...data,
         user_id: user.id
       });

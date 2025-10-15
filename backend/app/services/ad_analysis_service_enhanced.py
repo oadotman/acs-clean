@@ -47,7 +47,9 @@ class EnhancedAdAnalysisService:
         user_id: int, 
         ad: AdInput, 
         competitor_ads: List[CompetitorAd] = [],
-        requested_tools: List[str] = None
+        requested_tools: List[str] = None,
+        brand_voice: dict = None,
+        no_emojis: bool = False
     ) -> AdAnalysisResponse:
         """
         Perform comprehensive ad analysis using the unified SDK
@@ -57,6 +59,8 @@ class EnhancedAdAnalysisService:
             ad: Ad input data
             competitor_ads: Optional competitor ads for comparison
             requested_tools: Specific tools to run (if None, runs all available)
+            brand_voice: Optional brand voice configuration for AI
+            no_emojis: Whether to exclude emojis from generated content
             
         Returns:
             AdAnalysisResponse compatible with legacy interface
@@ -123,66 +127,79 @@ class EnhancedAdAnalysisService:
     ) -> AdAnalysisResponse:
         """Convert SDK orchestration result to legacy AdAnalysisResponse format"""
         
-        # Extract scores from successful tools
-        scores_dict = {}
-        feedback = []
-        
-        for tool_name, tool_output in orchestration_result.tool_results.items():
-            if tool_output.success:
-                # Map tool scores to legacy score names
-                for score_name, score_value in tool_output.scores.items():
-                    if score_name == 'clarity_score':
-                        scores_dict['clarity_score'] = score_value
-                    elif score_name == 'power_score':
-                        scores_dict['persuasion_score'] = score_value
-                    elif score_name == 'cta_strength':
-                        scores_dict['cta_strength'] = score_value
-                    elif score_name == 'platform_fit':
-                        scores_dict['platform_fit_score'] = score_value
-                
-                # Collect recommendations as feedback
-                if tool_output.recommendations:
-                    feedback.extend([
-                        f"{tool_name}: {rec}" for rec in tool_output.recommendations
-                    ])
-        
-        # Add emotion score if available (would come from emotion tool)
-        if 'emotion_score' not in scores_dict:
-            scores_dict['emotion_score'] = 70.0  # Default fallback
-        
-        # Create AdScore object
-        ad_scores = AdScore(
-            clarity_score=scores_dict.get('clarity_score', 70.0),
-            persuasion_score=scores_dict.get('persuasion_score', 70.0),
-            emotion_score=scores_dict.get('emotion_score', 70.0),
-            cta_strength=scores_dict.get('cta_strength', 70.0),
-            platform_fit_score=scores_dict.get('platform_fit_score', 75.0),
-            overall_score=orchestration_result.overall_score or self._calculate_fallback_overall_score(scores_dict)
-        )
-        
-        # Generate alternatives (TODO: integrate with AI generator tool)
-        alternatives = await self._generate_fallback_alternatives(original_ad)
-        
-        # Handle competitor comparison if provided
-        competitor_comparison = None
-        if competitor_ads:
-            competitor_comparison = await self._analyze_competitors_sdk(
-                original_ad, 
-                competitor_ads,
-                orchestration_result
+        try:
+            # Extract scores from successful tools
+            scores_dict = {}
+            feedback = []
+            
+            logger.info(f"Converting orchestration result with {len(orchestration_result.tool_results)} tool results")
+            
+            for tool_name, tool_output in orchestration_result.tool_results.items():
+                logger.debug(f"Processing tool: {tool_name}, type: {type(tool_output)}")
+                if tool_output.success:
+                    # Map tool scores to legacy score names
+                    # Ensure scores is a dictionary before iterating
+                    scores_data = tool_output.scores if isinstance(tool_output.scores, dict) else {}
+                    for score_name, score_value in scores_data.items():
+                        if score_name == 'clarity_score':
+                            scores_dict['clarity_score'] = score_value
+                        elif score_name == 'power_score':
+                            scores_dict['persuasion_score'] = score_value
+                        elif score_name == 'cta_strength':
+                            scores_dict['cta_strength'] = score_value
+                        elif score_name == 'platform_fit':
+                            scores_dict['platform_fit_score'] = score_value
+                    
+                    # Collect recommendations as feedback
+                    recommendations_data = tool_output.recommendations if hasattr(tool_output, 'recommendations') and tool_output.recommendations else []
+                    if recommendations_data:
+                        feedback.extend([
+                            f"{tool_name}: {rec}" for rec in recommendations_data
+                        ])
+            
+            # Add emotion score if available (would come from emotion tool)
+            if 'emotion_score' not in scores_dict:
+                scores_dict['emotion_score'] = 70.0  # Default fallback
+            
+            # Create AdScore object
+            ad_scores = AdScore(
+                clarity_score=scores_dict.get('clarity_score', 70.0),
+                persuasion_score=scores_dict.get('persuasion_score', 70.0),
+                emotion_score=scores_dict.get('emotion_score', 70.0),
+                cta_strength=scores_dict.get('cta_strength', 70.0),
+                platform_fit_score=scores_dict.get('platform_fit_score', 75.0),
+                overall_score=orchestration_result.overall_score or self._calculate_fallback_overall_score(scores_dict)
             )
-        
-        # Generate quick wins from tool insights
-        quick_wins = self._extract_quick_wins(orchestration_result)
-        
-        return AdAnalysisResponse(
-            analysis_id=orchestration_result.request_id,
-            scores=ad_scores,
-            feedback=feedback,
-            alternatives=alternatives,
-            competitor_comparison=competitor_comparison,
-            quick_wins=quick_wins
-        )
+            
+            # Generate alternatives (TODO: integrate with AI generator tool)
+            alternatives = await self._generate_fallback_alternatives(original_ad)
+            
+            # Handle competitor comparison if provided
+            competitor_comparison = None
+            if competitor_ads:
+                competitor_comparison = await self._analyze_competitors_sdk(
+                    original_ad, 
+                    competitor_ads,
+                    orchestration_result
+                )
+            
+            # Generate quick wins from tool insights
+            quick_wins = self._extract_quick_wins(orchestration_result)
+            
+            # Convert feedback list to string
+            feedback_str = "\n".join(feedback) if feedback else "Analysis completed successfully"
+            
+            return AdAnalysisResponse(
+                analysis_id=orchestration_result.request_id,
+                scores=ad_scores,
+                feedback=feedback_str,
+                alternatives=alternatives,
+                competitor_comparison=competitor_comparison,
+                quick_wins=quick_wins
+            )
+        except Exception as e:
+            logger.error(f"Error converting orchestration result to legacy format: {e}", exc_info=True)
+            raise
     
     def _calculate_fallback_overall_score(self, scores_dict: Dict[str, float]) -> float:
         """Calculate overall score using legacy weights"""
@@ -243,11 +260,11 @@ class EnhancedAdAnalysisService:
         quick_wins = []
         
         for tool_name, tool_output in orchestration_result.tool_results.items():
-            if tool_output.success and tool_output.insights:
+            if tool_output.success and hasattr(tool_output, 'insights') and tool_output.insights:
                 
                 # Readability quick wins
                 if tool_name == "readability_analyzer":
-                    insights = tool_output.insights
+                    insights = tool_output.insights if isinstance(tool_output.insights, dict) else {}
                     if insights.get('grade_level', 0) > 10:
                         quick_wins.append("Simplify language to improve readability")
                     if len(insights.get('power_words_found', [])) < 2:
@@ -255,7 +272,7 @@ class EnhancedAdAnalysisService:
                 
                 # CTA quick wins
                 elif tool_name == "cta_analyzer":
-                    insights = tool_output.insights
+                    insights = tool_output.insights if isinstance(tool_output.insights, dict) else {}
                     if not insights.get('has_urgency', False):
                         quick_wins.append("Add urgency to your CTA")
                     if not insights.get('has_action_verb', False):

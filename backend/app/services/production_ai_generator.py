@@ -16,6 +16,7 @@ except ImportError:
 from typing import Dict, List, Optional, Any
 import time
 import logging
+import os
 from dataclasses import dataclass
 from app.core.exceptions import AIProviderUnavailable, ProductionError, fail_fast_on_mock_data
 
@@ -42,6 +43,8 @@ class ProductionAIService:
     
     def __init__(self, openai_key: str, gemini_key: str = None):
         self.providers = {}
+        # Get timeout from environment or use default
+        self.ai_timeout = int(os.getenv('AI_REQUEST_TIMEOUT', 60))
         
         # Initialize only real AI providers
         if openai_key and openai_key.startswith('sk-'):
@@ -258,25 +261,29 @@ class ProductionAIService:
                 creativity_level, urgency_level, emotion_type, filter_cliches
             )
             
-            # Use new OpenAI client
-            client = openai.AsyncOpenAI(api_key=openai.api_key)
+            # Use new OpenAI client with timeout
+            client = openai.AsyncOpenAI(api_key=openai.api_key, timeout=self.ai_timeout)
             
-            response = await client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": "You are an expert copywriter with 15+ years creating high-converting ads. Respond only with the requested format, no extra text."
-                    },
-                    {
-                        "role": "user", 
-                        "content": prompt
-                    }
-                ],
-                max_tokens=500,
-                temperature=ai_params["temperature"],
-                presence_penalty=ai_params["presence_penalty"],
-                frequency_penalty=ai_params["frequency_penalty"]
+            # Wrap in asyncio.wait_for for additional timeout safety
+            response = await asyncio.wait_for(
+                client.chat.completions.create(
+                    model="gpt-4",
+                    messages=[
+                        {
+                            "role": "system", 
+                            "content": "You are an expert copywriter with 15+ years creating high-converting ads. Respond only with the requested format, no extra text."
+                        },
+                        {
+                            "role": "user", 
+                            "content": prompt
+                        }
+                    ],
+                    max_tokens=500,
+                    temperature=ai_params["temperature"],
+                    presence_penalty=ai_params["presence_penalty"],
+                    frequency_penalty=ai_params["frequency_penalty"]
+                ),
+                timeout=self.ai_timeout + 5  # Additional 5 seconds for safety
             )
             
             content = response.choices[0].message.content
@@ -296,6 +303,12 @@ class ProductionAIService:
             
             return parsed_result
             
+        except (asyncio.TimeoutError, openai.APITimeoutError) as e:
+            logger.warning(f"OpenAI timeout after {self.ai_timeout} seconds: {str(e)}")
+            raise AIProviderUnavailable(
+                "openai",
+                f"OpenAI request timed out after {self.ai_timeout} seconds. AI processing took longer than expected."
+            )
         except openai.APIError as e:
             raise AIProviderUnavailable(
                 "openai",
@@ -371,12 +384,15 @@ class ProductionAIService:
                 creativity_level, urgency_level, emotion_type, filter_cliches
             )
             
-            response = await model.generate_content_async(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=500,
-                    temperature=ai_params["temperature"],
-                )
+            response = await asyncio.wait_for(
+                model.generate_content_async(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        max_output_tokens=500,
+                        temperature=ai_params["temperature"],
+                    )
+                ),
+                timeout=self.ai_timeout
             )
             
             # Estimate tokens for tracking
@@ -395,6 +411,12 @@ class ProductionAIService:
             
             return parsed_result
             
+        except asyncio.TimeoutError as e:
+            logger.warning(f"Gemini timeout after {self.ai_timeout} seconds: {str(e)}")
+            raise AIProviderUnavailable(
+                "gemini",
+                f"Gemini request timed out after {self.ai_timeout} seconds. AI processing took longer than expected."
+            )
         except Exception as e:
             raise AIProviderUnavailable(
                 "gemini",

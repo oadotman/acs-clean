@@ -171,6 +171,11 @@ const NewAnalysis = () => {
     tone: 'conversational',
     personality: 'friendly',
     formality: 'casual',
+    emojiLevel: 'moderate', // New: emoji usage preference
+    creativityLevel: 5, // New: creativity level (1-10)
+    urgencyLevel: 5, // New: urgency level (1-10)
+    emotionType: 'inspiring', // New: emotion type
+    filterCliches: true, // New: filter clichés
     targetAudience: '',
     brandValues: '',
     pastAds: '' // For learning from existing content
@@ -1494,7 +1499,7 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                   </Box>
                   
                   <Grid container spacing={3}>
-                    <Grid item xs={12} md={4}>
+                    <Grid item xs={12} md={3}>
                       <FormControl fullWidth>
                         <InputLabel>Tone</InputLabel>
                         <Select
@@ -1511,7 +1516,7 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                       </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid item xs={12} md={3}>
                       <FormControl fullWidth>
                         <InputLabel>Personality</InputLabel>
                         <Select
@@ -1528,7 +1533,7 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                       </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid item xs={12} md={3}>
                       <FormControl fullWidth>
                         <InputLabel>Formality</InputLabel>
                         <Select
@@ -1539,6 +1544,22 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                           <MenuItem value="casual">Casual</MenuItem>
                           <MenuItem value="semi-formal">Semi-formal</MenuItem>
                           <MenuItem value="formal">Formal</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12} md={3}>
+                      <FormControl fullWidth>
+                        <InputLabel>Emoji Usage</InputLabel>
+                        <Select
+                          value={brandVoice.emojiLevel}
+                          onChange={(e) => setBrandVoice(prev => ({ ...prev, emojiLevel: e.target.value }))}
+                          label="Emoji Usage"
+                        >
+                          <MenuItem value="none">No Emojis</MenuItem>
+                          <MenuItem value="minimal">Minimal (1-2 emojis) 🎯</MenuItem>
+                          <MenuItem value="moderate">Moderate (3-5 emojis) 🎯✨</MenuItem>
+                          <MenuItem value="expressive">Expressive (liberal use) 🎯✨🚀</MenuItem>
                         </Select>
                       </FormControl>
                     </Grid>
@@ -1567,6 +1588,103 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                   </Grid>
                 </Box>
                 
+                {/* Advanced Creative Controls */}
+                <Box sx={{ mt: 4 }}>
+                  <Box display="flex" alignItems="center" gap={1} sx={{ mb: 3 }}>
+                    <AutoAwesome color="secondary" />
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Advanced Creative Controls
+                    </Typography>
+                  </Box>
+                  
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" gutterBottom>
+                        Creativity Level: {brandVoice.creativityLevel}/10
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Typography variant="caption" color="text.secondary">Conservative</Typography>
+                        <Box sx={{ flex: 1, px: 1 }}>
+                          <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            value={brandVoice.creativityLevel}
+                            onChange={(e) => setBrandVoice(prev => ({ ...prev, creativityLevel: parseInt(e.target.value) }))}
+                            style={{ width: '100%' }}
+                          />
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">Bold</Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                        Controls how creative and experimental the AI should be with language and approaches
+                      </Typography>
+                    </Grid>
+                    
+                    <Grid item xs={12} md={6}>
+                      <Typography variant="body2" gutterBottom>
+                        Urgency Level: {brandVoice.urgencyLevel}/10
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Typography variant="caption" color="text.secondary">Relaxed</Typography>
+                        <Box sx={{ flex: 1, px: 1 }}>
+                          <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            value={brandVoice.urgencyLevel}
+                            onChange={(e) => setBrandVoice(prev => ({ ...prev, urgencyLevel: parseInt(e.target.value) }))}
+                            style={{ width: '100%' }}
+                          />
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">Urgent</Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                        Controls scarcity language and time-sensitive messaging intensity
+                      </Typography>
+                    </Grid>
+                    
+                    <Grid item xs={12} md={6}>
+                      <FormControl fullWidth>
+                        <InputLabel>Emotion Type</InputLabel>
+                        <Select
+                          value={brandVoice.emotionType}
+                          onChange={(e) => setBrandVoice(prev => ({ ...prev, emotionType: e.target.value }))}
+                          label="Emotion Type"
+                        >
+                          <MenuItem value="inspiring">Inspiring ✨</MenuItem>
+                          <MenuItem value="trust_building">Trust Building 🤝</MenuItem>
+                          <MenuItem value="excitement">Excitement 🎉</MenuItem>
+                          <MenuItem value="problem_solving">Problem Solving 🔧</MenuItem>
+                          <MenuItem value="fear_of_missing_out">FOMO ⏰</MenuItem>
+                          <MenuItem value="curiosity">Curiosity 🤔</MenuItem>
+                          <MenuItem value="confidence">Confidence 💪</MenuItem>
+                          <MenuItem value="urgent">Urgent ⚡</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    
+                    <Grid item xs={12} md={6}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <input
+                          type="checkbox"
+                          checked={brandVoice.filterCliches}
+                          onChange={(e) => setBrandVoice(prev => ({ ...prev, filterCliches: e.target.checked }))}
+                          id="filter-cliches"
+                        />
+                        <Box>
+                          <Typography variant="body2" component="label" htmlFor="filter-cliches" sx={{ cursor: 'pointer' }}>
+                            Filter Clichés 🙅‍♂️
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                            Avoid overused marketing phrases like "game-changer", "next-level", etc.
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+                
                 {/* Brand Voice Status Indicator */}
                 {(brandVoice.pastAds.trim() || brandVoice.targetAudience.trim() || brandVoice.brandValues.trim()) && (
                   <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(124, 58, 237, 0.05)', borderRadius: 2 }}>
@@ -1579,7 +1697,8 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                       {brandVoice.pastAds.trim() ? '✅ Learning from past ads • ' : ''}
                       {brandVoice.targetAudience.trim() ? '✅ Target audience defined • ' : ''}
-                      {brandVoice.brandValues.trim() ? '✅ Brand values set' : ''}
+                      {brandVoice.brandValues.trim() ? '✅ Brand values set • ' : ''}
+                      ✅ Emoji level: {brandVoice.emojiLevel}
                     </Typography>
                   </Box>
                 )}

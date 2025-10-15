@@ -210,12 +210,18 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
               tone: brandVoice.tone,
               personality: brandVoice.personality,
               formality: brandVoice.formality,
+              emoji_level: brandVoice.noEmojis ? 'none' : (brandVoice.emojiLevel || 'moderate'),
+              creativity_level: brandVoice.creativityLevel || 5,
+              urgency_level: brandVoice.urgencyLevel || 5,
+              emotion_type: brandVoice.emotionType || 'inspiring',
+              filter_cliches: brandVoice.filterCliches !== undefined ? brandVoice.filterCliches : true,
               target_audience: brandVoice.targetAudience,
               brand_values: brandVoice.brandValues,
-              past_ads: brandVoice.pastAds || null // Include past ads for learning
+              past_ads: brandVoice.pastAds || null
             } : null
           },
-          competitor_ads: [] // Empty array as we don't have competitors in comprehensive analysis
+          competitor_ads: [], // Empty array as we don't have competitors in comprehensive analysis
+          no_emojis: brandVoice?.noEmojis || false
         };
         
         console.log('💾 Calling analyzeAd with proper format:', adData);
@@ -294,6 +300,12 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
               brandVoice?.targetAudience ? `Tailor messaging to ${brandVoice.targetAudience}` : 'Match audience expectations for the platform'
             ]
           },
+          // COMPREHENSIVE ANALYSIS ENHANCEMENTS: Add creative controls from brand voice
+          creativity_level: brandVoice?.creativityLevel || 5,
+          urgency_level: brandVoice?.urgencyLevel || 5,
+          emotion_type: brandVoice?.emotionType || 'inspiring',
+          emoji_level: brandVoice?.emojiLevel || 'moderate',
+          filter_cliches: brandVoice?.filterCliches !== undefined ? brandVoice.filterCliches : true,
           platform: platform,
           // Preserve the database analysis ID and response
           analysis_id: standardResponse.analysis_id,

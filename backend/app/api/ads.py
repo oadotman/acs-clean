@@ -7,6 +7,10 @@ from app.services.ad_analysis_service_enhanced import EnhancedAdAnalysisService
 from app.services.production_ai_generator import ProductionAIService
 from app.auth import get_current_user, require_subscription_limit
 from app.models.user import User
+from app.core.exceptions import AIProviderUnavailable
+from app.core.config import settings
+import asyncio
+import logging
 from app.schemas.ads import (
     AdInput, 
     CompetitorAd, 
@@ -20,9 +24,11 @@ from app.utils.file_extract import FileExtractor
 from app.core.config import settings
 import json
 import uuid
+import time
 from datetime import datetime
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # Initialize AI service with OpenAI
 ai_service = None
@@ -32,7 +38,7 @@ if settings.OPENAI_API_KEY:
             openai_key=settings.OPENAI_API_KEY
         )
     except Exception as e:
-        print(f"⚠️ Failed to initialize AI service: {e}")
+        print(f"WARNING: Failed to initialize AI service: {e}")
         ai_service = None
 
 @router.post("/comprehensive-analyze")
@@ -48,6 +54,8 @@ async def comprehensive_analyze_ad(
         ad_copy = request.get('ad_copy', '')
         platform = request.get('platform', 'facebook')
         user_id = request.get('user_id')
+        brand_voice = request.get('brand_voice', {})
+        no_emojis = request.get('no_emojis', False)
         
         if not ad_copy:
             raise HTTPException(status_code=400, detail="ad_copy is required")
@@ -75,12 +83,14 @@ async def comprehensive_analyze_ad(
         analysis = await ad_service.analyze_ad(
             user_id=current_user.id,
             ad=analysis_request.ad,
-            competitor_ads=analysis_request.competitor_ads
+            competitor_ads=analysis_request.competitor_ads,
+            brand_voice=brand_voice,
+            no_emojis=no_emojis
         )
         
         return {
             "success": True,
-            "analysis": analysis,
+            "analysis": analysis.dict() if hasattr(analysis, 'dict') else analysis,
             "platform": platform,
             "message": "Comprehensive analysis completed successfully"
         }
@@ -109,14 +119,59 @@ async def analyze_ad(
             "target_audience": getattr(request.ad, 'target_audience', None)
         }
         
+        # Extract brand voice parameters from request if available
+        brand_voice = getattr(request.ad, 'brand_voice', None)
+        if brand_voice:
+            logger.info(f"Brand voice parameters received: {brand_voice}")
+        
         # Use real AI service if available, otherwise fallback to enhanced service
         if ai_service:
             try:
-                # Generate AI-powered analysis and improvement
-                ai_result = await ai_service.generate_ad_alternative(
-                    ad_data=ad_data,
-                    variant_type="comprehensive_analysis"
+                logger.info(f"Starting AI analysis for user {current_user.id}, analysis {analysis_id}")
+                start_time = time.time()
+                
+                # Extract brand voice parameters for AI service call
+                emoji_level = brand_voice.get('emoji_level', 'moderate') if brand_voice else 'moderate'
+                human_tone = brand_voice.get('tone', 'conversational') if brand_voice else 'conversational'
+                brand_tone = brand_voice.get('personality', 'friendly') if brand_voice else 'casual'
+                formality_level = 5  # Default middle ground
+                if brand_voice and brand_voice.get('formality'):
+                    formality_mapping = {'casual': 3, 'semi-formal': 5, 'formal': 7}
+                    formality_level = formality_mapping.get(brand_voice.get('formality'), 5)
+                
+                # Extract advanced creative controls
+                creativity_level = brand_voice.get('creativity_level', 5) if brand_voice else 5
+                urgency_level = brand_voice.get('urgency_level', 5) if brand_voice else 5
+                emotion_type = brand_voice.get('emotion_type', 'inspiring') if brand_voice else 'inspiring'
+                filter_cliches = brand_voice.get('filter_cliches', True) if brand_voice else True
+                
+                target_audience_description = brand_voice.get('target_audience') if brand_voice else None
+                brand_voice_description = brand_voice.get('brand_values') if brand_voice else None
+                
+                logger.info(f"AI generation parameters: emoji_level={emoji_level}, human_tone={human_tone}, formality_level={formality_level}")
+                logger.info(f"Advanced controls: creativity_level={creativity_level}, urgency_level={urgency_level}, emotion_type={emotion_type}, filter_cliches={filter_cliches}")
+                
+                # Generate AI-powered analysis with timeout and all brand voice parameters
+                ai_result = await asyncio.wait_for(
+                    ai_service.generate_ad_alternative(
+                        ad_data=ad_data,
+                        variant_type="comprehensive_analysis",
+                        emoji_level=emoji_level,
+                        human_tone=human_tone,
+                        brand_tone=brand_tone,
+                        formality_level=formality_level,
+                        target_audience_description=target_audience_description,
+                        brand_voice_description=brand_voice_description,
+                        creativity_level=creativity_level,
+                        urgency_level=urgency_level,
+                        emotion_type=emotion_type,
+                        filter_cliches=filter_cliches
+                    ),
+                    timeout=settings.AI_REQUEST_TIMEOUT + 5  # Extra 5 seconds buffer
                 )
+                
+                elapsed_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+                logger.info(f"AI analysis completed for user {current_user.id} in {elapsed_time:.2f}ms")
                 
                 # Extract scores from AI result
                 ai_scores = ai_result.get('scores', {})
@@ -154,8 +209,18 @@ async def analyze_ad(
                 
                 feedback_text = " ".join(ai_feedback) if isinstance(ai_feedback, list) else str(ai_feedback)
                 
+            except (asyncio.TimeoutError, AIProviderUnavailable) as ai_error:
+                elapsed_time = (time.time() - start_time) * 1000 if 'start_time' in locals() else 0
+                logger.warning(
+                    f"AI timeout/unavailable for user {current_user.id}, analysis {analysis_id} after {elapsed_time:.2f}ms: {str(ai_error)}"
+                )
+                # Fallback to enhanced service when AI times out or is unavailable
+                return await _fallback_to_enhanced_service(request, db, current_user, analysis_id)
             except Exception as ai_error:
-                print(f"AI service failed: {ai_error}")
+                elapsed_time = (time.time() - start_time) * 1000 if 'start_time' in locals() else 0
+                logger.error(
+                    f"AI service failed for user {current_user.id}, analysis {analysis_id} after {elapsed_time:.2f}ms: {str(ai_error)}"
+                )
                 # Fallback to enhanced service if AI fails
                 return await _fallback_to_enhanced_service(request, db, current_user, analysis_id)
         else:

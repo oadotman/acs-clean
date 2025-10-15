@@ -82,6 +82,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = Field(None, description="OpenAI API key")
     OPENAI_MAX_TOKENS: int = Field(default=2000, description="OpenAI max tokens per request")
     OPENAI_RATE_LIMIT: int = Field(default=100, description="OpenAI requests per minute")
+    AI_REQUEST_TIMEOUT: int = Field(default=60, description="AI request timeout in seconds")
+    FRONTEND_AI_TIMEOUT: int = Field(default=120000, description="Frontend AI timeout in milliseconds")
     HUGGINGFACE_API_KEY: Optional[str] = Field(None, description="HuggingFace API key")
     
     # Redis Configuration

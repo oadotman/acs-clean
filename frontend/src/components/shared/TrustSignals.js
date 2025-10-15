@@ -149,59 +149,6 @@ const TrustSignals = () => {
             ))}
           </Box>
         </Box>
-
-        {/* Awards & Recognition */}
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="h6" sx={{ 
-            color: '#E5E7EB', 
-            mb: 4,
-            fontWeight: 600
-          }}>
-            Industry Recognition
-          </Typography>
-          
-          <Grid container spacing={3} justifyContent="center">
-            {awards.map((award, index) => (
-              <Grid item xs={12} sm={4} key={index}>
-                <Box sx={{
-                  background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)',
-                  border: '1px solid rgba(251, 191, 36, 0.2)',
-                  borderRadius: 3,
-                  p: 3,
-                  textAlign: 'center',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    borderColor: 'rgba(251, 191, 36, 0.3)'
-                  }
-                }}>
-                  <StarRate sx={{ color: '#fbbf24', fontSize: 32, mb: 2 }} />
-                  <Typography variant="body1" sx={{ 
-                    color: '#F9FAFB', 
-                    fontWeight: 600,
-                    mb: 1
-                  }}>
-                    {award.title}
-                  </Typography>
-                  <Typography variant="body2" sx={{ 
-                    color: '#fbbf24',
-                    fontWeight: 500,
-                    mb: 1
-                  }}>
-                    {award.year}
-                  </Typography>
-                  <Typography variant="body2" sx={{ 
-                    color: '#E5E7EB',
-                    opacity: 0.8,
-                    fontSize: '0.85rem'
-                  }}>
-                    {award.organization}
-                  </Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
       </Container>
     </Box>
   );

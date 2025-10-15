@@ -155,7 +155,7 @@ const Dashboard = () => {
       setIsAnalyzing(true);
       setShowInputPanel(false);
       
-      toast.loading('Analyzing your ad...', { id: 'analysis' });
+      toast.loading('Running comprehensive AI analysis (this may take 30-60 seconds)...', { id: 'analysis' });
       
       console.log('🚀 Starting ad analysis...', { adText, platform });
       
@@ -185,8 +185,8 @@ const Dashboard = () => {
         score: result.scores?.overall_score || result.analysis?.overall_score || 75,
         improvement: Math.max(0, (result.scores?.overall_score || result.analysis?.overall_score || 75) - 60),
         improvements: Array.isArray(result.feedback) ? result.feedback : [
-          result.feedback || 'Analysis completed successfully',
-          'Check detailed results for insights'
+          result.feedback || 'Comprehensive analysis completed with 9 AI tools',
+          'Check detailed results for insights and recommendations'
         ],
         analysis_id: result.analysis_id,
         fullAnalysis: result // Keep the full AI response for AnalysisResults to parse

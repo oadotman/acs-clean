@@ -15,6 +15,7 @@ from .creative_controls import (
 
 class EmojiLevel(str, Enum):
     """Emoji usage levels for ad copy generation"""
+    NONE = "none"            # No emojis
     MINIMAL = "minimal"      # 1-2 emojis max
     MODERATE = "moderate"    # 3-5 emojis
     EXPRESSIVE = "expressive"  # Liberal use of emojis
@@ -210,6 +211,7 @@ HUMAN_TONE_PARAMS: Dict[HumanTone, Dict[str, float]] = {
 
 # Emoji usage guidelines for prompt generation
 EMOJI_GUIDELINES: Dict[EmojiLevel, str] = {
+    EmojiLevel.NONE: "Do not use any emojis. Focus on text-only content with clear, descriptive language.",
     EmojiLevel.MINIMAL: "Use 1-2 emojis maximum, only when they genuinely enhance meaning. Prefer professional, universally understood emojis.",
     EmojiLevel.MODERATE: "Use 3-5 emojis strategically to enhance emotional connection and readability. Balance professionalism with personality.",
     EmojiLevel.EXPRESSIVE: "Use emojis liberally to create emotional resonance and visual appeal. Embrace platform culture while maintaining brand appropriateness."

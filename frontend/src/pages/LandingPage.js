@@ -212,15 +212,15 @@ const LandingPage = () => {
   const roleMessages = [
     {
       role: "CMOs",
-      message: "Walk into Monday's meeting with proof and a plan, not excuses."
+      message: "Walk into leadership meetings with proof, not excuses."
     },
     {
       role: "Agencies", 
-      message: "Turn 8-hour audits into 4-minute wins. 10x client capacity."
+      message: "Deliver data-backed results in minutes, not days."
     },
     {
-      role: "Solo Founders",
-      message: "Stop burning cash. Upload → Diagnose → Deploy → Profit."
+      role: "Founders",
+      message: "Get enterprise-level ad insights without enterprise costs."
     }
   ];
 
@@ -287,29 +287,28 @@ const LandingPage = () => {
           <Zoom in timeout={800}>
             <Box sx={{ textAlign: 'center', mb: 4 }}>
               <Chip
-                icon={<LocalFireDepartment sx={{ color: '#C084FC' }} />}
-                label="Your competitors are outperforming your ads by 300%. Here's why."
+                icon={<Verified sx={{ color: '#10B981' }} />}
+                label="Used by performance marketers at leading agencies, SaaS companies, and e-commerce brands"
                 sx={{
                   background: gradients.glassCard,
                   backdropFilter: 'blur(20px)',
-                  border: '2px solid rgba(192, 132, 252, 0.3)',
+                  border: '2px solid rgba(16, 185, 129, 0.3)',
                   color: '#F9FAFB',
-                  fontWeight: 700,
-                  fontSize: { xs: '0.9rem', md: '1.1rem' },
-                  py: 3,
+                  fontWeight: 600,
+                  fontSize: { xs: '0.85rem', md: '1rem' },
+                  py: 2.5,
                   px: 3,
                   height: 'auto',
                   borderRadius: 100,
-                  boxShadow: '0 10px 40px rgba(192, 132, 252, 0.3)',
-                  animation: `${pulseGlow} 3s ease-in-out infinite`,
+                  boxShadow: '0 8px 25px rgba(16, 185, 129, 0.2)',
                   '& .MuiChip-label': {
                     px: 2,
                     py: 1
                   },
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    transform: 'scale(1.05)',
-                    boxShadow: '0 15px 50px rgba(192, 132, 252, 0.5)',
+                    transform: 'scale(1.02)',
+                    boxShadow: '0 12px 35px rgba(16, 185, 129, 0.3)',
                   }
                 }}
               />
@@ -323,7 +322,7 @@ const LandingPage = () => {
                 <Typography
                   variant="h1"
                   sx={{
-                    fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem', lg: '5.5rem' },
+                    fontSize: { xs: '2.2rem', sm: '3rem', md: '4rem', lg: '4.8rem' },
                     fontWeight: 900,
                     mb: 4,
                     lineHeight: 1.1,
@@ -333,49 +332,68 @@ const LandingPage = () => {
                     textShadow: '0 4px 20px rgba(192, 132, 252, 0.3)',
                   }}
                 >
-                  Outperform competitors
+                  Generate High-Converting,{' '}
                   <Box component="span" sx={{ 
                     background: gradients.ctaPrimary,
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
-                    display: 'block',
-                    mt: 2,
                     fontWeight: 900,
                   }}>
-                    paying 60% less per click - here's how.
+                    Policy-Safe Ad Variants
+                  </Box>
+                  {' '}in 2 Minutes
+                  <Box component="span" sx={{ 
+                    display: 'block',
+                    mt: 2,
+                    fontSize: { xs: '1.8rem', sm: '2.5rem', md: '3.2rem', lg: '3.8rem' },
+                    fontWeight: 700,
+                    color: '#10B981'
+                  }}>
+                    — Backed by Behavioral Science
                   </Box>
                 </Typography>
                 
                 {/* Subheadline */}
                 <Typography
-                  variant="h5"
+                  variant="h4"
                   sx={{
-                    mb: 6,
-                    fontWeight: 400,
-                    color: '#E5E7EB',
-                    fontSize: { xs: '1.1rem', sm: '1.3rem', md: '1.5rem' },
-                    lineHeight: 1.6,
-                    maxWidth: '900px',
+                    mb: 3,
+                    fontWeight: 600,
+                    color: '#F9FAFB',
+                    fontSize: { xs: '1.3rem', sm: '1.5rem', md: '1.8rem' },
+                    lineHeight: 1.5,
+                    maxWidth: '950px',
                     mx: 'auto',
                     textAlign: 'center',
-                    opacity: 0.95,
                   }}
                 >
-                  Every day you delay costs you{' '}
+                  AdCopySurge analyzes your existing ads, identifies weak points, and delivers psychology-backed, compliant variants that{' '}
                   <Box component="span" sx={{ 
-                    color: '#C084FC', 
+                    color: '#10B981', 
                     fontWeight: 700,
                   }}>
-                    more than you'd like to admit
+                    outperform competitors
                   </Box>
-                  . Discover the 4 hidden profit killers in your campaigns and{' '}
-                  <Box component="span" sx={{ 
-                    color: '#F9FAFB', 
-                    fontWeight: 700,
-                  }}>
-                    get compliant, high-converting alternatives in 2 minutes or less.
-                  </Box>
+                  {' '}— without risking ad bans.
+                </Typography>
+                
+                {/* Supporting Text */}
+                <Typography
+                  variant="h6"
+                  sx={{
+                    mb: 6,
+                    fontWeight: 500,
+                    color: '#E5E7EB',
+                    fontSize: { xs: '1rem', sm: '1.1rem', md: '1.2rem' },
+                    lineHeight: 1.6,
+                    maxWidth: '800px',
+                    mx: 'auto',
+                    textAlign: 'center',
+                    opacity: 0.9,
+                  }}
+                >
+                  The only platform combining compliance scanning, behavioral psychology scoring, and ROI-driven variant generation — all in one streamlined workflow.
                 </Typography>
 
                 {/* Performance Insights Card */}
@@ -506,7 +524,7 @@ const LandingPage = () => {
                           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                         }}
                       >
-                        Get My 2-Minute Ad Audit
+                        Run My Free Ad Analysis Now
                       </Button>
                     </Box>
                   </Paper>
@@ -519,32 +537,42 @@ const LandingPage = () => {
                   justifyContent="center"
                 >
                   <Zoom in timeout={2000}>
-                    <Button
-                      variant="contained"
-                      size="large"
-                      onClick={handleFreeScan}
-                      startIcon={<RocketLaunch />}
-                      sx={{
-                        background: gradients.ctaPrimary,
-                        color: '#F9FAFB',
-                        fontSize: { xs: '1.1rem', md: '1.3rem' },
-                        px: { xs: 5, md: 8 },
-                        py: { xs: 2.5, md: 3.5 },
-                        borderRadius: 3,
-                        fontWeight: 800,
-                        textTransform: 'none',
-                        boxShadow: '0 15px 50px rgba(192, 132, 252, 0.4)',
-                        border: '2px solid rgba(255, 255, 255, 0.2)',
-                        '&:hover': {
-                          background: gradients.ctaHover,
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 20px 60px rgba(192, 132, 252, 0.6)',
-                        },
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                      }}
-                    >
-                      Get My 2-Minute Ad Audit
-                    </Button>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Button
+                        variant="contained"
+                        size="large"
+                        onClick={handleFreeScan}
+                        startIcon={<RocketLaunch />}
+                        sx={{
+                          background: gradients.ctaPrimary,
+                          color: '#F9FAFB',
+                          fontSize: { xs: '1.1rem', md: '1.3rem' },
+                          px: { xs: 5, md: 8 },
+                          py: { xs: 2.5, md: 3.5 },
+                          borderRadius: 3,
+                          fontWeight: 800,
+                          textTransform: 'none',
+                          boxShadow: '0 15px 50px rgba(192, 132, 252, 0.4)',
+                          border: '2px solid rgba(255, 255, 255, 0.2)',
+                          '&:hover': {
+                            background: gradients.ctaHover,
+                            transform: 'translateY(-4px)',
+                            boxShadow: '0 20px 60px rgba(192, 132, 252, 0.6)',
+                          },
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}
+                      >
+                        Get Your Free Ad Analysis in 2 Minutes
+                      </Button>
+                      <Typography variant="body2" sx={{ 
+                        color: 'rgba(249, 250, 251, 0.8)', 
+                        mt: 1.5, 
+                        textAlign: 'center',
+                        fontSize: '0.9rem'
+                      }}>
+                        Takes 2 minutes. No credit card required.
+                      </Typography>
+                    </Box>
                   </Zoom>
                   <Zoom in timeout={2200}>
                     <Button
@@ -579,14 +607,13 @@ const LandingPage = () => {
 
                 {/* Trust Line */}
                 <Typography variant="body1" sx={{ 
-                  color: '#E5E7EB', 
+                  color: '#10B981', 
                   mb: 3, 
                   textAlign: 'center',
-                  fontSize: { xs: '0.95rem', md: '1.1rem' },
-                  fontWeight: 500,
-                  opacity: 0.9,
+                  fontSize: { xs: '1rem', md: '1.2rem' },
+                  fontWeight: 600,
                 }}>
-                  ✅ No credit card • ✅ Results in 60 seconds • ✅ Free forever plan • 🔒 SOC 2 + GDPR Compliant
+                  ✅ No credit card required • ✅ GDPR-Compliant • ✅ Cancel anytime
                 </Typography>
               </Grid>
             </Grid>
@@ -707,10 +734,10 @@ const LandingPage = () => {
         </Container>
       </Box>
       
-      {/* Challenges Section */}
+      {/* 9 Proprietary Engines Section */}
       <Box sx={{ 
-        background: gradients.darkSectionAlt, 
-        py: { xs: 8, md: 12 }, 
+        background: gradients.darkSectionAlt,
+        py: { xs: 10, md: 14 }, 
         color: '#F9FAFB',
         position: 'relative',
         zIndex: 2
@@ -720,277 +747,149 @@ const LandingPage = () => {
             textAlign: 'center', 
             fontWeight: 800, 
             mb: 3,
-            fontSize: { xs: '2.5rem', md: '3.5rem' },
+            fontSize: { xs: '2.8rem', md: '4rem' },
             color: '#F9FAFB',
-            letterSpacing: '-0.02em',
+            letterSpacing: '-0.02em'
           }}>
-             Turn Your Biggest Challenges Into Competitive Advantages
+              The 9-Tool Workflow
+          </Typography>
+          <Typography variant="h3" sx={{ 
+            textAlign: 'center', 
+            fontWeight: 700, 
+            mb: 4,
+            fontSize: { xs: '1.8rem', md: '2.5rem' },
+            color: '#C084FC'
+          }}>
+            Your Ad, Perfected by 9 Specialized Proprietary Engines
           </Typography>
           <Typography variant="h5" sx={{ 
             textAlign: 'center', 
             color: '#E5E7EB', 
-            mb: 10,
+            mb: 8,
             fontSize: { xs: '1.3rem', md: '1.6rem' },
-            maxWidth: '800px',
+            maxWidth: '900px',
             mx: 'auto',
             opacity: 0.9,
+            lineHeight: 1.5
           }}>
-            We've identified the 6 hidden profit-killers in ad campaigns. Here's how to fix them.
+            Paste your ad copy — AdCopySurge runs it through nine advanced engines that analyze compliance, psychology, and ROI potential, producing a compliant, conversion-optimized version in under 2 minutes.
           </Typography>
           
-          <Grid container spacing={6}>
-            {/* Challenge 1 */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ 
-                background: 'linear-gradient(135deg, #ffffff 0%, #faf7ff 100%)', 
-                border: '2px solid rgba(124, 58, 237, 0.1)', 
-                borderRadius: 4,
-                p: 6,
-                height: '100%',
-                boxShadow: '0 10px 40px rgba(124, 58, 237, 0.08)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 20px 60px rgba(124, 58, 237, 0.15)'
-                }
+          {/* Visual Flow */}
+          <Box sx={{ textAlign: 'center', mb: 10 }}>
+            <Paper sx={{
+              background: gradients.glassCardPurple,
+              backdropFilter: 'blur(10px)',
+              border: '2px solid rgba(192, 132, 252, 0.3)',
+              borderRadius: 4,
+              p: { xs: 4, md: 6 },
+              maxWidth: '800px',
+              mx: 'auto',
+              boxShadow: '0 15px 40px rgba(124, 58, 237, 0.2)'
+            }}>
+              <Typography variant="h4" sx={{ 
+                color: '#F9FAFB', 
+                fontWeight: 700,
+                mb: 4,
+                fontSize: { xs: '1.5rem', md: '2rem' }
               }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <Security sx={{ color: '#7c3aed', fontSize: '2rem', mr: 2 }} />
-                  <Typography variant="h5" sx={{ color: '#1e1b4b', fontWeight: 700 }}>
-                    Compliance Protection
+                Your Ad Copy → 9 Specialized Engines → (Optimized Copy + A/B/C Variants)
+              </Typography>
+            </Paper>
+          </Box>
+          
+          {/* The 9 Engines Grid */}
+          <Grid container spacing={4}>
+            {[
+              { name: 'Ad Copy Analyzer', icon: <Analytics />, desc: 'Deep-dive structural analysis' },
+              { name: 'Compliance Checker', icon: <Security />, desc: 'Platform policy validation' },
+              { name: 'Psychology Scorer', icon: <Lightbulb />, desc: 'Behavioral trigger assessment' },
+              { name: 'A/B/C Variant Generator', icon: <CompareArrows />, desc: 'Strategic testing variants' },
+              { name: 'ROI Optimizer', icon: <TrendingUp />, desc: 'Revenue impact prediction' },
+              { name: 'Industry Optimizer', icon: <AutoAwesome />, desc: 'Sector-specific optimization' },
+              { name: 'Legal Risk Scanner', icon: <CheckCircle />, desc: 'Regulatory compliance check' },
+              { name: 'Brand Voice Engine', icon: <Star />, desc: 'Tone and messaging alignment' },
+              { name: 'Performance Forensics', icon: <Speed />, desc: 'Conversion bottleneck detection' }
+            ].map((engine, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <Paper sx={{ 
+                  background: 'linear-gradient(135deg, #ffffff 0%, #faf7ff 100%)',
+                  border: '2px solid rgba(124, 58, 237, 0.1)',
+                  borderRadius: 4,
+                  p: 4,
+                  height: '100%',
+                  textAlign: 'center',
+                  boxShadow: '0 10px 40px rgba(124, 58, 237, 0.08)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 20px 60px rgba(124, 58, 237, 0.15)',
+                    borderColor: 'rgba(124, 58, 237, 0.2)'
+                  }
+                }}>
+                  <Box sx={{ 
+                    width: 60,
+                    height: 60,
+                    borderRadius: '50%',
+                    background: gradients.purplePrimary,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 3,
+                    boxShadow: '0 8px 25px rgba(124, 58, 237, 0.3)'
+                  }}>
+                    {React.cloneElement(engine.icon, { 
+                      sx: { color: 'white', fontSize: '1.8rem' }
+                    })}
+                  </Box>
+                  <Typography variant="h6" sx={{ 
+                    color: '#1e1b4b', 
+                    fontWeight: 700, 
+                    mb: 2,
+                    fontSize: '1.1rem'
+                  }}>
+                    {engine.name}
                   </Typography>
-                </Box>
-                <Typography variant="body1" sx={{ color: '#4b5563', mb: 3, lineHeight: 1.7 }}>
-                  Prevent costly ad bans with our 47-point compliance scanner that catches policy violations before they cost you thousands.
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#10b981', fontWeight: 600, mb: 2 }}>
-                  ✓ Avoid $2,100–$16,800 in lost revenue per ban
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#7c3aed', fontWeight: 600 }}>
-                  Get compliant copy variations that pass platform reviews.
-                </Typography>
-              </Paper>
-            </Grid>
-            
-            {/* Challenge 2 */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ 
-                background: 'linear-gradient(135deg, #ffffff 0%, #faf7ff 100%)', 
-                border: '2px solid rgba(124, 58, 237, 0.1)', 
-                borderRadius: 4,
-                p: 6,
-                height: '100%',
-                boxShadow: '0 10px 40px rgba(124, 58, 237, 0.08)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 20px 60px rgba(124, 58, 237, 0.15)'
-                }
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <Analytics sx={{ color: '#7c3aed', fontSize: '2rem', mr: 2 }} />
-                  <Typography variant="h5" sx={{ color: '#1e1b4b', fontWeight: 700 }}>
-                    Smart A/B/C Testing Strategy
+                  <Typography variant="body2" sx={{ 
+                    color: '#6b7280',
+                    fontSize: '0.95rem'
+                  }}>
+                    {engine.desc}
                   </Typography>
-                </Box>
-                <Typography variant="body1" sx={{ color: '#4b5563', mb: 3, lineHeight: 1.7 }}>
-                  Replace random testing with 3 psychology-backed variants. Know what will work before you spend.
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#10b981', fontWeight: 600, mb: 2 }}>
-                  ✓ Stop wasting $5K-$20K on failed tests
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#10b981', fontWeight: 600, mb: 2 }}>
-                  ✓ Generate benefit-focused, problem-focused, and story-driven versions
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#10b981', fontWeight: 600, mb: 2 }}>
-                  ✓ Get high-probability winners from proven psychology principles
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#7c3aed', fontWeight: 600 }}>
-                  Test smarter, not harder.
-                </Typography>
-              </Paper>
-            </Grid>
-            
-            {/* Challenge 3 */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ 
-                background: 'linear-gradient(135deg, #ffffff 0%, #faf7ff 100%)', 
-                border: '2px solid rgba(124, 58, 237, 0.1)', 
-                borderRadius: 4,
-                p: 6,
-                height: '100%',
-                boxShadow: '0 10px 40px rgba(124, 58, 237, 0.08)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 20px 60px rgba(124, 58, 237, 0.15)'
-                }
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <CompareArrows sx={{ color: '#7c3aed', fontSize: '2rem', mr: 2 }} />
-                  <Typography variant="h5" sx={{ color: '#1e1b4b', fontWeight: 700 }}>
-                    Competitor Intelligence
-                  </Typography>
-                </Box>
-                <Typography variant="body1" sx={{ color: '#4b5563', mb: 3, lineHeight: 1.7 }}>
-                  Discover exactly what makes competitor ads outperform yours and apply those insights instantly.
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#10b981', fontWeight: 600, mb: 2 }}>
-                  ✓ Match or beat competitor CTRs
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#7c3aed', fontWeight: 600 }}>
-                  Get the psychological triggers that make ads scale.
-                </Typography>
-              </Paper>
-            </Grid>
-            
-            {/* Challenge 4 */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ 
-                background: 'linear-gradient(135deg, #ffffff 0%, #faf7ff 100%)', 
-                border: '2px solid rgba(124, 58, 237, 0.1)', 
-                borderRadius: 4,
-                p: 6,
-                height: '100%',
-                boxShadow: '0 10px 40px rgba(124, 58, 237, 0.08)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 20px 60px rgba(124, 58, 237, 0.15)'
-                }
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <Speed sx={{ color: '#7c3aed', fontSize: '2rem', mr: 2 }} />
-                  <Typography variant="h5" sx={{ color: '#1e1b4b', fontWeight: 700 }}>
-                    Rapid Optimization
-                  </Typography>
-                </Box>
-                <Typography variant="body1" sx={{ color: '#4b5563', mb: 3, lineHeight: 1.7 }}>
-                  Generate and test 10x more variations in the same time. Learn faster, optimize smarter.
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#10b981', fontWeight: 600, mb: 2 }}>
-                  ✓ 6,000+ tests/year vs competitor 130
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#7c3aed', fontWeight: 600 }}>
-                  Accelerate your learning curve by 46x.
-                </Typography>
-              </Paper>
-            </Grid>
-            
-            {/* Challenge 5 - Strategic A/B/C Testing */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ 
-                background: 'linear-gradient(135deg, #ffffff 0%, #faf7ff 100%)', 
-                border: '2px solid rgba(124, 58, 237, 0.1)', 
-                borderRadius: 4,
-                p: 6,
-                height: '100%',
-                boxShadow: '0 10px 40px rgba(124, 58, 237, 0.08)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 20px 60px rgba(124, 58, 237, 0.15)'
-                }
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <CompareArrows sx={{ color: '#7c3aed', fontSize: '2rem', mr: 2 }} />
-                  <Typography variant="h5" sx={{ color: '#1e1b4b', fontWeight: 700 }}>
-                    Strategic A/B/C Testing
-                  </Typography>
-                </Box>
-                <Typography variant="body1" sx={{ color: '#4b5563', mb: 3, lineHeight: 1.7 }}>
-                  Stop guessing which message resonates. Generate 3 psychology-backed variants instantly.
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#10b981', fontWeight: 600, mb: 2 }}>
-                  ✓ Test benefit-driven, problem-focused, and story-led approaches
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#7c3aed', fontWeight: 600 }}>
-                  Get data-driven insights on what your audience truly responds to.
-                </Typography>
-              </Paper>
-            </Grid>
-            
-            {/* Challenge 6 - Platform-Optimized Copy */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ 
-                background: 'linear-gradient(135deg, #ffffff 0%, #faf7ff 100%)', 
-                border: '2px solid rgba(124, 58, 237, 0.1)', 
-                borderRadius: 4,
-                p: 6,
-                height: '100%',
-                boxShadow: '0 10px 40px rgba(124, 58, 237, 0.08)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 20px 60px rgba(124, 58, 237, 0.15)'
-                }
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <AutoAwesome sx={{ color: '#7c3aed', fontSize: '2rem', mr: 2 }} />
-                  <Typography variant="h5" sx={{ color: '#1e1b4b', fontWeight: 700 }}>
-                    Platform-Optimized Copy
-                  </Typography>
-                </Box>
-                <Typography variant="body1" sx={{ color: '#4b5563', mb: 3, lineHeight: 1.7 }}>
-                  Never worry about character limits or platform-specific requirements again.
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#10b981', fontWeight: 600, mb: 2 }}>
-                  ✓ Auto-optimize for Facebook, Instagram, LinkedIn, Twitter, TikTok, Google Ads
-                </Typography>
-                <Typography variant="body1" sx={{ color: '#7c3aed', fontWeight: 600 }}>
-                  Get perfectly-sized, platform-appropriate copy that matches each channel's best practices.
-                </Typography>
-              </Paper>
-            </Grid>
+                </Paper>
+              </Grid>
+            ))}
           </Grid>
           
-          {/* Opportunity Highlight */}
-          <Paper sx={{ 
-            background: gradients.purplePrimary,
-            p: 6,
-            mt: 10,
-            textAlign: 'center',
-            borderRadius: 4,
-            boxShadow: '0 20px 60px rgba(124, 58, 237, 0.3)'
-          }}>
-            <Typography variant="h4" sx={{ color: 'white', fontWeight: 800, mb: 3 }}>
-              Your Optimization Opportunity:
-            </Typography>
-            <Grid container spacing={4} justifyContent="center">
-              <Grid item xs={12} sm={4}>
-                <Typography variant="h4" sx={{ color: '#fbbf24', fontWeight: 800, mb: 1 }}>
-                  Daily
-                </Typography>
-                <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
-                  profit recovery
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Typography variant="h4" sx={{ color: '#fbbf24', fontWeight: 800, mb: 1 }}>
-                  Monthly
-                </Typography>
-                <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
-                  revenue boost
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Typography variant="h4" sx={{ color: '#fbbf24', fontWeight: 800, mb: 1 }}>
-                  Yearly
-                </Typography>
-                <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
-                  competitive advantage
-                </Typography>
-              </Grid>
-            </Grid>
-            <Typography variant="body1" sx={{ 
-              color: 'rgba(255,255,255,0.9)', 
-              mt: 3, 
-              fontWeight: 600,
-              fontSize: '1.1rem'
-            }}>
-               Plus: Market leadership, team confidence, predictable growth.
-            </Typography>
-          </Paper>
+          {/* CTA */}
+          <Box sx={{ textAlign: 'center', mt: 8 }}>
+            <Button
+              variant="contained"
+              size="large"
+              onClick={handleFreeScan}
+              sx={{
+                background: gradients.ctaPrimary,
+                color: '#F9FAFB',
+                fontSize: { xs: '1.2rem', md: '1.4rem' },
+                px: { xs: 6, md: 10 },
+                py: { xs: 2.5, md: 3.5 },
+                borderRadius: 3,
+                fontWeight: 800,
+                textTransform: 'none',
+                boxShadow: '0 15px 50px rgba(192, 132, 252, 0.4)',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                '&:hover': {
+                  background: gradients.ctaHover,
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 20px 60px rgba(192, 132, 252, 0.6)',
+                },
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              Get Your Free Ad Analysis in 2 Minutes
+            </Button>
+          </Box>
         </Container>
       </Box>
       
@@ -1116,14 +1015,33 @@ const LandingPage = () => {
             </Grid>
           </Grid>
           
-          {/* Speed Proof */}
+          {/* Real Testimonial */}
           <Box sx={{ textAlign: 'center', mt: 6 }}>
-            <Typography variant="h6" sx={{ color: '#f59e0b', fontWeight: 600, mb: 2 }}>
-              Speed Proof:
-            </Typography>
-            <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.1rem' }}>
-              In under 4 minutes, Sarah generated optimized variants. Within 48 hours of testing, one version outperformed her original ad by 82%.
-            </Typography>
+            <Paper sx={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(10px)',
+              border: '2px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: 4,
+              p: 4,
+              maxWidth: '600px',
+              mx: 'auto'
+            }}>
+              <Typography variant="body1" sx={{ 
+                color: 'rgba(255,255,255,0.9)', 
+                fontSize: '1.1rem',
+                fontStyle: 'italic',
+                mb: 3,
+                lineHeight: 1.6
+              }}>
+                "AdCopySurge helped us reduce CPC from $3.80 to $2.10 and lift CTR by 78%. The compliance scanner alone saved us from two potential account suspensions."
+              </Typography>
+              <Typography variant="body2" sx={{ 
+                color: '#f59e0b', 
+                fontWeight: 600
+              }}>
+                — Alex K., FinTech Startup ($500K/Q spend)
+              </Typography>
+            </Paper>
           </Box>
           
           <Box sx={{ textAlign: 'center', mt: 6 }}>
@@ -1151,11 +1069,8 @@ const LandingPage = () => {
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
-              Get My 2-Minute Ad Audit
+              See How Much You're Leaving on the Table — Try It Free
             </Button>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mt: 2 }}>
-              Takes 60 seconds. Zero risk.
-            </Typography>
           </Box>
         </Container>
       </Box>
@@ -1322,6 +1237,43 @@ const LandingPage = () => {
               </Typography>
             </Paper>
           </Box>
+          
+          {/* One-Line Summary CTA */}
+          <Box sx={{ textAlign: 'center', mt: 8 }}>
+            <Typography variant="h5" sx={{ 
+              color: '#C084FC', 
+              fontWeight: 700,
+              mb: 4,
+              fontSize: { xs: '1.3rem', md: '1.5rem' }
+            }}>
+              In 120 seconds, get 3 psychology-backed, compliant variants and ROI predictions.
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              onClick={handleFreeScan}
+              sx={{
+                background: gradients.ctaPrimary,
+                color: '#F9FAFB',
+                fontSize: { xs: '1.1rem', md: '1.3rem' },
+                px: { xs: 5, md: 8 },
+                py: { xs: 2, md: 3 },
+                borderRadius: 3,
+                fontWeight: 700,
+                textTransform: 'none',
+                boxShadow: '0 12px 40px rgba(192, 132, 252, 0.4)',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                '&:hover': {
+                  background: gradients.ctaHover,
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 16px 50px rgba(192, 132, 252, 0.6)',
+                },
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              Get Your Free Ad Analysis in 2 Minutes
+            </Button>
+          </Box>
         </Container>
       </Box>
       
@@ -1342,7 +1294,7 @@ const LandingPage = () => {
             color: '#F9FAFB',
             letterSpacing: '-0.02em'
           }}>
-            🎯 Strategic A/B/C Testing: Know What Works Before You Spend
+              Strategic A/B/C Testing: Know What Works Before You Spend
           </Typography>
           <Typography variant="h5" sx={{ 
             textAlign: 'center', 
@@ -1546,7 +1498,7 @@ const LandingPage = () => {
               mb: 4,
               fontSize: { xs: '1.8rem', md: '2.2rem' }
             }}>
-              Generate all 3 variants in 60 seconds → Test on your platform → Use winner → Rinse and repeat
+              Generate all 3 variants in 120 seconds → Test on your platform → Use winner → Rinse and repeat
             </Typography>
           </Box>
           
@@ -1605,8 +1557,16 @@ const LandingPage = () => {
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
-              Get My Strategic A/B/C Testing
+              Get Your Free Ad Analysis in 2 Minutes
             </Button>
+            <Typography variant="body2" sx={{ 
+              color: 'rgba(249, 250, 251, 0.8)', 
+              mt: 2, 
+              textAlign: 'center',
+              fontSize: '0.9rem'
+            }}>
+              Takes 2 minutes. No credit card required.
+            </Typography>
           </Box>
         </Container>
       </Box>
@@ -1628,7 +1588,7 @@ const LandingPage = () => {
             color: '#F9FAFB',
             letterSpacing: '-0.02em',
           }}>
-            🚀 Success Stories: Real Results From Real Companies
+              Success Stories: Real Results From Real Companies
           </Typography>
           <Typography variant="h6" sx={{ 
             textAlign: 'center', 
@@ -1700,119 +1660,6 @@ const LandingPage = () => {
         </Container>
       </Box>
       
-      {/* Instant Score Widget Section */}
-      <Box sx={{ 
-        backgroundColor: '#ffffff',
-        py: { xs: 10, md: 12 }, 
-        color: '#1f2937',
-        position: 'relative',
-        zIndex: 2
-      }}>
-        <Container maxWidth="md">
-          <Typography variant="h3" sx={{ 
-            textAlign: 'center', 
-            fontWeight: 800, 
-            mb: 3,
-            fontSize: { xs: '2.5rem', md: '3.5rem' },
-            color: '#1e1b4b'
-          }}>
-            📈 Try Our Ad Audit Tool
-          </Typography>
-          <Typography variant="h6" sx={{ 
-            textAlign: 'center', 
-            color: '#6b7280', 
-            mb: 4
-          }}>
-            Paste any ad below and see your score instantly (this is just a preview - sign up for the full 47-point analysis)
-          </Typography>
-          
-          <Paper sx={{ 
-            background: 'linear-gradient(135deg, #faf7ff 0%, #f3e8ff 100%)',
-            border: '2px solid rgba(124, 58, 237, 0.2)',
-            borderRadius: 4,
-            p: 6,
-            boxShadow: '0 20px 60px rgba(124, 58, 237, 0.1)'
-          }}>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              placeholder="Paste your ad copy here for instant scoring..."
-              value={adText}
-              onChange={(e) => setAdText(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  color: '#1f2937',
-                  fontSize: '1rem',
-                  backgroundColor: 'rgba(255,255,255,0.7)',
-                  '& fieldset': {
-                    borderColor: 'rgba(124, 58, 237, 0.3)'
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'rgba(124, 58, 237, 0.5)'
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7c3aed'
-                  }
-                },
-                '& .MuiOutlinedInput-input::placeholder': {
-                  color: '#9ca3af'
-                }
-              }}
-            />
-            
-            {showInstantScore && instantScore && (
-              <Fade in={showInstantScore}>
-                <Box sx={{ mt: 3, textAlign: 'center' }}>
-                  <Typography variant="h4" sx={{ 
-                    color: instantScore < 30 ? '#7c3aed' : instantScore < 60 ? '#a855f7' : '#10b981',
-                    fontWeight: 700,
-                    mb: 1
-                  }}>
-                    Score: {instantScore}/100
-                  </Typography>
-                  <Typography variant="body1" sx={{ 
-                    color: '#4b5563',
-                    mb: 2
-                  }}>
-                    {instantScore < 30 ? '🔍 Optimization opportunities detected' : 
-                     instantScore < 60 ? '📈 Good potential for improvement' : 
-                     '✅ Solid foundation'}
-                  </Typography>
-                  <Typography variant="body2" sx={{ 
-                    color: '#6b7280',
-                    mb: 3
-                  }}>
-                    This is a simplified preview. Get the full 47-point analysis + fixes for free →
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    onClick={handleFreeScan}
-                    sx={{
-                      background: gradients.purplePrimary,
-                      color: 'white',
-                      fontWeight: 700,
-                      px: 6,
-                      py: 2,
-                      textTransform: 'none',
-                      borderRadius: 3,
-                      boxShadow: '0 8px 25px rgba(124, 58, 237, 0.3)',
-                      '&:hover': {
-                        background: gradients.primaryDark,
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 12px 35px rgba(124, 58, 237, 0.4)'
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    Get My 2-Minute Ad Audit
-                  </Button>
-                </Box>
-              </Fade>
-            )}
-          </Paper>
-        </Container>
-      </Box>
 
       {/* Trust Signals Section */}
       <Box sx={{ 
@@ -1863,7 +1710,7 @@ const LandingPage = () => {
             mx: 'auto',
             fontWeight: 700,
           }}>
-            now let's find the plan that fits your goal
+            Choose Your Plan or Start Free — See Results in 2 Minutes
           </Typography>
           
           {/* Pricing Table */}
@@ -1909,7 +1756,7 @@ const LandingPage = () => {
         </Container>
       </Box>
       
-      {/* Role-Specific Messaging */}
+      {/* Built for Every Role Section */}
       <Box sx={{ 
         background: gradients.landingHero,
         py: { xs: 10, md: 12 }, 
@@ -1918,14 +1765,15 @@ const LandingPage = () => {
         zIndex: 2
       }}>
         <Container maxWidth="lg">
-          <Typography variant="h3" sx={{ 
+          <Typography variant="h2" sx={{ 
             textAlign: 'center', 
             fontWeight: 800, 
             mb: 8,
             color: 'white',
-            fontSize: { xs: '2.2rem', md: '3rem' }
+            fontSize: { xs: '2.8rem', md: '4rem' },
+            letterSpacing: '-0.02em'
           }}>
-              Designed for Your Role
+                Built For Every Role
           </Typography>
           
           <Grid container spacing={4}>
@@ -1968,67 +1816,143 @@ const LandingPage = () => {
         </Container>
       </Box>
       
-      {/* Final CTA */}
+      {/* Trust & Security Section */}
+      <Box sx={{ 
+        background: gradients.darkSection,
+        py: { xs: 8, md: 12 }, 
+        color: '#F9FAFB',
+        position: 'relative',
+        zIndex: 2,
+        borderTop: '1px solid rgba(192, 132, 252, 0.2)'
+      }}>
+        <Container maxWidth="lg">
+          <Typography variant="h3" sx={{ 
+            textAlign: 'center',
+            fontWeight: 800, 
+            mb: 6,
+            fontSize: { xs: '2rem', md: '2.5rem' },
+            color: '#F9FAFB',
+            letterSpacing: '-0.02em'
+          }}>
+            🔒 Trusted by 500+ Marketing Teams — Enterprise-Grade Security
+          </Typography>
+          
+          <Grid container spacing={4} justifyContent="center">
+            <Grid item xs={12} sm={6} md={3} textAlign="center">
+              <Typography variant="body1" sx={{ 
+                color: '#10B981', 
+                fontWeight: 600,
+                fontSize: '1.1rem'
+              }}>
+                ✅ GDPR-Compliant Data Handling
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3} textAlign="center">
+              <Typography variant="body1" sx={{ 
+                color: '#10B981', 
+                fontWeight: 600,
+                fontSize: '1.1rem'
+              }}>
+                ✅ 99.9% Uptime SLA
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3} textAlign="center">
+              <Typography variant="body1" sx={{ 
+                color: '#10B981', 
+                fontWeight: 600,
+                fontSize: '1.1rem'
+              }}>
+                ✅ Encrypted Data at Rest & in Transit
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3} textAlign="center">
+              <Typography variant="body1" sx={{ 
+                color: '#10B981', 
+                fontWeight: 600,
+                fontSize: '1.1rem'
+              }}>
+                ✅ SOC 2 Certification (Q2 2025)
+              </Typography>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Final CTA - Stop Guessing Start Scaling */}
       <Box sx={{ 
         background: gradients.landingHero,
-        py: { xs: 10, md: 14 }, 
+        py: { xs: 12, md: 16 }, 
         textAlign: 'center',
         color: 'white',
         position: 'relative',
         zIndex: 2
       }}>
         <Container maxWidth="lg">
-          <Typography variant="h2" sx={{ 
-            fontWeight: 800, 
-            mb: 3,
-            fontSize: { xs: '2.8rem', md: '4rem' },
-            letterSpacing: '-0.02em'
+          <Typography variant="h1" sx={{ 
+            fontWeight: 900, 
+            mb: 4,
+            fontSize: { xs: '3rem', md: '5rem' },
+            letterSpacing: '-0.03em',
+            lineHeight: 1.1
           }}>
-            Ready to Stop Losing to Competitors?
+            Stop Guessing.{' '}
+            <Box component="span" sx={{ 
+              background: gradients.ctaPrimary,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>
+              Start Scaling.
+            </Box>
           </Typography>
-          <Typography variant="h5" sx={{ 
-            mb: 6,
-            fontSize: { xs: '1.4rem', md: '1.8rem' },
-            color: 'rgba(255,255,255,0.9)',
+          
+          <Typography variant="h4" sx={{ 
+            mb: 8,
+            fontSize: { xs: '1.5rem', md: '2rem' },
+            color: 'rgba(255,255,255,0.95)',
             maxWidth: '800px',
-            mx: 'auto'
+            mx: 'auto',
+            fontWeight: 600,
+            lineHeight: 1.4
           }}>
-            Join 500+ marketers who've transformed their ad performance.
+            Join 500+ marketers who've stopped guessing and started scaling with psychology-driven ad optimization.
           </Typography>
           
           <Button
             variant="contained"
             size="large"
             onClick={handleFreeScan}
+            startIcon={<RocketLaunch />}
             sx={{
               background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
               color: '#7c3aed',
-              fontSize: { xs: '1.3rem', md: '1.5rem' },
-              px: { xs: 6, md: 10 },
-              py: { xs: 2.5, md: 3.5 },
-              fontWeight: 800,
+              fontSize: { xs: '1.4rem', md: '1.8rem' },
+              px: { xs: 8, md: 12 },
+              py: { xs: 3, md: 4 },
+              fontWeight: 900,
               textTransform: 'none',
               borderRadius: 4,
-              border: '2px solid rgba(255, 255, 255, 0.3)',
-              boxShadow: '0 12px 40px rgba(255, 255, 255, 0.2)',
+              border: '3px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 15px 50px rgba(255, 255, 255, 0.3)',
+              mb: 6,
               '&:hover': {
                 background: 'linear-gradient(135deg, #faf7ff 0%, #f3e8ff 100%)',
-                transform: 'translateY(-3px)',
-                boxShadow: '0 16px 50px rgba(255, 255, 255, 0.3)',
+                transform: 'translateY(-4px)',
+                boxShadow: '0 20px 60px rgba(255, 255, 255, 0.4)',
                 color: '#6d28d9'
               },
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
           >
-            Get My 2-Minute Ad Audit
+            Stop Guessing. Start Scaling. Get Started Free in Under 2 Minutes.
           </Button>
           
-          <Typography variant="body1" sx={{ 
-            mt: 4, 
+          <Typography variant="h6" sx={{ 
             color: 'rgba(255,255,255,0.9)',
-            fontSize: '1.1rem'
+            fontSize: { xs: '1.1rem', md: '1.3rem' },
+            fontWeight: 600
           }}>
-            ✅ $12M+ saved • ✅ 10,000+ ads analyzed daily • ✅ SOC 2 + GDPR compliant • ✅ 30-day money-back guarantee
+            GDPR-Compliant • Cancel Anytime
           </Typography>
         </Container>
       </Box>

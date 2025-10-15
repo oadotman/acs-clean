@@ -390,13 +390,13 @@ const Footer = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Phone sx={{ fontSize: '1rem', color: 'grey.400' }} />
                   <Typography variant="caption" color="grey.300">
-                    +1 (555) 123-4567
+                    +2348106740579
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <LocationOn sx={{ fontSize: '1rem', color: 'grey.400' }} />
                   <Typography variant="caption" color="grey.300">
-                    San Francisco, CA
+                    Lagos
                   </Typography>
                 </Box>
               </Stack>
