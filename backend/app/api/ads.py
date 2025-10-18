@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, File, UploadFile, Form
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from app.core.database import get_db
 from app.services.ad_analysis_service_enhanced import EnhancedAdAnalysisService
@@ -41,6 +41,119 @@ if settings.OPENAI_API_KEY:
         print(f"WARNING: Failed to initialize AI service: {e}")
         ai_service = None
 
+# Import the new platform services
+from app.services.platform_ad_generator import PlatformAdGenerator, GenerationResult
+from app.services.platform_registry import get_platform_registry, resolve_platform_id
+from app.services.variant_strategies import get_variant_context
+from app.services.response_formatter import format_standardized_response
+
+# Helper functions for platform-aware generation
+def _format_content_for_display(content: Dict[str, Any], platform_id: str) -> str:
+    """Format generated content for display as a single string"""
+    if platform_id == 'google_ads':
+        # Google Ads has multiple headlines and descriptions
+        headlines = content.get('headlines', [])
+        descriptions = content.get('descriptions', [])
+        cta = content.get('cta', '')
+        
+        parts = []
+        if headlines:
+            parts.append(f"Headlines: {' | '.join(headlines)}")
+        if descriptions:
+            parts.append(f"Descriptions: {' | '.join(descriptions)}")
+        if cta:
+            parts.append(f"CTA: {cta}")
+        
+        return ' • '.join(parts)
+    
+    elif platform_id == 'instagram':
+        # Instagram has body + hashtags + optional CTA
+        body = content.get('body', '')
+        hashtags = content.get('hashtags', [])
+        cta = content.get('cta', '')
+        
+        parts = [body]
+        if hashtags:
+            parts.append(' '.join(hashtags))
+        if cta:
+            parts.append(cta)
+        
+        return '\n'.join(parts)
+    
+    elif platform_id == 'twitter_x':
+        # Twitter/X just has body with embedded CTA
+        return content.get('body', '')
+    
+    else:
+        # Facebook, LinkedIn, TikTok have headline + body + CTA
+        headline = content.get('headline', '')
+        body = content.get('body', '')
+        cta = content.get('cta', '')
+        
+        parts = []
+        if headline:
+            parts.append(headline)
+        if body:
+            parts.append(body)
+        if cta:
+            parts.append(cta)
+        
+        return ' • '.join(parts)
+
+def _create_fallback_response(ad_copy: str, platform_id: str, errors: List[str]) -> Dict[str, Any]:
+    """Create fallback response when platform generation fails"""
+    analysis_id = f"fallback_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{platform_id}"
+    
+    # Create basic fallback content
+    fallback_content = {
+        'headline': ad_copy[:50] if len(ad_copy) > 50 else ad_copy,
+        'body': ad_copy,
+        'cta': 'Learn More'
+    }
+    
+    if platform_id == 'google_ads':
+        fallback_content = {
+            'headlines': [ad_copy[:30], 'Quality Service', 'Get Started'],
+            'descriptions': [ad_copy[:90], 'Professional solutions for your needs'],
+            'cta': 'Contact Us'
+        }
+    elif platform_id == 'instagram':
+        fallback_content = {
+            'body': ad_copy,
+            'hashtags': ['#business', '#service', '#quality'],
+            'cta': 'Discover More'
+        }
+    elif platform_id == 'twitter_x':
+        fallback_content = {
+            'body': ad_copy[:280]
+        }
+    elif platform_id == 'tiktok':
+        fallback_content = {
+            'body': ad_copy[:100],
+            'cta': 'Try Now'
+        }
+    
+    return {
+        'analysis_id': analysis_id,
+        'platform_id': platform_id,
+        'original': {
+            'copy': ad_copy,
+            'score': 60
+        },
+        'improved': {
+            'copy': _format_content_for_display(fallback_content, platform_id),
+            'score': 65,
+            'content': fallback_content,
+            'platform_specific': False
+        },
+        'abTests': {
+            'abc_variants': [],
+            'platform_optimized': False
+        },
+        'errors': errors,
+        'fallback_used': True
+    }
+
 @router.post("/comprehensive-analyze")
 async def comprehensive_analyze_ad(
     request: dict,  # Accept flexible request format
@@ -48,55 +161,155 @@ async def comprehensive_analyze_ad(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_subscription_limit)
 ):
-    """Comprehensive analysis with all 9 tools - new endpoint"""
+    """Platform-aware comprehensive ad generation with structured output"""
     try:
         # Extract data from request
         ad_copy = request.get('ad_copy', '')
         platform = request.get('platform', 'facebook')
-        user_id = request.get('user_id')
+        user_id = request.get('user_id') or getattr(current_user, 'id', None)
         brand_voice = request.get('brand_voice', {})
         no_emojis = request.get('no_emojis', False)
         
         if not ad_copy:
             raise HTTPException(status_code=400, detail="ad_copy is required")
         
-        # Convert ad_copy string to AdInput format if needed
-        if isinstance(ad_copy, str):
-            # Parse the ad copy into components
-            ad_input = AdInput(
-                headline=ad_copy[:100] if len(ad_copy) > 100 else ad_copy,  # First 100 chars as headline
-                body_text=ad_copy,
-                cta="Learn More",  # Default CTA
-                platform=platform
-            )
-        else:
-            ad_input = AdInput(**ad_copy)
+        # Resolve and validate platform
+        resolved_platform = resolve_platform_id(platform)
+        logger.info(f"[platform-aware] request received: user_id={user_id}, platform={platform} -> {resolved_platform}, ad_copy_len={len(ad_copy)}")
         
-        # Create analysis request
-        analysis_request = AdAnalysisRequest(
-            ad=ad_input,
-            competitor_ads=[]
-        )
+        # Validate platform is supported
+        registry = get_platform_registry()
+        if not registry.is_valid_platform(resolved_platform):
+            raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
         
-        # Perform comprehensive analysis
-        ad_service = EnhancedAdAnalysisService(db)
-        analysis = await ad_service.analyze_ad(
-            user_id=current_user.id,
-            ad=analysis_request.ad,
-            competitor_ads=analysis_request.competitor_ads,
-            brand_voice=brand_voice,
-            no_emojis=no_emojis
-        )
-        
-        return {
-            "success": True,
-            "analysis": analysis.dict() if hasattr(analysis, 'dict') else analysis,
-            "platform": platform,
-            "message": "Comprehensive analysis completed successfully"
+        # Prepare context for generation
+        generation_context = {
+            'industry': brand_voice.get('industry', 'general'),
+            'target_audience': brand_voice.get('target_audience', 'general audience'),
+            'brand_voice': brand_voice.get('personality', 'professional'),
+            'tone': brand_voice.get('tone', 'conversational'),
+            'formality': brand_voice.get('formality', 'semi-formal')
         }
         
+        # Initialize platform-aware generator
+        if not settings.OPENAI_API_KEY:
+            raise HTTPException(status_code=500, detail="AI service not configured")
+        
+        generator = PlatformAdGenerator(settings.OPENAI_API_KEY)
+        
+        # Generate platform-specific ad
+        generation_result = await generator.generate_ad(
+            text_input=ad_copy,
+            platform_id=resolved_platform,
+            context=generation_context
+        )
+        
+        if not generation_result.success:
+            logger.error(f"[platform-aware] Generation failed: {generation_result.errors}")
+            # Fall back to basic structure for backward compatibility
+            return _create_fallback_response(ad_copy, resolved_platform, generation_result.errors)
+        
+        logger.info(f"[platform-aware] Generation successful: {generation_result.metrics}")
+
+        # Generate platform-specific A/B/C variants using platform strategies
+        abc_variants = []
+        try:
+            # Create 3 variants using platform-specific strategies
+            variant_requests = []
+            
+            for variant_version in ['A', 'B', 'C']:
+                # Get platform-specific context for this variant
+                variant_context = get_variant_context(resolved_platform, variant_version, generation_context)
+                
+                variant_requests.append({
+                    'text_input': ad_copy,
+                    'platform_id': resolved_platform, 
+                    'context': variant_context
+                })
+            
+            logger.info(f"[platform-aware] Generating {len(variant_requests)} platform-specific variants for {resolved_platform}")
+            variant_results = await generator.generate_batch(variant_requests)
+            
+            for i, variant_result in enumerate(variant_results):
+                variant_version = ['A', 'B', 'C'][i]
+                variant_context = variant_requests[i]['context']
+                
+                if variant_result.success:
+                    abc_variants.append({
+                        "version": variant_version,
+                        "type": variant_context.get('variant_focus', 'benefit_focused'),
+                        "variant_name": variant_context.get('variant_name', f'Version {variant_version}'),
+                        "variant_description": variant_context.get('variant_description', ''),
+                        "confidence_score": getattr(variant_result, 'confidence_score', 75),
+                        **variant_result.generated_content,
+                        "char_counts": variant_result.char_counts,
+                        "platform_id": resolved_platform
+                    })
+                else:
+                    # Add fallback variant with lower confidence
+                    abc_variants.append({
+                        "version": variant_version,
+                        "type": variant_context.get('variant_focus', 'benefit_focused'), 
+                        "variant_name": variant_context.get('variant_name', f'Version {variant_version}'),
+                        "variant_description": f"Fallback variant (generation failed)",
+                        "confidence_score": 45,  # Low score for fallback
+                        **generation_result.generated_content,  # Use main result as fallback
+                        "char_counts": generation_result.char_counts,
+                        "platform_id": resolved_platform,
+                        "errors": variant_result.errors
+                    })
+            
+            logger.info(f"[platform-aware] Generated {len(abc_variants)} platform-specific variants")
+            
+        except Exception as e:
+            logger.warning(f"[platform-aware] Variant generation failed: {e}")
+            abc_variants = []
+
+        # Ensure we have exactly 3 variants (fallback if needed)
+        if len(abc_variants) < 3:
+            logger.info(f"[platform-aware] Only {len(abc_variants)} variants generated, filling remaining with main result")
+            
+            variant_types = ['benefit_focused', 'problem_focused', 'story_driven']
+            variant_names = ['Benefit-Focused', 'Problem-Focused', 'Story-Driven']
+            
+            for i in range(len(abc_variants), 3):
+                abc_variants.append({
+                    "id": f"variant_{chr(65 + i).lower()}",  # a, b, c
+                    "version": chr(65 + i),  # A, B, C
+                    "type": variant_types[i],
+                    "variant_label": f"VERSION {chr(65 + i)}",
+                    "variant_name": variant_names[i],
+                    "variant_description": f"Platform-optimized {variant_types[i].replace('_', ' ')} approach (fallback)",
+                    **generation_result.generated_content,
+                    "char_counts": generation_result.char_counts,
+                    "platform_id": resolved_platform
+                })
+        
+        logger.info(f"[platform-aware] Final abc_variants count: {len(abc_variants)}")
+
+        # Use standardized response format
+        logger.info(f"[platform-aware] Creating standardized response: platform={resolved_platform}, success={generation_result.success}, variants={len(abc_variants)}")
+        
+        # Get validation result for confidence scoring
+        from app.services.content_validator import validate_content
+        validation_result = validate_content(generation_result.generated_content, resolved_platform, strict_mode=False)
+        
+        # Create standardized response
+        standardized_response = format_standardized_response(
+            platform_id=resolved_platform,
+            original_ad_copy=ad_copy,
+            generation_result=generation_result,
+            validation_result=validation_result,
+            variants=abc_variants,
+            original_score=65
+        )
+        
+        logger.info(f"[platform-aware] Standardized response ready: confidence={standardized_response['confidenceScore']}, variants={len(standardized_response['variants'])}")
+        return standardized_response
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Comprehensive analysis failed: {str(e)}")
+        logger.exception(f"[platform-aware] failure: {e}")
+        raise HTTPException(status_code=500, detail=f"Platform-aware generation failed: {str(e)}")
 
 @router.post("/analyze")
 async def analyze_ad(

@@ -1,0 +1,55 @@
+====================================================================================================
+COMPREHENSIVE PLATFORM-SPECIFIC AD GENERATION TEST REPORT
+====================================================================================================
+
+📋 TEST SUITE INFORMATION:
+   Start Time: 2025-10-18T11:10:49.739370
+   OpenAI Key Provided: Yes
+   API URL: http://localhost:8000
+   Test Modules Available: Yes
+
+🎯 EXECUTIVE SUMMARY:
+   Overall Success Rate: 62.8% (564/898 tests)
+   Test Suites Passed: 3/5
+   Total Execution Time: 66.77s
+   Status: 🔴 CRITICAL - Major Issues
+
+🚨 CRITICAL ISSUES:
+   • Output quality tests failed
+   • Low average quality score: 0.0/100
+   • Frontend integration tests failed
+   • API health check failed
+
+📊 TEST SUITE RESULTS:
+   Basic Validation: ✅ PASS
+     Tests: 36 data validation checks
+   Platform Validation: ❌ FAIL (561/750 tests, 74.8%)
+   Output Quality: ❌ FAIL (0/84 tests, avg quality: 0.0/100)
+   Frontend Integration: ❌ FAIL (0/14 tests, 0.0%)
+   Performance & Edge Cases: ❌ FAIL (3/50 tests, 6.0%)
+     Average Response Time: 0ms
+
+🌐 PLATFORM-SPECIFIC RESULTS:
+   facebook: ⚠️ 93/120 (77.5%)
+   instagram: ⚠️ 94/126 (74.6%)
+   google_ads: ⚠️ 96/126 (76.2%)
+   linkedin: ⚠️ 95/126 (75.4%)
+   twitter_x: ⚠️ 87/126 (69.0%)
+   tiktok: ⚠️ 96/126 (76.2%)
+
+⏱️  PERFORMANCE BENCHMARKS:
+
+💡 RECOMMENDATIONS:
+   • URGENT: Low overall test success rate - system needs significant fixes
+   • Focus on improving these platforms: facebook, instagram, google_ads, linkedin, twitter_x, tiktok
+   • Good performance - response times are acceptable
+
+🚀 NEXT STEPS:
+   1. Address all critical issues immediately
+   2. Re-run failed test suites after fixes
+   4. Consider implementing real-time monitoring
+   5. Schedule regular test runs
+
+====================================================================================================
+Report Generated: 2025-10-18T11:11:56.505388
+====================================================================================================

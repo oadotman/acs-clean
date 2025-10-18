@@ -1,0 +1,249 @@
+{
+  "facebook": {
+    "id": "facebook",
+    "displayName": "Facebook",
+    "fields": {
+      "headline": {
+        "required": true,
+        "maxChars": 40,
+        "count": 1
+      },
+      "body": {
+        "required": true,
+        "maxChars": 125,
+        "count": 1
+      },
+      "cta": {
+        "required": true,
+        "maxChars": 30,
+        "count": 1
+      }
+    },
+    "tone": "conversational, friendly, social",
+    "structureOrder": ["headline", "body", "cta"],
+    "specialRequirements": [
+      "Visual-first platform - copy supports imagery",
+      "Community and connection focus",
+      "Strong emotional hooks work well"
+    ],
+    "ctaVerbs": ["get", "shop", "join", "try", "start", "discover", "learn", "see"],
+    "bannedPhrases": [
+      "Unlock the benefits of",
+      "Tired of the problem?",
+      "Imagine this:",
+      "Get all products today!"
+    ],
+    "repetitionRules": {
+      "preventHeadlineInBody": true
+    },
+    "hardLimits": true,
+    "audienceMindset": "Casual browsers seeking connection and entertainment"
+  },
+  "instagram": {
+    "id": "instagram",
+    "displayName": "Instagram",
+    "fields": {
+      "body": {
+        "required": true,
+        "maxChars": 2200,
+        "count": 1,
+        "hookLength": 125
+      },
+      "hashtags": {
+        "required": false,
+        "maxChars": 30,
+        "count": 10,
+        "minCount": 5
+      },
+      "cta": {
+        "required": false,
+        "maxChars": 30,
+        "count": 1
+      }
+    },
+    "tone": "casual, storytelling, lifestyle, visual",
+    "structureOrder": ["body", "hashtags", "cta"],
+    "specialRequirements": [
+      "First 125 characters should hook attention",
+      "Supports hashtags naturally",
+      "Soft, non-pushy CTA preferred"
+    ],
+    "ctaVerbs": ["discover", "explore", "tap", "swipe", "check", "see", "get"],
+    "bannedPhrases": [
+      "Unlock the benefits of",
+      "Tired of the problem?",
+      "Imagine this:",
+      "Get all products today!"
+    ],
+    "repetitionRules": {
+      "preventHeadlineInBody": false
+    },
+    "hardLimits": true,
+    "audienceMindset": "Visual content consumers seeking inspiration and lifestyle content"
+  },
+  "google_ads": {
+    "id": "google_ads",
+    "displayName": "Google Ads",
+    "fields": {
+      "headlines": {
+        "required": true,
+        "maxChars": 30,
+        "count": 3,
+        "uniqueness": true
+      },
+      "descriptions": {
+        "required": true,
+        "maxChars": 90,
+        "count": 2
+      },
+      "cta": {
+        "required": false,
+        "maxChars": 15,
+        "count": 1
+      }
+    },
+    "tone": "direct, clear, keyword-rich, solution-focused",
+    "structureOrder": ["headlines", "descriptions", "cta"],
+    "specialRequirements": [
+      "Headlines must be unique - no duplicates or near-duplicates",
+      "Include target keywords",
+      "Match search intent closely",
+      "Be specific and direct"
+    ],
+    "ctaVerbs": ["get", "start", "try", "buy", "learn", "download", "call", "book"],
+    "bannedPhrases": [
+      "Unlock the benefits of",
+      "Tired of the problem?",
+      "Imagine this:",
+      "Get all products today!"
+    ],
+    "repetitionRules": {
+      "preventHeadlineInBody": true,
+      "enforceHeadlineUniqueness": true
+    },
+    "hardLimits": true,
+    "audienceMindset": "Active searchers with specific problems to solve"
+  },
+  "linkedin": {
+    "id": "linkedin",
+    "displayName": "LinkedIn",
+    "fields": {
+      "headline": {
+        "required": true,
+        "maxChars": 150,
+        "count": 1
+      },
+      "body": {
+        "required": true,
+        "maxChars": 600,
+        "count": 1
+      },
+      "cta": {
+        "required": true,
+        "maxChars": 30,
+        "count": 1
+      }
+    },
+    "tone": "professional, authoritative, business-focused, B2B",
+    "structureOrder": ["headline", "body", "cta"],
+    "specialRequirements": [
+      "Emphasize business outcomes and ROI",
+      "Professional language - no casual slang",
+      "Authority and expertise positioning",
+      "B2B decision-maker focus"
+    ],
+    "ctaVerbs": ["request", "schedule", "download", "learn", "get", "contact", "book", "join"],
+    "bannedPhrases": [
+      "Unlock the benefits of",
+      "Tired of the problem?",
+      "Imagine this:",
+      "Get all products today!"
+    ],
+    "repetitionRules": {
+      "preventHeadlineInBody": true
+    },
+    "hardLimits": true,
+    "audienceMindset": "Professionals seeking business advancement and career growth"
+  },
+  "twitter_x": {
+    "id": "twitter_x",
+    "displayName": "Twitter/X",
+    "fields": {
+      "body": {
+        "required": true,
+        "maxChars": 280,
+        "count": 1,
+        "includesCTA": true
+      }
+    },
+    "tone": "concise, punchy, quotable, conversational",
+    "structureOrder": ["body"],
+    "specialRequirements": [
+      "CTA must be embedded naturally in body text",
+      "Total character count includes CTA",
+      "Optimize for shareability and quotes",
+      "Quick attention grabbers"
+    ],
+    "ctaVerbs": ["get", "try", "join", "see", "check", "tap", "visit", "follow"],
+    "bannedPhrases": [
+      "Unlock the benefits of",
+      "Tired of the problem?",
+      "Imagine this:",
+      "Get all products today!"
+    ],
+    "repetitionRules": {
+      "preventHeadlineInBody": false
+    },
+    "hardLimits": true,
+    "audienceMindset": "Fast-paced social media users seeking quick, digestible content"
+  },
+  "tiktok": {
+    "id": "tiktok",
+    "displayName": "TikTok",
+    "fields": {
+      "body": {
+        "required": true,
+        "maxChars": 100,
+        "count": 1
+      },
+      "cta": {
+        "required": true,
+        "maxChars": 20,
+        "count": 1
+      }
+    },
+    "tone": "energetic, Gen-Z, trendy, fun, casual",
+    "structureOrder": ["body", "cta"],
+    "specialRequirements": [
+      "Use Gen-Z language naturally (not forced)",
+      "Focus on hooks that stop the scroll",
+      "Entertainment-first mindset",
+      "Viral and shareable elements"
+    ],
+    "ctaVerbs": ["get", "try", "check", "tap", "see", "join", "follow", "watch"],
+    "bannedPhrases": [
+      "Unlock the benefits of",
+      "Tired of the problem?",
+      "Imagine this:",
+      "Get all products today!"
+    ],
+    "repetitionRules": {
+      "preventHeadlineInBody": false
+    },
+    "hardLimits": true,
+    "audienceMindset": "Younger demographics seeking entertainment and trends"
+  },
+  "_meta": {
+    "version": "1.0.0",
+    "lastUpdated": "2024-10-18T08:35:00Z",
+    "synonyms": {
+      "google": "google_ads",
+      "x": "twitter_x",
+      "twitter": "twitter_x",
+      "fb": "facebook",
+      "ig": "instagram",
+      "in": "linkedin"
+    },
+    "defaultPlatform": "facebook"
+  }
+}

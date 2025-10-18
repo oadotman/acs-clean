@@ -1,0 +1,29 @@
+================================================================================
+OUTPUT QUALITY VERIFICATION REPORT
+================================================================================
+
+📊 SUMMARY:
+   Total Tests: 84
+   Passed: 0
+   Failed: 84
+   Success Rate: 0.0%
+   Execution Time: 0.27s
+
+🎯 QUALITY METRICS:
+   Average Quality Score: 0.0/100
+   Character Limit Violations: 0
+   Template Phrase Violations: 0
+   Grammar Issues: 0
+   Retry Successes: 0
+
+📋 PLATFORM RESULTS:
+   facebook: 0/14 (0.0%) - Quality: 0.0/100
+   instagram: 0/14 (0.0%) - Quality: 0.0/100
+   google_ads: 0/14 (0.0%) - Quality: 0.0/100
+   linkedin: 0/14 (0.0%) - Quality: 0.0/100
+   twitter_x: 0/14 (0.0%) - Quality: 0.0/100
+   tiktok: 0/14 (0.0%) - Quality: 0.0/100
+
+❌ TOP ISSUES:
+   Content generation failed: 84 occurrences
+   LLM generation failed after all retries: 84 occurrences

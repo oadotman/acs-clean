@@ -1,0 +1,128 @@
+[
+  {
+    "test": "Valid Response - Facebook",
+    "success": true,
+    "message": "Contract validation passed",
+    "details": {},
+    "timestamp": 1760786349.1274123
+  },
+  {
+    "test": "Valid Response - Instagram",
+    "success": true,
+    "message": "Contract validation passed",
+    "details": {},
+    "timestamp": 1760786352.236383
+  },
+  {
+    "test": "Valid Response - Google",
+    "success": true,
+    "message": "Contract validation passed",
+    "details": {},
+    "timestamp": 1760786355.1212416
+  },
+  {
+    "test": "Valid Response - Linkedin",
+    "success": true,
+    "message": "Contract validation passed",
+    "details": {},
+    "timestamp": 1760786357.0674598
+  },
+  {
+    "test": "Valid Response - Twitter",
+    "success": true,
+    "message": "Contract validation passed",
+    "details": {},
+    "timestamp": 1760786359.4605608
+  },
+  {
+    "test": "Valid Response - Tiktok",
+    "success": true,
+    "message": "Contract validation passed",
+    "details": {},
+    "timestamp": 1760786362.1713362
+  },
+  {
+    "test": "Edge Case - Very Short Ad",
+    "success": true,
+    "message": "All variants have content",
+    "details": {},
+    "timestamp": 1760786364.1421132
+  },
+  {
+    "test": "Edge Case - Very Long Ad",
+    "success": true,
+    "message": "All variants have content",
+    "details": {},
+    "timestamp": 1760786366.1582592
+  },
+  {
+    "test": "Edge Case - Ad with Quotes",
+    "success": true,
+    "message": "All variants have content",
+    "details": {},
+    "timestamp": 1760786368.7644691
+  },
+  {
+    "test": "Edge Case - Ad with Newlines",
+    "success": true,
+    "message": "All variants have content",
+    "details": {},
+    "timestamp": 1760786370.7958732
+  },
+  {
+    "test": "Edge Case - Ad with Special Characters",
+    "success": true,
+    "message": "All variants have content",
+    "details": {},
+    "timestamp": 1760786372.7984633
+  },
+  {
+    "test": "Edge Case - Empty-ish Ad",
+    "success": true,
+    "message": "All variants have content",
+    "details": {},
+    "timestamp": 1760786375.5985184
+  },
+  {
+    "test": "Text Cleaning - Remove Quotes",
+    "success": true,
+    "message": "Text properly cleaned",
+    "details": {},
+    "timestamp": 1760786377.3266013
+  },
+  {
+    "test": "Text Cleaning - Remove Newlines",
+    "success": true,
+    "message": "Text properly cleaned",
+    "details": {},
+    "timestamp": 1760786379.0828202
+  },
+  {
+    "test": "Text Cleaning - Remove Escaped Quotes",
+    "success": true,
+    "message": "Text properly cleaned",
+    "details": {},
+    "timestamp": 1760786381.0320747
+  },
+  {
+    "test": "Text Cleaning - Collapse Spaces",
+    "success": true,
+    "message": "Text properly cleaned",
+    "details": {},
+    "timestamp": 1760786383.1721716
+  },
+  {
+    "test": "Variant Uniqueness",
+    "success": true,
+    "message": "All variants are unique and original",
+    "details": {},
+    "timestamp": 1760786385.030752
+  },
+  {
+    "test": "Performance",
+    "success": true,
+    "message": "Response time: 1843ms",
+    "details": {},
+    "timestamp": 1760786386.87482
+  }
+]

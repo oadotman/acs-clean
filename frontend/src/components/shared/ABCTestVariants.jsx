@@ -38,6 +38,7 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserFeedback from './UserFeedback';
+import toast from 'react-hot-toast';
 
 // Variant strategies and their configurations
 const VARIANT_STRATEGIES = {
@@ -94,12 +95,17 @@ const ABCTestVariants = ({
 
   // Handle copying variant to clipboard
   const handleCopy = (variantKey, text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedStates(prev => ({ ...prev, [variantKey]: true }));
-      setTimeout(() => {
-        setCopiedStates(prev => ({ ...prev, [variantKey]: false }));
-      }, 2000);
-    });
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        setCopiedStates(prev => ({ ...prev, [variantKey]: true }));
+        toast.success('Copied');
+        setTimeout(() => {
+          setCopiedStates(prev => ({ ...prev, [variantKey]: false }));
+        }, 1500);
+      })
+      .catch(() => {
+        toast.error('Failed to copy');
+      });
   };
 
   // Handle export menu
@@ -242,15 +248,17 @@ const ABCTestVariants = ({
                 </Box>
               </Box>
               
-              <Chip
-                label={`${variant.score || 85}/100`}
-                size="small"
-                sx={{
-                  backgroundColor: `${strategy?.color}20`,
-                  color: strategy?.color,
-                  fontWeight: 600
-                }}
-              />
+                {variant.score && (
+                  <Chip
+                    label={`${variant.score}/100`}
+                    size="small"
+                    sx={{
+                      backgroundColor: `${strategy?.color}20`,
+                      color: strategy?.color,
+                      fontWeight: 600
+                    }}
+                  />
+                )}
             </Box>
 
             {/* Strategy Info */}
@@ -383,8 +391,7 @@ const ABCTestVariants = ({
                     variant="contained"
                     size="small"
                     startIcon={isCopied ? <CheckIcon /> : <CopyIcon />}
-                    onClick={() => handleCopy(variant.version, fullText)}
-                    disabled={isCopied}
+                    onClick={(e) => { e.stopPropagation(); handleCopy(variant.version, fullText); }}
                     sx={{ 
                       backgroundColor: strategy?.color, 
                       '&:hover': { backgroundColor: strategy?.color + 'DD' },
@@ -455,21 +462,23 @@ const ABCTestVariants = ({
       <Card variant="outlined" sx={{ mb: 3 }}>
         <CardContent sx={{ textAlign: 'center', py: 4 }}>
           <Typography variant="h6" color="text.secondary" gutterBottom>
-            Generate A/B/C Test Variants
+            No A/B/C Test Variants Available
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Create 3 strategic variants to test different psychological approaches
+            AI-generated strategic variants will appear when available from the analysis.
           </Typography>
-          <Button
-            variant="contained"
-            size="large"
-            onClick={onGenerate}
-            disabled={isGenerating}
-            startIcon={isGenerating ? null : <RefreshIcon />}
-            sx={{ px: 4 }}
-          >
-            {isGenerating ? 'Generating Variants...' : 'Generate A/B/C Test Variants'}
-          </Button>
+          {onGenerate && (
+            <Button
+              variant="contained"
+              size="large"
+              onClick={onGenerate}
+              disabled={isGenerating}
+              startIcon={isGenerating ? null : <RefreshIcon />}
+              sx={{ px: 4 }}
+            >
+              {isGenerating ? 'Generating Variants...' : 'Generate A/B/C Test Variants'}
+            </Button>
+          )}
         </CardContent>
       </Card>
     );

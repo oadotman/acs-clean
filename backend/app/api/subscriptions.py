@@ -59,7 +59,7 @@ async def get_subscription_plans():
                     "47-point psychology analysis",
                     "Competitor benchmarking",
                     "ROI-optimized positioning",
-                    "A/B test generator",
+                    "A/B/C test generator",
                     "Email support"
                 ],
                 "popular": True

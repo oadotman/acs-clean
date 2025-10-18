@@ -11,7 +11,8 @@ import {
   Stack,
   Chip,
   Alert,
-  Fade
+  Fade,
+  CircularProgress
 } from '@mui/material';
 import {
   Analytics,
@@ -126,6 +127,7 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
   const [overallProgress, setOverallProgress] = useState(0);
   const [currentTip, setCurrentTip] = useState(0);
   const [showTips, setShowTips] = useState(true);
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   // Real API analysis process
   useEffect(() => {
@@ -171,6 +173,7 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
             if (currentIndex >= analysisTools.length) {
               console.log('🎯 All tools completed visually, waiting for API...');
               clearInterval(intervalId);
+              setIsFinalizing(true);
               
               // Set a safety timeout - if API doesn't respond in 90 seconds, show error
               // Comprehensive analysis with 9 AI tools can take 30-60 seconds
@@ -191,44 +194,43 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
         // Use the comprehensive analysis endpoint that returns A/B/C variants
         const standardResponse = await apiService.comprehensiveAnalyze(adCopy, platform);
         console.log('🎆 Comprehensive Response received:', standardResponse);
-        console.log('🎆 Response validation:', {
-          hasAnalysisId: !!standardResponse.analysis_id,
-          hasOriginal: !!standardResponse.original,
-          hasImproved: !!standardResponse.improved,
-          hasAbTests: !!standardResponse.abTests,
-          hasAbcVariants: !!standardResponse.abTests?.abc_variants,
-          abcVariantsCount: standardResponse.abTests?.abc_variants?.length || 0,
-          analysisId: standardResponse.analysis_id
-        });
         
-        // Log A/B/C variants for debugging
-        if (standardResponse.abTests?.abc_variants) {
-          console.log('✅ A/B/C Variants received:', standardResponse.abTests.abc_variants);
-        } else {
-          console.warn('⚠️ No A/B/C variants in response');
+        // Import the unified contract validator
+        const { validateApiResponse, logValidationFailure, createFallbackResponse } = await import('../utils/responseValidator');
+        
+        // Validate response against unified contract
+        const validation = validateApiResponse(standardResponse);
+        
+        if (!validation.isValid) {
+          console.error('🚨 CONTRACT VALIDATION FAILED');
+          logValidationFailure(standardResponse, validation.errors, validation.warnings);
+          throw new Error(`Backend response violates API contract: ${validation.errors.slice(0, 2).join('; ')}`);
         }
         
-        // Use the comprehensive response directly - it already has the right format
+        if (validation.warnings.length > 0) {
+          console.warn('⚠️ Response validation warnings:', validation.warnings);
+        }
+        
+        console.log('✅ Response validation passed - contract compliant');
+        console.log('✅ abTests.abc_variants length:', standardResponse.abTests.abc_variants.length);
+        console.log('✅ Variant IDs:', standardResponse.abTests.abc_variants.map(v => v.id));
+        
+        // Use the validated response directly (no more complex normalization)
+        const abc = standardResponse.abTests.abc_variants;
+
+        // Use the validated response directly (already contract compliant)
         const response = {
-          // Use data from comprehensive endpoint response
-          original: standardResponse.original || {
-            copy: adCopy,
-            score: 65
-          },
-          improved: standardResponse.improved || {
-            copy: adCopy,
-            score: 75,
-            improvements: []
-          },
-          compliance: standardResponse.compliance || { status: 'COMPLIANT', totalIssues: 0, issues: [] },
-          psychology: standardResponse.psychology || { overallScore: 70, topOpportunity: 'Add social proof', triggers: [] },
-          // IMPORTANT: Include A/B/C variants from comprehensive response
+          original: standardResponse.original,
+          improved: standardResponse.improved,
+          compliance: standardResponse.compliance,
+          psychology: standardResponse.psychology,
+          // Use the validated A/B/C variants directly
           abTests: {
-            variations: standardResponse.abTests?.variations || [],
-            abc_variants: standardResponse.abTests?.abc_variants || []  // Strategic A/B/C test variants
+            variations: standardResponse.abTests.variations,
+            abc_variants: abc  // Already validated to have exactly 3 items
           },
-          roi: standardResponse.roi || { segment: 'Mass market', premiumVersions: [] },
-          legal: standardResponse.legal || { riskLevel: 'Low', issues: [] },
+          roi: standardResponse.roi,
+          legal: standardResponse.legal,
           brandVoice: standardResponse.brandVoice || { 
             tone: platform === 'linkedin' ? 'Professional' : 'Conversational',
             personality: 'Friendly',
@@ -237,13 +239,14 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
             recommendations: []
           },
           performance: standardResponse.performance || { forensics: {}, quickWins: [] },
-          platform: standardResponse.platform || platform,
-          analysis_id: standardResponse.analysis_id || 'comprehensive-analysis',
-          comprehensive_analysis_complete: standardResponse.comprehensive_analysis_complete || true
+          platform: standardResponse.platform,
+          analysis_id: standardResponse.analysis_id,
+          comprehensive_analysis_complete: standardResponse.comprehensive_analysis_complete
         };
         
         // Mark as completed
         isCompleted = true;
+        setIsFinalizing(false);
         
         // Clear interval and safety timeout
         if (intervalId) clearInterval(intervalId);
@@ -364,6 +367,22 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
               }}
             />
           </Box>
+
+          {isFinalizing && (
+            <Alert
+              severity="info"
+              icon={<CircularProgress size={16} />}
+              sx={{
+                mt: 2,
+                py: 1,
+                '& .MuiAlert-message': { display: 'flex', alignItems: 'center', gap: 1 },
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Generating A/B/C variants...
+              </Typography>
+            </Alert>
+          )}
 
           <Typography variant="body2" color="text.secondary">
             Tools completed: {completedTools.length} of {analysisTools.length}

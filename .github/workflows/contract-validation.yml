@@ -1,0 +1,102 @@
+name: API Contract Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - 'frontend/src/**'
+      - 'contracts/**'
+
+jobs:
+  contract-validation:
+    runs-on: ubuntu-latest
+    
+    services:
+      # Start backend service for testing
+      backend:
+        image: python:3.9
+        ports:
+          - 8000:8000
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+    
+    - name: Start backend server
+      run: |
+        cd backend
+        python working_api.py &
+        sleep 10  # Wait for server to start
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    
+    - name: Run contract validation tests
+      run: |
+        cd tests
+        python contract_test_suite.py
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: contract-test-results
+        path: tests/contract_test_results.json
+    
+    - name: Fail if contract violated
+      run: |
+        if [ -f "tests/contract_test_results.json" ]; then
+          python -c "
+          import json
+          with open('tests/contract_test_results.json') as f:
+              results = json.load(f)
+          failed = [r for r in results if not r['success']]
+          if failed:
+              print(f'❌ {len(failed)} contract tests failed!')
+              for f in failed:
+                  print(f'  - {f[\"test\"]}: {f[\"message\"]}')
+              exit(1)
+          else:
+              print('✅ All contract tests passed!')
+          "
+        fi
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    needs: contract-validation
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+    
+    - name: Test frontend contract integration
+      run: |
+        cd frontend
+        npm test -- --testPathPattern=contract

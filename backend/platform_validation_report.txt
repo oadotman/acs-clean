@@ -1,0 +1,54 @@
+================================================================================
+PLATFORM VALIDATION TEST REPORT
+================================================================================
+
+📊 SUMMARY:
+   Total Tests: 750
+   Passed: 536
+   Failed: 214
+   Success Rate: 71.5%
+   Execution Time: 509.34s
+
+📋 PLATFORM RESULTS:
+   facebook: 88/120 (73.3%)
+   instagram: 93/126 (73.8%)
+   google_ads: 83/126 (65.9%)
+   linkedin: 95/126 (75.4%)
+   twitter_x: 83/126 (65.9%)
+   tiktok: 94/126 (74.6%)
+
+🎯 TEST CATEGORY RESULTS:
+   parser_tests: 0/125 (0.0%)
+   character_limit_tests: 125/125 (100.0%)
+   template_detection_tests: 100/125 (80.0%)
+   grammar_validation_tests: 120/125 (96.0%)
+   confidence_score_tests: 125/125 (100.0%)
+   quality_standards_tests: 66/125 (52.8%)
+
+❌ FAILED TESTS:
+   facebook_short_ads_0 (parser_field_extraction):
+      - Missing required fields: ['headline', 'body', 'cta']
+      - Parser exception: '<' not supported between instances of 'str' and 'int'
+   facebook_short_ads_0 (quality_standards):
+   facebook_short_ads_1 (parser_field_extraction):
+      - Missing required fields: ['headline', 'body', 'cta']
+      - Parser exception: '<' not supported between instances of 'str' and 'int'
+   facebook_short_ads_1 (quality_standards):
+   facebook_short_ads_2 (parser_field_extraction):
+      - Missing required fields: ['headline', 'body', 'cta']
+      - Parser exception: '<' not supported between instances of 'str' and 'int'
+   facebook_short_ads_2 (template_detection):
+      - Found template phrases: ["Don't miss out"]
+   facebook_long_ads_0 (parser_field_extraction):
+      - Missing required fields: ['headline', 'body', 'cta']
+      - Parser exception: '<' not supported between instances of 'str' and 'int'
+   facebook_long_ads_1 (parser_field_extraction):
+      - Missing required fields: ['headline', 'body', 'cta']
+      - Parser exception: '<' not supported between instances of 'str' and 'int'
+   facebook_long_ads_2 (parser_field_extraction):
+      - Missing required fields: ['headline', 'body', 'cta']
+      - Parser exception: '<' not supported between instances of 'str' and 'int'
+   facebook_no_cta_ads_0 (parser_field_extraction):
+      - Missing required fields: ['headline', 'body', 'cta']
+      - Parser exception: '<' not supported between instances of 'str' and 'int'
+   ... and 204 more failures
