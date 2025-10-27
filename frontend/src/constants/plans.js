@@ -167,82 +167,91 @@ export const LEGACY_TIER_MAPPING = {
   'pro': SUBSCRIPTION_TIERS.AGENCY_UNLIMITED
 };
 
-// Paddle product ID mapping (to be updated with real Paddle product IDs)
+// Paddle Price ID mapping with REAL Paddle product Price IDs
 export const PADDLE_PRODUCT_MAPPING = {
-  // Monthly plans
+  // Growth Plan
   [SUBSCRIPTION_TIERS.GROWTH]: {
     monthly: {
-      productId: 'growth_monthly',
+      priceId: 'pri_01k8gd5r03mg7p8gasg95pn105',  // Real Paddle Price ID
       name: 'Growth Plan (Monthly)',
       price: 39
     },
     yearly: {
-      productId: 'growth_yearly',
+      priceId: 'pri_01k8gdcc0z9qwz0htks3p6ydan',  // Real Paddle Price ID
       name: 'Growth Plan (Yearly)',
-      price: Math.floor(39 * 12 * 0.8) // 20% discount
+      price: Math.floor(39 * 12 * 0.8) // 20% discount = $374/year
     }
   },
+  // Agency Standard Plan
   [SUBSCRIPTION_TIERS.AGENCY_STANDARD]: {
     monthly: {
-      productId: 'agency_standard_monthly',
+      priceId: 'pri_01k8gdm6y2zqgcaqdv63ayk94k',  // Real Paddle Price ID
       name: 'Agency Standard Plan (Monthly)',
       price: 99
     },
     yearly: {
-      productId: 'agency_standard_yearly',
+      priceId: 'pri_01k8gdk1hzrbf282v2schhg92j',  // Real Paddle Price ID
       name: 'Agency Standard Plan (Yearly)',
-      price: Math.floor(99 * 12 * 0.8) // 20% discount
+      price: Math.floor(99 * 12 * 0.8) // 20% discount = $950/year
     }
   },
+  // Agency Premium Plan
   [SUBSCRIPTION_TIERS.AGENCY_PREMIUM]: {
     monthly: {
-      productId: 'agency_premium_monthly',
+      priceId: 'pri_01k8ge5xmbdga7r7d5qddpnc4b',  // Real Paddle Price ID
       name: 'Agency Premium Plan (Monthly)',
       price: 199
     },
     yearly: {
-      productId: 'agency_premium_yearly',
+      priceId: 'pri_01k8ge7f9kqqr5qk1kxt1kerf5',  // Real Paddle Price ID
       name: 'Agency Premium Plan (Yearly)',
-      price: Math.floor(199 * 12 * 0.8) // 20% discount
+      price: Math.floor(199 * 12 * 0.8) // 20% discount = $1,910/year
     }
   },
+  // Agency Unlimited Plan
   [SUBSCRIPTION_TIERS.AGENCY_UNLIMITED]: {
     monthly: {
-      productId: 'agency_unlimited_monthly',
+      priceId: 'pri_01k8geawnz6d88m4m447rtzqp9',  // Real Paddle Price ID
       name: 'Agency Unlimited Plan (Monthly)',
       price: 249
     },
     yearly: {
-      productId: 'agency_unlimited_yearly',
+      priceId: 'pri_01k8geddk1apxh8wrq0k6x2bkk',  // Real Paddle Price ID
       name: 'Agency Unlimited Plan (Yearly)',
-      price: Math.floor(249 * 12 * 0.8) // 20% discount
+      price: Math.floor(249 * 12 * 0.8) // 20% discount = $2,390/year
     }
   },
   // Legacy support (monthly only for backward compatibility)
   'basic': {
-    productId: 'growth_monthly',
+    priceId: 'pri_01k8gd5r03mg7p8gasg95pn105',  // Maps to Growth Monthly
     name: 'Growth Plan',
     price: 39
   },
   'pro': {
-    productId: 'agency_unlimited_monthly',
+    priceId: 'pri_01k8geawnz6d88m4m447rtzqp9',  // Maps to Agency Unlimited Monthly
     name: 'Agency Unlimited Plan',
     price: 249
   }
 };
 
-// Helper function to get product mapping by billing period
+// Helper function to get product Price ID by billing period
 export const getPaddleProductByPeriod = (tier, period = 'monthly') => {
   const tierMapping = PADDLE_PRODUCT_MAPPING[tier];
   if (!tierMapping) return null;
   
   // Handle legacy structure (basic/pro)
-  if (tierMapping.productId) {
+  if (tierMapping.priceId) {
     return tierMapping;
   }
   
   // Handle new nested structure
   return tierMapping[period] || tierMapping.monthly;
+};
+
+// Helper function to get just the Price ID
+export const getPaddlePriceId = (tier, period = 'monthly') => {
+  const product = getPaddleProductByPeriod(tier, period);
+  return product ? product.priceId : null;
 };
 
 export default PRICING_PLANS;

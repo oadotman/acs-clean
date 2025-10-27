@@ -1,6 +1,7 @@
 import toast from 'react-hot-toast';
 import { SUBSCRIPTION_TIERS, PRICING_PLANS, PLAN_LIMITS } from '../constants/plans';
 import { supabase } from '../lib/supabaseClientClean';
+import { withTimeout, isTimeoutError } from './queryTimeout';
 
 /**
  * Credit System for AdCopySurge
@@ -73,12 +74,16 @@ export const getUserCredits = async (userId) => {
   try {
     console.log('💳 Getting user credits for:', userId);
     
-    // Try to get credits from Supabase
-    const { data, error } = await supabase
-      .from('user_credits')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
+    // Try to get credits from Supabase with 30-second timeout
+    const { data, error } = await withTimeout(
+      supabase
+        .from('user_credits')
+        .select('*')
+        .eq('user_id', userId)
+        .single(),
+      30000,
+      'Get user credits'
+    );
 
     if (error && error.code !== 'PGRST116') {
       console.warn('⚠️ Error fetching user credits from DB:', error);
@@ -93,16 +98,38 @@ export const getUserCredits = async (userId) => {
     }
 
     console.log('✅ Retrieved user credits from DB:', data);
+    
+    // Check if user has unlimited tier
+    const isUnlimitedTier = data.subscription_tier === 'agency_unlimited' || 
+                           data.subscription_tier === SUBSCRIPTION_TIERS.AGENCY_UNLIMITED;
+    
+    const credits = isUnlimitedTier ? 999999 : (data.current_credits || 0);
+    const monthlyAllowance = isUnlimitedTier ? 999999 : (data.monthly_allowance || 0);
+    
+    console.log('📊 Credits calculated:', {
+      tier: data.subscription_tier,
+      isUnlimited: isUnlimitedTier,
+      credits,
+      monthlyAllowance
+    });
+    
     return {
-      credits: data.current_credits || 0,
-      monthlyAllowance: data.monthly_allowance || 0,
+      credits,
+      monthlyAllowance,
       lastReset: data.last_reset,
       totalUsed: data.total_used || 0,
       bonusCredits: data.bonus_credits || 0,
       subscriptionTier: data.subscription_tier || SUBSCRIPTION_TIERS.FREE
     };
   } catch (error) {
-    console.error('❌ Error in getUserCredits:', error);
+    // Handle timeout errors specifically
+    if (isTimeoutError(error)) {
+      console.error('⏱️ Timeout fetching user credits after 30 seconds');
+      // Don't show toast for timeout - it's too annoying
+      console.warn('⚠️ Using fallback credits due to timeout');
+    } else {
+      console.error('❌ Error in getUserCredits:', error);
+    }
     // Fallback to localStorage-based credits
     return getLocalCredits(userId);
   }
@@ -154,14 +181,24 @@ export const initializeUserCredits = async (userId, subscriptionTier = SUBSCRIPT
       subscription_tier: subscriptionTier
     };
 
-    const { data, error } = await supabase
-      .from('user_credits')
-      .insert(creditData)
-      .select()
-      .single();
+    // Initialize credits with 30-second timeout
+    const { data, error } = await withTimeout(
+      supabase
+        .from('user_credits')
+        .insert(creditData)
+        .select()
+        .single(),
+      30000,
+      'Initialize user credits'
+    );
 
     if (error) {
-      console.error('Error initializing user credits:', error);
+      if (isTimeoutError(error)) {
+        console.error('⏱️ Timeout initializing user credits after 30 seconds');
+        console.warn('⚠️ Returning default credits due to timeout');
+      } else {
+        console.error('Error initializing user credits:', error);
+      }
       return { credits: 0, monthlyAllowance: 0 };
     }
 
@@ -171,7 +208,15 @@ export const initializeUserCredits = async (userId, subscriptionTier = SUBSCRIPT
       bonusCredits: data.bonus_credits
     };
   } catch (error) {
-    console.error('Error initializing credits:', error);
+    if (isTimeoutError(error)) {
+      console.error('⏱️ Timeout in initializeUserCredits after 10 seconds');
+      toast.error('Credit initialization timed out. Please try again.', {
+        duration: 7000,
+        icon: '⏱️'
+      });
+    } else {
+      console.error('Error initializing credits:', error);
+    }
     return { credits: 0, monthlyAllowance: 0 };
   }
 };
@@ -438,11 +483,20 @@ export const getCreditColor = (current, monthly) => {
  * Get team member limits for subscription tier
  */
 export const getTeamMemberLimits = (subscriptionTier) => {
+  console.log('🔍 getTeamMemberLimits called with tier:', subscriptionTier);
+  console.log('🔍 Checking PLAN_LIMITS["' + subscriptionTier + '"]:', PLAN_LIMITS[subscriptionTier]);
+  console.log('🔍 All available keys in PLAN_LIMITS:', Object.keys(PLAN_LIMITS));
+  
   const limits = PLAN_LIMITS[subscriptionTier] || PLAN_LIMITS[SUBSCRIPTION_TIERS.FREE];
-  return {
+  console.log('🔍 Resolved limits object:', limits);
+  console.log('🔍 limits.teamMembers value:', limits.teamMembers);
+  
+  const result = {
     maxTeamMembers: limits.teamMembers || 0,
     canInviteTeamMembers: (limits.teamMembers || 0) > 0
   };
+  console.log('🔍 Returning:', result);
+  return result;
 };
 
 /**

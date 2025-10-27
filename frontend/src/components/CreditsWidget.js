@@ -18,7 +18,7 @@ import { useAuth } from '../services/authContext';
 import paddleService from '../services/paddleService';
 import creditsService from '../services/creditsService';
 import { getUserCredits } from '../utils/creditSystem';
-import { SUBSCRIPTION_TIERS } from '../constants/plans';
+import { SUBSCRIPTION_TIERS, PLAN_LIMITS } from '../constants/plans';
 import toast from 'react-hot-toast';
 
 const CreditsWidget = ({ collapsed = false }) => {
@@ -26,6 +26,7 @@ const CreditsWidget = ({ collapsed = false }) => {
   const { user, subscription } = useAuth();
   const [credits, setCredits] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [upgrading, setUpgrading] = useState(false);
 
   // Fetch credits from service
@@ -34,11 +35,25 @@ const CreditsWidget = ({ collapsed = false }) => {
       try {
         setLoading(true);
         
+        // Check for unlimited tier FIRST to avoid unnecessary API call
+        const currentTier = subscription?.subscription_tier || subscription?.tier || 'free';
+        
+        if (currentTier === 'agency_unlimited') {
+          console.log('CreditsWidget: Unlimited tier detected, skipping fetch');
+          setCredits({
+            current: Infinity,
+            total: Infinity,
+            resetDate: null,
+            tier: currentTier,
+            isUnlimited: true
+          });
+          setLoading(false);
+          return;
+        }
+        
         // Get credits from new credit system
         const userCreditsData = await getUserCredits(user?.id);
         console.log('CreditsWidget: Fetched credits data:', userCreditsData);
-        
-        const currentTier = subscription?.tier || userCreditsData.tier || 'free';
         
         // Check if user has unlimited credits
         const planLimits = PLAN_LIMITS[currentTier.toUpperCase()] || PLAN_LIMITS[SUBSCRIPTION_TIERS.FREE];
@@ -58,10 +73,15 @@ const CreditsWidget = ({ collapsed = false }) => {
         setCredits(formattedCredits);
       } catch (error) {
         console.error('Failed to fetch credits:', error);
-        // Don't show toast error in development to avoid spam
-        if (process.env.NODE_ENV === 'production') {
-          toast.error('Failed to load credits');
-        }
+        setError(error.message || 'Failed to load credits');
+        // Set fallback to prevent endless loading
+        setCredits({
+          current: 0,
+          total: 5,
+          resetDate: null,
+          tier: 'free',
+          isUnlimited: false
+        });
       } finally {
         setLoading(false);
       }
@@ -69,9 +89,8 @@ const CreditsWidget = ({ collapsed = false }) => {
 
     if (user) {
       fetchCredits();
-      // Refresh credits every minute to show updates
-      const interval = setInterval(fetchCredits, 60000);
-      return () => clearInterval(interval);
+      // Real-time updates now handled by useCredits hook subscription
+      // No need for polling interval anymore
     }
   }, [user, subscription?.tier]);
 
@@ -149,10 +168,49 @@ const CreditsWidget = ({ collapsed = false }) => {
     return `${diffDays} days`;
   };
 
+  const handleRetry = () => {
+    setError(null);
+    setLoading(true);
+    // Trigger re-fetch by updating subscription dependency
+    window.location.reload();
+  };
+
   if (loading) {
     return (
       <Box sx={{ p: collapsed ? 1 : 2, width: '100%' }}>
         <LinearProgress size="small" />
+        {!collapsed && (
+          <Typography variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'center', color: 'text.secondary' }}>
+            Loading credits...
+          </Typography>
+        )}
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: collapsed ? 1 : 2, width: '100%' }}>
+        <Tooltip title={error} placement="right">
+          <Chip
+            icon={<WarningIcon />}
+            label={collapsed ? "!" : "Error"}
+            color="error"
+            size="small"
+            onClick={handleRetry}
+            sx={{ cursor: 'pointer' }}
+          />
+        </Tooltip>
+        {!collapsed && (
+          <Button
+            size="small"
+            fullWidth
+            onClick={handleRetry}
+            sx={{ mt: 1, fontSize: '0.75rem' }}
+          >
+            Retry
+          </Button>
+        )}
       </Box>
     );
   }

@@ -1,34 +1,37 @@
 /**
- * Paddle billing service for frontend subscription management
+ * Paddle Billing service for frontend subscription management (NEW Paddle Billing API)
  * Handles Paddle.js integration and API calls
+ * Documentation: https://developer.paddle.com/paddlejs/overview
  */
 
 class PaddleService {
   constructor() {
     this.loaded = false;
     this.paddleInstance = null;
-    this.vendorId = process.env.REACT_APP_PADDLE_VENDOR_ID || null;
-    this.environment = process.env.REACT_APP_PADDLE_ENVIRONMENT || 'sandbox';
+    // NEW: Use client token instead of vendor ID for Paddle Billing
+    this.clientToken = process.env.REACT_APP_PADDLE_CLIENT_TOKEN || null;
+    this.vendorId = process.env.REACT_APP_PADDLE_VENDOR_ID || null;  // Still needed for Classic API fallback
+    this.environment = process.env.REACT_APP_PADDLE_ENVIRONMENT || 'production';
     this.apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
     
     // Log configuration status for debugging
     console.log('🏗️ PaddleService initialized:', {
-      vendorId: this.vendorId ? 'Set' : 'Not configured',
+      clientToken: this.clientToken ? 'Set' : 'Not configured',
       environment: this.environment,
       apiUrl: this.apiUrl
     });
     
-    if (!this.vendorId) {
-      console.warn('⚠️ REACT_APP_PADDLE_VENDOR_ID not set. Paddle checkout will not work until configured.');
+    if (!this.clientToken) {
+      console.warn('⚠️ REACT_APP_PADDLE_CLIENT_TOKEN not set. Paddle checkout will not work until configured.');
     }
   }
 
   /**
-   * Load Paddle.js script dynamically
+   * Load Paddle.js script dynamically (NEW Paddle Billing API)
    */
   async loadPaddleScript() {
-    if (!this.vendorId) {
-      throw new Error('Paddle Vendor ID not configured. Please set REACT_APP_PADDLE_VENDOR_ID in your environment variables.');
+    if (!this.clientToken) {
+      throw new Error('Paddle Client Token not configured. Please set REACT_APP_PADDLE_CLIENT_TOKEN in your environment variables.');
     }
     
     if (this.loaded && window.Paddle) {
@@ -44,22 +47,22 @@ class PaddleService {
         return;
       }
 
-      // Create script element
+      // Create script element for NEW Paddle Billing
       const script = document.createElement('script');
-      script.src = this.environment === 'sandbox' 
-        ? 'https://cdn.paddle.com/paddle/paddle.js'
-        : 'https://cdn.paddle.com/paddle/paddle.js';
+      script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';  // NEW Paddle Billing script
+      script.type = 'text/javascript';
       
       script.onload = () => {
         if (window.Paddle) {
-          // Initialize Paddle
-          window.Paddle.Setup({ 
-            vendor: this.vendorId,
+          // Initialize Paddle with client token (NEW API)
+          window.Paddle.Initialize({ 
+            token: this.clientToken,
             eventCallback: this.handlePaddleEvent.bind(this)
           });
           
           this.loaded = true;
           this.paddleInstance = window.Paddle;
+          console.log('✅ Paddle.js loaded and initialized successfully');
           resolve(window.Paddle);
         } else {
           reject(new Error('Failed to load Paddle'));
@@ -245,74 +248,74 @@ class PaddleService {
   }
 
   /**
-   * Get Paddle product configuration
-   * These should match your Paddle dashboard product IDs
+   * Get Paddle Price ID configuration with REAL Paddle Price IDs
+   * These are the actual Price IDs from your Paddle dashboard
    */
   getPaddleProductMapping() {
     const products = {
       // New 5-tier structure with monthly/yearly support
       growth: {
         monthly: {
-          productId: 'growth_monthly',
+          priceId: 'pri_01k8gd5r03mg7p8gasg95pn105',  // Real Paddle Price ID
           name: 'Growth Plan (Monthly)',
           price: 39
         },
         yearly: {
-          productId: 'growth_yearly',
+          priceId: 'pri_01k8gdcc0z9qwz0htks3p6ydan',  // Real Paddle Price ID
           name: 'Growth Plan (Yearly)',
-          price: Math.floor(39 * 12 * 0.8) // 374
+          price: Math.floor(39 * 12 * 0.8) // $374/year
         }
       },
       agency_standard: {
         monthly: {
-          productId: 'agency_standard_monthly',
+          priceId: 'pri_01k8gdm6y2zqgcaqdv63ayk94k',  // Real Paddle Price ID
           name: 'Agency Standard Plan (Monthly)',
           price: 99
         },
         yearly: {
-          productId: 'agency_standard_yearly',
+          priceId: 'pri_01k8gdk1hzrbf282v2schhg92j',  // Real Paddle Price ID
           name: 'Agency Standard Plan (Yearly)',
-          price: Math.floor(99 * 12 * 0.8) // 950
+          price: Math.floor(99 * 12 * 0.8) // $950/year
         }
       },
       agency_premium: {
         monthly: {
-          productId: 'agency_premium_monthly',
+          priceId: 'pri_01k8ge5xmbdga7r7d5qddpnc4b',  // Real Paddle Price ID
           name: 'Agency Premium Plan (Monthly)',
           price: 199
         },
         yearly: {
-          productId: 'agency_premium_yearly',
+          priceId: 'pri_01k8ge7f9kqqr5qk1kxt1kerf5',  // Real Paddle Price ID
           name: 'Agency Premium Plan (Yearly)',
-          price: Math.floor(199 * 12 * 0.8) // 1910
+          price: Math.floor(199 * 12 * 0.8) // $1,910/year
         }
       },
       agency_unlimited: {
         monthly: {
-          productId: 'agency_unlimited_monthly',
+          priceId: 'pri_01k8geawnz6d88m4m447rtzqp9',  // Real Paddle Price ID
           name: 'Agency Unlimited Plan (Monthly)',
           price: 249
         },
         yearly: {
-          productId: 'agency_unlimited_yearly',
+          priceId: 'pri_01k8geddk1apxh8wrq0k6x2bkk',  // Real Paddle Price ID
           name: 'Agency Unlimited Plan (Yearly)',
-          price: Math.floor(249 * 12 * 0.8) // 2390
+          price: Math.floor(249 * 12 * 0.8) // $2,390/year
         }
       },
       // Legacy support - keep for backward compatibility (monthly only)
       basic: {
-        productId: 'growth_monthly', // Maps to Growth plan
+        priceId: 'pri_01k8gd5r03mg7p8gasg95pn105',  // Maps to Growth Monthly
         name: 'Growth Plan',
         price: 39
       },
       pro: {
-        productId: 'agency_unlimited_monthly', // Maps to Agency Unlimited plan
+        priceId: 'pri_01k8geawnz6d88m4m447rtzqp9',  // Maps to Agency Unlimited Monthly
         name: 'Agency Unlimited Plan',
         price: 249
       }
     };
     
-    console.log('🛍️ Paddle product mapping loaded:', products);
+    console.log('🛍️ Paddle Price ID mapping loaded with REAL IDs');
     return products;
   }
 }

@@ -67,6 +67,7 @@ const BillingCredits = () => {
     totalUsed,
     bonusCredits,
     loading: creditsLoading,
+    error: creditsError,
     getFormattedCredits,
     getCreditStatusColor,
     getCreditPercentage,
@@ -139,13 +140,28 @@ const BillingCredits = () => {
   ];
 
   const currentPlan = PRICING_PLANS.find(plan => plan.tier === userTier);
-  const isUnlimited = credits === 'unlimited' || credits >= 999999;
+  // Check if user has unlimited tier - use both tier check and credit value
+  const isUnlimited = userTier === 'agency_unlimited' || 
+                     subscription?.subscription_tier === 'agency_unlimited' ||
+                     credits === 'unlimited' || 
+                     credits >= 999999 ||
+                     monthlyAllowance >= 999999;
+  
+  console.log('📊 BillingCredits - isUnlimited check:', {
+    userTier,
+    subscriptionTier: subscription?.subscription_tier,
+    credits,
+    monthlyAllowance,
+    isUnlimited
+  });
+  
   const creditColor = getCreditStatusColor();
   const percentage = getCreditPercentage();
 
   const renderCreditsTab = () => (
     <Grid container spacing={3}>
-      {/* Current Credits Card */}
+      {/* Current Credits Card - Hidden for unlimited users */}
+      {!isUnlimited && (
       <Grid item xs={12} md={8}>
         <Card>
           <CardContent sx={{ p: 3 }}>
@@ -206,6 +222,17 @@ const BillingCredits = () => {
                       </Typography>
                     </>
                   )}
+                  
+                  {isUnlimited && (
+                    <Alert severity="success" sx={{ mt: 2 }}>
+                      <Typography variant="body2" fontWeight="bold">
+                        ✨ Unlimited Plan Active
+                      </Typography>
+                      <Typography variant="caption">
+                        You have unlimited credits - analyze as much as you want!
+                      </Typography>
+                    </Alert>
+                  )}
                 </Box>
               </Grid>
             </Grid>
@@ -218,9 +245,32 @@ const BillingCredits = () => {
           </CardContent>
         </Card>
       </Grid>
+      )}
+
+      {/* Unlimited Plan Message */}
+      {isUnlimited && (
+        <Grid item xs={12}>
+          <Card>
+            <CardContent sx={{ p: 4, textAlign: 'center' }}>
+              <Star sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
+              <Typography variant="h4" fontWeight="bold" gutterBottom color="success.main">
+                ✨ Unlimited Credits Active
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                You're on the Agency Unlimited plan with unlimited credits.
+                <br />
+                Analyze as many ads as you want - no limits, no restrictions!
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Your plan renews automatically each month.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      )}
 
       {/* Credit Costs Reference */}
-      <Grid item xs={12} md={4}>
+      <Grid item xs={12} md={isUnlimited ? 12 : 4}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -475,12 +525,59 @@ const BillingCredits = () => {
     </Card>
   );
 
+  // Handle credit loading and error states
+  const handleRetryCredits = async () => {
+    console.log('🔄 Retrying credit fetch...');
+    await refreshCredits();
+  };
+
   if (creditsLoading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Loading...
-        </Typography>
+        <Box display="flex" flexDirection="column" alignItems="center" gap={2} py={8}>
+          <Typography variant="h5" gutterBottom>
+            Loading your credit information...
+          </Typography>
+          <LinearProgress sx={{ width: '50%' }} />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (creditsError) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert 
+          severity="error" 
+          action={
+            <Button color="inherit" size="small" onClick={handleRetryCredits}>
+              Retry
+            </Button>
+          }
+          sx={{ mb: 3 }}
+        >
+          <Typography variant="body1" fontWeight="bold">
+            Failed to load credit information
+          </Typography>
+          <Typography variant="body2">
+            {creditsError}
+          </Typography>
+        </Alert>
+        
+        <Card>
+          <CardContent sx={{ textAlign: 'center', py: 6 }}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              Unable to display billing information
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={handleRetryCredits}
+              sx={{ mt: 2 }}
+            >
+              Reload Credits
+            </Button>
+          </CardContent>
+        </Card>
       </Container>
     );
   }

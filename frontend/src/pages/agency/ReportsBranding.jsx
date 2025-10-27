@@ -773,7 +773,7 @@ const AgencyReportsBranding = () => {
       description: 'Compare multiple ad variations side-by-side',
       icon: '⚖️',
       maxAnalyses: 5,
-      useCase: 'A/B Testing Review'
+      useCase: 'A/B/C Testing Review'
     }
   ];
 

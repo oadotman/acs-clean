@@ -153,7 +153,6 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     let mounted = true;
-    let timeoutId;
     
     console.log('🔄 AuthProvider initializing...');
     
@@ -176,192 +175,98 @@ export const AuthProvider = ({ children }) => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Check initial session immediately with timeout and fallbacks
+    // Simplified auth initialization without complex network checks
     const initializeAuth = async () => {
-      // Set overall timeout for auth initialization (prevent infinite loading)
+      console.log('🔍 Initializing authentication...');
+      
+      // Simple overall timeout as safety net
       const overallTimeoutId = setTimeout(() => {
-        console.warn('⏰ Auth initialization taking too long, forcing completion...');
+        console.warn('⏰ Auth timeout - proceeding as unauthenticated');
         if (mounted) {
           setLoading(false);
+          setUser(null);
+          setIsAuthenticated(false);
         }
-      }, 25000); // 25 second overall timeout
+      }, 8000); // 8 second timeout
       
       try {
-        console.log('🔍 Checking for existing session...');
+        // Simple direct session check with timeout
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Session check timeout')), 5000);
+        });
         
-        // Clear overall timeout on any successful completion
-        const clearOverallTimeout = () => {
-          if (overallTimeoutId) {
-            clearTimeout(overallTimeoutId);
+        const result = await Promise.race([sessionPromise, timeoutPromise]);
+        const { data, error } = result;
+        
+        if (error) {
+          console.warn('⚠️ Session check error:', error.message);
+          if (mounted) {
+            setLoading(false);
           }
-        };
-        
-        // Quick network connectivity check
-        console.log('🌐 Checking network connectivity...');
-        const hasNetwork = await checkNetworkConnectivity();
-        if (!hasNetwork) {
-          console.warn('⚠️ Poor network connectivity detected - authentication may be slower');
-        } else {
-          console.log('✅ Network connectivity confirmed');
+          clearTimeout(overallTimeoutId);
+          return;
         }
         
-        // Try different approaches in order of preference
-        const attempts = [
-          // Attempt 1: Try localStorage first (fastest)
-          {
-            name: 'LocalStorage check',
-            timeout: 1000,
-            method: () => {
-              const storedSession = localStorage.getItem('adcopysurge-supabase-auth-token');
-              if (storedSession) {
-                try {
-                  const parsed = JSON.parse(storedSession);
-                  if (parsed.expires_at && new Date(parsed.expires_at * 1000) > new Date()) {
-                    return Promise.resolve({ data: { session: parsed }, error: null });
-                  }
-                } catch (e) {
-                  console.warn('⚠️ Failed to parse stored session:', e);
-                }
-              }
-              return Promise.resolve({ data: { session: null }, error: null });
-            }
-          },
-          // Attempt 2: Quick session check with reasonable timeout
-          {
-            name: 'Quick session check',
-            timeout: 8000, // Reduced from 15000ms
-            method: () => supabase.auth.getSession()
-          },
-          // Attempt 3: Direct user check as final fallback
-          {
-            name: 'Direct user check',
-            timeout: 12000, // Reduced from 30000ms
-            method: () => supabase.auth.getUser()
-          }
-        ];
+        const session = data?.session;
         
-        for (const attempt of attempts) {
-          try {
-            console.log(`🚀 Trying ${attempt.name} (${attempt.timeout}ms timeout)...`);
-            const startTime = Date.now();
-            
-            // Create timeout promise with cleaner logging
-            const timeoutPromise = new Promise((_, reject) => {
-              timeoutId = setTimeout(() => {
-                // Only log timeout warnings for methods that are expected to succeed quickly
-                const shouldWarn = attempt.name !== 'Direct user check' || attempt.timeout < 8000;
-                if (shouldWarn) {
-                  console.log(`⏱️ ${attempt.name} timed out after ${attempt.timeout}ms (trying next method)`);
-                }
-                reject(new Error(`${attempt.name} timed out`));
-              }, attempt.timeout);
+        if (session?.user) {
+          console.log('✅ Found active session for:', session.user.email);
+          if (mounted) {
+            setUser(session.user);
+            setIsAuthenticated(true);
+            // Fetch profile without awaiting to avoid blocking
+            fetchUserProfile(session.user.id).finally(() => {
+              if (mounted) setLoading(false);
             });
-            
-            // Race between the auth check and timeout
-            const result = await Promise.race([
-              attempt.method(),
-              timeoutPromise
-            ]);
-            
-            const endTime = Date.now();
-            console.log(`⚡ ${attempt.name} completed in ${endTime - startTime}ms`);
-            
-            // Clear timeout
-            if (timeoutId) {
-              clearTimeout(timeoutId);
-              timeoutId = null;
-            }
-            
-            // Handle the result
-            const { data, error } = result;
-            const session = data?.session || data?.user ? { user: data.user || data.session?.user } : null;
-            
-            if (error) {
-              console.warn(`⚠️ ${attempt.name} error:`, error);
-              continue; // Try next method
-            }
-            
-            if (session?.user) {
-              console.log(`✅ Found session via ${attempt.name} for:`, session.user.email);
-              if (mounted) {
-                setUser(session.user);
-                setIsAuthenticated(true);
-                setLoading(false); // Ensure loading is set to false
-                clearOverallTimeout(); // Clear the overall timeout
-                await fetchUserProfile(session.user.id);
-              }
-              return; // Success, exit the loop
-            }
-            
-            console.log(`ℹ️ ${attempt.name} found no session`);
-            break; // No session found, no need to try other methods
-            
-          } catch (attemptError) {
-            // Differentiate between timeout errors and actual failures
-            if (attemptError.message.includes('timed out')) {
-              console.log(`⏱️ ${attempt.name} timed out, trying next method`);
-            } else {
-              console.warn(`⚠️ ${attempt.name} failed:`, attemptError.message);
-            }
-            if (timeoutId) {
-              clearTimeout(timeoutId);
-              timeoutId = null;
-            }
-            // Continue to next attempt
+          }
+        } else {
+          console.log('ℹ️ No active session found');
+          if (mounted) {
+            setLoading(false);
           }
         }
         
-        console.log('ℹ️ All authentication attempts completed - no valid session found');
+        clearTimeout(overallTimeoutId);
       } catch (error) {
-        console.error('💥 Auth initialization error:', error);
-        if (error.message.includes('timed out')) {
-          console.warn('⚠️ All authentication methods timed out, proceeding with unauthenticated state');
-          
-          // Run diagnostics in development to help debug the issue
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🔍 Running authentication diagnostics...');
-            setTimeout(() => runAuthDiagnostics(), 1000); // Run after a delay to avoid interfering with initialization
-          }
-        }
-      } finally {
+        console.error('❌ Auth initialization failed:', error.message);
         if (mounted) {
           setLoading(false);
+          setUser(null);
+          setIsAuthenticated(false);
         }
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
-        // Always clear the overall timeout
-        if (overallTimeoutId) {
-          clearTimeout(overallTimeoutId);
-        }
+        clearTimeout(overallTimeoutId);
       }
     };
 
     // Initialize auth
     initializeAuth();
 
-    // Listen for auth changes
+    // Listen for auth changes - but don't handle INITIAL_SESSION since initializeAuth does it
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔄 Auth state changed:', event, session?.user?.email || 'no user');
       
       if (!mounted) return;
       
-      // Handle INITIAL_SESSION event properly
-      if (event === 'INITIAL_SESSION' && session?.user) {
-        console.log('📌 Initial session found for:', session.user.email);
-        setUser(session.user);
-        setIsAuthenticated(true);
-        await fetchUserProfile(session.user.id);
-      } else if (event === 'SIGNED_IN' && session?.user) {
+      // Skip INITIAL_SESSION - already handled by initializeAuth
+      if (event === 'INITIAL_SESSION') {
+        console.log('ℹ️ Skipping INITIAL_SESSION (handled by initializeAuth)');
+        return;
+      }
+      
+      if (event === 'SIGNED_IN' && session?.user) {
         console.log('✅ User signed in:', session.user.email);
         setUser(session.user);
         setIsAuthenticated(true);
-        await fetchUserProfile(session.user.id);
-      } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session?.user)) {
-        console.log('👋 User signed out or no initial session');
+        setLoading(false);
+        // Fetch profile without blocking
+        fetchUserProfile(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        console.log('👋 User signed out');
         setUser(null);
         setIsAuthenticated(false);
         setSubscription(null);
+        setLoading(false);
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
         console.log('🔄 Token refreshed for:', session.user.email);
         setUser(session.user);
@@ -371,15 +276,10 @@ export const AuthProvider = ({ children }) => {
         setUser(session.user);
         setIsAuthenticated(true);
       }
-      
-      setLoading(false);
     });
 
     return () => {
       mounted = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       authSubscription?.unsubscribe();
@@ -389,20 +289,40 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUserProfile = async (userId) => {
     try {
-      const { data, error } = await supabase
+      console.log('📋 Fetching user profile for:', userId);
+      
+      // Add timeout to profile fetch to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000);
+      });
+      
+      const fetchPromise = supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .single();
       
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+      
       if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching user profile:', error);
+        console.error('❌ Error fetching user profile:', error);
         return;
       }
       
-      setSubscription(data);
+      console.log('✅ User profile fetched:', {
+        email: data?.email,
+        tier: data?.subscription_tier,
+        agency_id: data?.agency_id
+      });
+      
+      // Set the subscription with the subscription_tier field properly mapped
+      setSubscription({
+        ...data,
+        tier: data?.subscription_tier, // Ensure 'tier' field exists
+        subscription_tier: data?.subscription_tier // Ensure both fields exist
+      });
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('❌ Error fetching user profile:', error);
     }
   };
 

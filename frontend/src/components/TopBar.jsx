@@ -63,8 +63,16 @@ const TopBar = ({ onMenuClick, showMenuButton = false }) => {
 
   const handleLogout = async () => {
     handleMenuClose();
-    await logout();
-    navigate('/login');
+    try {
+      console.log('🚪 Starting logout process...');
+      await logout();
+      console.log('✅ Logout complete, navigating to login...');
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      // Force navigation even if logout fails
+      navigate('/login', { replace: true });
+    }
   };
 
   // Get user initials for avatar

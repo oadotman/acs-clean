@@ -77,13 +77,15 @@ export class IntegrationService {
     },
     zapier: {
       id: 'zapier',
-      name: 'Zapier Integration',
-      description: 'Connect with 5,000+ apps through Zapier automation',
+      name: 'Zapier',
+      description: 'Connect AdCopySurge with 8,000+ apps through the world\'s leading automation platform. Build powerful multi-step workflows without code and streamline your entire ad analysis process with pre-built templates and enterprise-grade reliability.',
       category: 'Automation',
       icon: '⚡',
-      features: ['Multi-app workflows', 'Automated triggers', 'Data transformations', '5000+ app connections'],
+      features: ['8,000+ app integrations', 'No-code workflow builder', 'Pre-built templates', 'Multi-step automation', 'Enterprise reliability', 'Instant synchronization'],
       status: 'available',
       configurable: true,
+      setupGuideUrl: '/docs/zapier-setup-guide.md',
+      externalSetupUrl: 'https://zapier.com/app/editor',
       setupFields: [
         {
           key: 'webhook_url',
@@ -105,6 +107,41 @@ export class IntegrationService {
           ],
           default: 'summary',
           description: 'How much data to send to Zapier'
+        }
+      ]
+    },
+    n8n: {
+      id: 'n8n',
+      name: 'n8n',
+      description: 'Open-source workflow automation platform that gives you complete control over your data and processes. Self-host for maximum privacy, customize with JavaScript, and connect to 400+ apps without vendor lock-in or recurring fees.',
+      category: 'Automation',
+      icon: '🔄',
+      features: ['Open-source & self-hosted', '400+ native integrations', 'Visual workflow editor', 'Custom JavaScript code', 'Complete data privacy', 'No vendor lock-in'],
+      status: 'available',
+      configurable: true,
+      setupGuideUrl: '/docs/n8n-setup-guide.md',
+      externalSetupUrl: 'https://n8n.io/cloud',
+      setupFields: [
+        {
+          key: 'webhook_url',
+          label: 'n8n Webhook URL',
+          type: 'url',
+          required: true,
+          placeholder: 'https://your-n8n-instance.com/webhook/...',
+          description: 'Copy the webhook URL from your n8n workflow'
+        },
+        {
+          key: 'data_format',
+          label: 'Data Format',
+          type: 'select',
+          required: true,
+          options: [
+            { value: 'summary', label: 'Summary (Recommended)' },
+            { value: 'full', label: 'Full Analysis Data' },
+            { value: 'scores_only', label: 'Scores Only' }
+          ],
+          default: 'summary',
+          description: 'Amount of data to send to your n8n workflow'
         }
       ]
     },
@@ -309,6 +346,10 @@ export class IntegrationService {
           return await this.testWebhook(config);
         case 'slack':
           return await this.testSlack(config);
+        case 'zapier':
+          return await this.testZapier(config);
+        case 'n8n':
+          return await this.testN8n(config);
         case 'api':
           return await this.testApi(config);
         default:
@@ -359,6 +400,78 @@ export class IntegrationService {
       return { success: false, error: 'Channel must start with #' };
     }
     return { success: true, message: 'Slack configuration valid' };
+  }
+
+  // Test Zapier webhook
+  static async testZapier(config) {
+    try {
+      if (!config.webhook_url) {
+        return { success: false, error: 'Zapier webhook URL is required' };
+      }
+
+      const testPayload = {
+        test: true,
+        timestamp: new Date().toISOString(),
+        event: 'connection_test',
+        data: {
+          message: 'Test connection from AdCopySurge',
+          platform: 'test',
+          score: 8.5
+        }
+      };
+
+      const response = await fetch(config.webhook_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(testPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Zapier webhook test failed: ${response.status} ${response.statusText}`);
+      }
+
+      return { success: true, message: 'Zapier webhook connected successfully' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Test n8n webhook
+  static async testN8n(config) {
+    try {
+      if (!config.webhook_url) {
+        return { success: false, error: 'n8n webhook URL is required' };
+      }
+
+      const testPayload = {
+        test: true,
+        timestamp: new Date().toISOString(),
+        event: 'connection_test',
+        data: {
+          message: 'Test connection from AdCopySurge',
+          platform: 'test',
+          score: 8.5
+        }
+      };
+
+      const response = await fetch(config.webhook_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(testPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`n8n webhook test failed: ${response.status} ${response.statusText}`);
+      }
+
+      return { success: true, message: 'n8n webhook connected successfully' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   }
 
   // Test API configuration
@@ -424,6 +537,12 @@ export class IntegrationService {
         case 'slack':
           await this.sendSlackNotification(integration.config, eventType, data);
           break;
+        case 'zapier':
+          await this.sendZapier(integration.config, eventType, data);
+          break;
+        case 'n8n':
+          await this.sendN8n(integration.config, eventType, data);
+          break;
         default:
           console.log(`Integration type ${integration.integration_type} not implemented for sending`);
       }
@@ -471,6 +590,92 @@ export class IntegrationService {
     console.log(`Would send Slack notification to ${config.channel}:`, {
       eventType,
       data
+    });
+  }
+
+  // Send data to Zapier
+  static async sendZapier(config, eventType, data) {
+    if (!config.webhook_url) {
+      console.error('Zapier webhook URL not configured');
+      return;
+    }
+
+    // Format data based on config
+    let payload_data;
+    const data_format = config.data_format || 'summary';
+
+    if (data_format === 'scores_only') {
+      payload_data = {
+        score: data.score,
+        platform: data.platform,
+        improvement: data.improvement
+      };
+    } else if (data_format === 'full') {
+      payload_data = data;
+    } else {
+      payload_data = {
+        score: data.score,
+        platform: data.platform,
+        improvement: data.improvement,
+        top_insights: data.insights?.slice(0, 3) || []
+      };
+    }
+
+    const payload = {
+      event: eventType,
+      timestamp: new Date().toISOString(),
+      data: payload_data
+    };
+
+    await fetch(config.webhook_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  // Send data to n8n
+  static async sendN8n(config, eventType, data) {
+    if (!config.webhook_url) {
+      console.error('n8n webhook URL not configured');
+      return;
+    }
+
+    // Format data based on config
+    let payload_data;
+    const data_format = config.data_format || 'summary';
+
+    if (data_format === 'scores_only') {
+      payload_data = {
+        score: data.score,
+        platform: data.platform,
+        improvement: data.improvement
+      };
+    } else if (data_format === 'full') {
+      payload_data = data;
+    } else {
+      payload_data = {
+        score: data.score,
+        platform: data.platform,
+        improvement: data.improvement,
+        top_insights: data.insights?.slice(0, 3) || []
+      };
+    }
+
+    const payload = {
+      event: eventType,
+      timestamp: new Date().toISOString(),
+      data: payload_data
+    };
+
+    await fetch(config.webhook_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
     });
   }
 }

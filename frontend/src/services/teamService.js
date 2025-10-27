@@ -2,6 +2,16 @@
 import { supabase } from '../lib/supabaseClientClean';
 import toast from 'react-hot-toast';
 
+// Timeout helper to prevent infinite hangs - increased timeout for slow connections
+const withTimeout = (promise, timeoutMs = 30000, operationName = 'Operation') => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error(`${operationName} timed out after ${timeoutMs}ms`)), timeoutMs)
+    )
+  ]);
+};
+
 /**
  * TeamService - Service layer for managing team members, agencies, and permissions
  * 
@@ -24,15 +34,21 @@ class TeamService {
    */
   async getOrCreateUserAgency(userId) {
     try {
-      console.log('🏢 Fetching agency for user:', userId);
+      console.log('🏫 Fetching agency for user:', userId);
       
-      // First, check if user already belongs to an agency
-      // First, check if user already owns an agency
+      // Step 1: Check if user owns an agency
+      console.log('🔍 Step 1: Checking for owned agency...');
       const { data: ownedAgency, error: ownedError } = await supabase
         .from('agencies')
         .select('*')
         .eq('owner_id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to avoid error when not found
+      
+      console.log('🔍 Step 1 complete:', { 
+        hasOwnedAgency: !!ownedAgency, 
+        error: ownedError?.message,
+        errorCode: ownedError?.code 
+      });
 
       if (!ownedError && ownedAgency) {
         console.log('✅ Found existing owned agency:', ownedAgency.name);
@@ -42,7 +58,8 @@ class TeamService {
         };
       }
 
-      // Then check if user is a member of an agency
+      // Step 2: Check if user is a member of an agency  
+      console.log('🔍 Step 2: Checking for agency membership...');
       const { data: existingMember, error: memberError } = await supabase
         .from('agency_team_members')
         .select(`
@@ -59,27 +76,60 @@ class TeamService {
         `)
         .eq('user_id', userId)
         .eq('status', 'active')
-        .single();
+        .maybeSingle(); // Use maybeSingle() to avoid error when not found
+      
+      console.log('🔍 Step 2 complete:', { 
+        hasMembership: !!existingMember, 
+        error: memberError?.message,
+        errorCode: memberError?.code 
+      });
 
       if (!memberError && existingMember?.agencies) {
-        console.log('✅ Found existing agency:', existingMember.agencies.name);
+        console.log('✅ Found existing agency via membership:', existingMember.agencies.name);
         return {
           ...existingMember.agencies,
           userRole: existingMember.role
         };
       }
+      
+      // If PGRST116 error (no rows), that's expected - continue to create agency
+      if (memberError && memberError.code !== 'PGRST116') {
+        console.error('❌ Unexpected error checking membership:', memberError);
+        // Don't throw, continue to agency creation
+      }
 
       // No existing agency, check if user can create one
       console.log('🆕 Checking if user can create agency');
-      const { data: userProfile } = await supabase
+      const { data: userProfile, error: profileError } = await supabase
         .from('user_profiles')
         .select('full_name, email, can_create_agency, subscription_tier')
         .eq('id', userId)
         .single();
-
-      if (!userProfile?.can_create_agency) {
+      
+      if (profileError) {
+        console.error('❌ Error fetching user profile:', profileError);
+        throw new Error('Unable to fetch user profile. Please try again.');
+      }
+      
+      console.log('📊 User profile:', {
+        tier: userProfile?.subscription_tier,
+        canCreate: userProfile?.can_create_agency,
+        fullName: userProfile?.full_name
+      });
+      
+      // Check if user has agency tier OR can_create_agency flag
+      const isAgencyTier = ['agency_standard', 'agency_premium', 'agency_unlimited'].includes(userProfile?.subscription_tier);
+      const canCreate = userProfile?.can_create_agency === true || isAgencyTier;
+      
+      if (!canCreate) {
+        console.warn('⚠️ User cannot create agency:', {
+          tier: userProfile?.subscription_tier,
+          canCreateFlag: userProfile?.can_create_agency
+        });
         throw new Error('You need to upgrade to an Agency plan to create a team workspace. Please upgrade your subscription to continue.');
       }
+      
+      console.log('✅ User can create agency');
 
       const agencyName = userProfile?.full_name 
         ? `${userProfile.full_name}'s Agency`
@@ -144,7 +194,11 @@ class TeamService {
     try {
       console.log('👥 Fetching team members for agency:', agencyId);
       
-      // First, try a simple query without complex joins
+      if (!agencyId) {
+        throw new Error('Agency ID is required to fetch team members');
+      }
+      
+      // Query with proper joins to get user profile data
       const { data, error } = await supabase
         .from('agency_team_members')
         .select(`
@@ -159,21 +213,11 @@ class TeamService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching team members:', error);
-        
-        // Handle specific RLS policy recursion error
-        if (error.code === '42P17' && error.message?.includes('infinite recursion')) {
-          console.warn('⚠️ RLS policy recursion detected - this needs to be fixed in Supabase');
-          console.log('💡 Temporarily returning empty array until database policies are fixed');
-          return [];
-        }
-        
-        // Return empty array instead of throwing error for new agencies
-        console.log('ℹ️ No team members found, returning empty array');
-        return [];
+        console.error('❌ Error fetching team members:', error);
+        throw new Error(`Failed to fetch team members: ${error.message}`);
       }
 
-      // If no members, return empty array (this is normal for new agencies)
+      // If no members, return empty array (normal for new agencies)
       if (!data || data.length === 0) {
         console.log('ℹ️ No team members found for this agency yet');
         return [];
@@ -218,10 +262,8 @@ class TeamService {
       console.log(`✅ Fetched ${teamMembers.length} team members`);
       return teamMembers;
     } catch (error) {
-      console.error('Error in getTeamMembers:', error);
-      // Return empty array instead of throwing error to prevent UI crashes
-      console.log('⚠️ Returning empty team members array due to error');
-      return [];
+      console.error('❌ Error in getTeamMembers:', error);
+      throw error; // Let the UI handle the error properly
     }
   }
 

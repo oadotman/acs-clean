@@ -13,6 +13,9 @@ export const useBlog = () => {
 };
 
 export const BlogProvider = ({ children }) => {
+  // Blog feature is disabled - provide empty context without making API calls
+  const BLOG_ENABLED = false;
+  
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [popularPosts, setPopularPosts] = useState([]);
@@ -27,7 +30,6 @@ export const BlogProvider = ({ children }) => {
   });
 
   const API_BASE = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api';
-  const BLOG_ENABLED = process.env.REACT_APP_BLOG_ENABLED !== 'false';
 
   // API call helper
   const apiCall = useCallback(async (url, options = {}) => {
@@ -199,8 +201,14 @@ export const BlogProvider = ({ children }) => {
     }
   }, [apiCall]);
 
-  // Load initial data
+  // Load initial data - DISABLED
   useEffect(() => {
+    // Blog feature disabled - skip loading
+    if (!BLOG_ENABLED) {
+      console.log('🚫 Blog feature is disabled');
+      return;
+    }
+    
     const loadInitialData = async () => {
       try {
         // Load categories
@@ -221,7 +229,7 @@ export const BlogProvider = ({ children }) => {
     };
 
     loadInitialData();
-  }, [apiCall]);
+  }, [apiCall, BLOG_ENABLED]);
 
   // Clear search results
   const clearSearch = useCallback(() => {

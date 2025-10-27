@@ -53,14 +53,17 @@ const AgencyIntegrations = () => {
   const [integrationToDelete, setIntegrationToDelete] = useState(null);
   const [searchInputRef, setSearchInputRef] = useState(null);
 
-  // Get available integrations from service
-  const availableIntegrations = Object.values(IntegrationService.AVAILABLE_INTEGRATIONS);
+  // Get available integrations from service - filter to show only Zapier and n8n
+  const availableIntegrations = useMemo(() => {
+    return Object.values(IntegrationService.AVAILABLE_INTEGRATIONS)
+      .filter(integration => integration.id === 'zapier' || integration.id === 'n8n');
+  }, []);
 
   // Available categories
   const categories = useMemo(() => {
     const cats = ['all', ...new Set(availableIntegrations.map(i => i.category))];
     return cats;
-  }, []);
+  }, [availableIntegrations]);
 
   // Combine available integrations with user's connected integrations
   const integrationsWithStatus = useMemo(() => {
@@ -387,6 +390,22 @@ const AgencyIntegrations = () => {
                   <Typography variant="caption" color="success.main" sx={{ mb: 2, display: 'block' }}>
                     ✓ Last sync: {integration.lastSync}
                   </Typography>
+                )}
+
+                {/* Setup Guide Link */}
+                {integration.setupGuideUrl && !integration.connected && (
+                  <Box sx={{ mb: 2 }}>
+                    <Button
+                      size="small"
+                      startIcon={<LaunchIcon />}
+                      href={integration.setupGuideUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ textTransform: 'none' }}
+                    >
+                      View Setup Guide
+                    </Button>
+                  </Box>
                 )}
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

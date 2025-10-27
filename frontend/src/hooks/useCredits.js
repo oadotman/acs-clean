@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../services/authContext';
+import { supabase } from '../lib/supabaseClientClean';
 import { 
   getUserCredits, 
   consumeCredits, 
@@ -40,10 +41,52 @@ export const useCredits = () => {
     }
   }, [user?.id]);
 
-  // Initial fetch
+  // Initial fetch and real-time subscription
   useEffect(() => {
     fetchCredits();
-  }, [fetchCredits]);
+    
+    // Subscribe to real-time updates on user_credits table
+    if (user?.id) {
+      console.log('🔔 Setting up real-time credit subscription for user:', user.id);
+      
+      const subscription = supabase
+        .channel(`user_credits:${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'user_credits',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('🔔 Credit update received:', payload);
+            
+            if (payload.new) {
+              // Update local state immediately with new data
+              setCredits({
+                credits: payload.new.current_credits || 0,
+                monthlyAllowance: payload.new.monthly_allowance || 0,
+                lastReset: payload.new.last_reset,
+                totalUsed: payload.new.total_used || 0,
+                bonusCredits: payload.new.bonus_credits || 0,
+                subscriptionTier: payload.new.subscription_tier || 'free'
+              });
+              console.log('✅ Credits updated in real-time:', payload.new.current_credits);
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('🔔 Subscription status:', status);
+        });
+      
+      // Cleanup subscription on unmount
+      return () => {
+        console.log('🔔 Cleaning up credit subscription');
+        subscription.unsubscribe();
+      };
+    }
+  }, [fetchCredits, user?.id]);
 
   // Consume credits for an operation
   const useCredits = async (operation, quantity = 1, options = {}) => {
@@ -150,8 +193,10 @@ export const useCredits = () => {
 
   // Get credit percentage used
   const getCreditPercentage = () => {
-    if (!credits || credits.credits === 'unlimited') return 0;
-    if (credits.monthlyAllowance === 0) return 100;
+    if (!credits) return 100;
+    // Check for unlimited credits
+    if (credits.credits === 'unlimited' || credits.credits >= 999999) return 0;
+    if (credits.monthlyAllowance === 0 || credits.monthlyAllowance >= 999999) return 0;
     
     const used = credits.monthlyAllowance - credits.credits;
     return Math.min(100, Math.max(0, (used / credits.monthlyAllowance) * 100));

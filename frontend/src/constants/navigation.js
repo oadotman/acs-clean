@@ -77,39 +77,39 @@ export const ACCOUNT_NAV_ITEMS = [
   }
 ];
 
-// Agency-specific navigation items
+// Agency-specific navigation items (requires Agency plan)
 export const AGENCY_NAV_ITEMS = [
   {
     id: 'agency-integrations',
-    label: '🤝 Integrations',
+    label: 'Integrations',
     icon: Hub,
     path: '/agency/integrations',
-    description: 'Agency integrations and API connections'
-    // requiresTeam: true // Temporarily removed to show for all users
+    description: 'Agency integrations and API connections',
+    requiresAgency: true // Only for Agency plans
   },
   {
     id: 'team-management',
-    label: '👥 Team Management',
+    label: 'Team Management',
     icon: Groups,
     path: '/agency/team',
-    description: 'Manage team members and permissions'
-    // requiresTeam: true // Temporarily removed to show for all users
+    description: 'Manage team members and permissions',
+    requiresAgency: true // Only for Agency plans
   },
   {
     id: 'reports-branding',
-    label: '📊 Reports & Branding',
+    label: 'Reports & Branding',
     icon: Business,
     path: '/agency/reports',
-    description: 'Custom reports and branding options'
-    // requiresTeam: true // Temporarily removed to show for all users
+    description: 'Custom reports and branding options',
+    requiresAgency: true // Only for Agency plans
   },
   {
     id: 'white-label',
-    label: '🏷️ White Label Settings',
+    label: 'White Label Settings',
     icon: Label,
     path: '/agency/white-label',
-    description: 'White label configuration and branding'
-    // requiresTeam: true // Temporarily removed to show for all users
+    description: 'White label configuration and branding',
+    requiresAgency: true // Only for Agency plans
   }
 ];
 
@@ -140,18 +140,32 @@ export const NAV_SECTIONS = [
 // Helper functions to check user permissions for navigation items
 export const canAccessNavItem = (item, user, subscription) => {
   // If no special requirements, item is accessible
-  if (!item.requiresPro && !item.requiresTeam) {
+  if (!item.requiresPro && !item.requiresTeam && !item.requiresAgency) {
     return true;
   }
 
-  // Check Pro/Agency plan requirement
-  if (item.requiresPro) {
-    return subscription?.tier === 'pro' || subscription?.tier === 'agency';
+  const userTier = subscription?.subscription_tier || subscription?.tier || 'free';
+  
+  // Check Agency plan requirement (agency_standard, agency_premium, agency_unlimited)
+  if (item.requiresAgency) {
+    return userTier === 'agency_standard' || 
+           userTier === 'agency_premium' || 
+           userTier === 'agency_unlimited';
   }
 
-  // Check Team/Agency plan requirement
+  // Check Pro/Agency plan requirement (legacy support)
+  if (item.requiresPro) {
+    return userTier === 'pro' || 
+           userTier === 'agency_standard' || 
+           userTier === 'agency_premium' || 
+           userTier === 'agency_unlimited';
+  }
+
+  // Check Team requirement (legacy support - now maps to agency)
   if (item.requiresTeam) {
-    return subscription?.tier === 'agency';
+    return userTier === 'agency_standard' || 
+           userTier === 'agency_premium' || 
+           userTier === 'agency_unlimited';
   }
 
   return false;

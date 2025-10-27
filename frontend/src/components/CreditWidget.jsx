@@ -26,7 +26,9 @@ const CreditWidget = ({ compact = false }) => {
   const { 
     credits, 
     monthlyAllowance, 
-    loading, 
+    loading,
+    error, 
+    refreshCredits,
     getFormattedCredits, 
     getCreditStatusColor, 
     getCreditPercentage,
@@ -54,6 +56,43 @@ const CreditWidget = ({ compact = false }) => {
           <Typography variant="body2" color="text.secondary">
             Loading...
           </Typography>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show error state with retry button
+  if (error && !loading) {
+    return (
+      <Card 
+        elevation={0} 
+        sx={{ 
+          backgroundColor: 'rgba(239, 68, 68, 0.05)',
+          border: '1px solid rgba(239, 68, 68, 0.2)'
+        }}
+      >
+        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+          <Box display="flex" alignItems="center" gap={1} mb={1}>
+            <AccountBalanceWallet sx={{ fontSize: 20, color: 'error.main' }} />
+            <Typography variant="body2" fontWeight="600" color="error">
+              Credits Error
+            </Typography>
+          </Box>
+          <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+            {error.includes('timeout') || error.includes('timed out') 
+              ? 'Loading timed out after 10 seconds'
+              : 'Failed to load credit balance'
+            }
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            fullWidth
+            onClick={refreshCredits}
+            sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+          >
+            Retry
+          </Button>
         </CardContent>
       </Card>
     );

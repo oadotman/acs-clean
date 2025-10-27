@@ -27,7 +27,7 @@ const CreditDisplay = ({
   refreshTrigger = 0 
 }) => {
   const theme = useTheme();
-  const { user } = useAuth();
+  const { user, subscription } = useAuth();
   const [credits, setCredits] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,6 +39,20 @@ const CreditDisplay = ({
 
     try {
       setLoading(true);
+      
+      // Check for unlimited tier FIRST to avoid unnecessary API call
+      const userTier = subscription?.subscription_tier || 'free';
+      if (userTier === 'agency_unlimited') {
+        console.log('🎯 CreditDisplay: Unlimited tier detected, skipping fetch');
+        setCredits({
+          credits: 999999,
+          monthlyAllowance: -1,
+          subscriptionTier: SUBSCRIPTION_TIERS.AGENCY_UNLIMITED
+        });
+        setLoading(false);
+        return;
+      }
+      
       const creditData = await getUserCredits(user.id);
       console.log('🎯 CreditDisplay: Fetched credits:', creditData);
       setCredits(creditData);
@@ -57,7 +71,7 @@ const CreditDisplay = ({
 
   useEffect(() => {
     fetchCredits();
-  }, [user?.id, refreshTrigger]);
+  }, [user?.id, subscription?.subscription_tier, refreshTrigger]);
 
   if (loading || !credits) {
     return (

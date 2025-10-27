@@ -100,21 +100,39 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str = Field(default="noreply@adcopysurge.com", description="Default from email for Resend")
     RESEND_FROM_NAME: str = Field(default="AdCopySurge", description="Default from name for Resend")
     
-    # Paddle Billing Configuration
-    PADDLE_VENDOR_ID: Optional[str] = Field(None, description="Paddle vendor ID")
-    PADDLE_API_KEY: Optional[str] = Field(None, description="Paddle API key")
-    PADDLE_WEBHOOK_SECRET: Optional[str] = Field(None, description="Paddle webhook secret")
+    # Paddle Billing Configuration (New Paddle Billing API)
+    PADDLE_VENDOR_ID: Optional[str] = Field(None, description="Paddle vendor/seller ID")
+    PADDLE_API_KEY: Optional[str] = Field(None, description="Paddle API key for server-side calls")
+    PADDLE_CLIENT_TOKEN: Optional[str] = Field(None, description="Paddle client token for frontend checkout")
+    PADDLE_WEBHOOK_SECRET: Optional[str] = Field(None, description="Paddle webhook secret for signature verification")
+    PADDLE_WEBHOOK_ID: Optional[str] = Field(None, description="Paddle webhook notification ID")
     PADDLE_ENVIRONMENT: str = Field(default="sandbox", description="Paddle environment: sandbox or production")
     PADDLE_API_URL: str = Field(
-        default="https://sandbox-vendors.paddle.com/api", 
-        description="Paddle API URL"
+        default="https://sandbox-api.paddle.com", 
+        description="Paddle API URL (auto-set based on environment)"
     )
     
-    # Paddle Product IDs
-    PADDLE_BASIC_MONTHLY_ID: Optional[str] = Field(None, description="Paddle Basic Monthly Product ID")
-    PADDLE_PRO_MONTHLY_ID: Optional[str] = Field(None, description="Paddle Pro Monthly Product ID")
-    PADDLE_BASIC_YEARLY_ID: Optional[str] = Field(None, description="Paddle Basic Yearly Product ID")
-    PADDLE_PRO_YEARLY_ID: Optional[str] = Field(None, description="Paddle Pro Yearly Product ID")
+    # Paddle Product Price IDs - Growth Plan
+    PADDLE_GROWTH_MONTHLY_PRICE_ID: Optional[str] = Field(None, description="Growth Monthly Plan Price ID")
+    PADDLE_GROWTH_YEARLY_PRICE_ID: Optional[str] = Field(None, description="Growth Yearly Plan Price ID")
+    
+    # Paddle Product Price IDs - Agency Standard Plan
+    PADDLE_AGENCY_STANDARD_MONTHLY_PRICE_ID: Optional[str] = Field(None, description="Agency Standard Monthly Plan Price ID")
+    PADDLE_AGENCY_STANDARD_YEARLY_PRICE_ID: Optional[str] = Field(None, description="Agency Standard Yearly Plan Price ID")
+    
+    # Paddle Product Price IDs - Agency Premium Plan
+    PADDLE_AGENCY_PREMIUM_MONTHLY_PRICE_ID: Optional[str] = Field(None, description="Agency Premium Monthly Plan Price ID")
+    PADDLE_AGENCY_PREMIUM_YEARLY_PRICE_ID: Optional[str] = Field(None, description="Agency Premium Yearly Plan Price ID")
+    
+    # Paddle Product Price IDs - Agency Unlimited Plan
+    PADDLE_AGENCY_UNLIMITED_MONTHLY_PRICE_ID: Optional[str] = Field(None, description="Agency Unlimited Monthly Plan Price ID")
+    PADDLE_AGENCY_UNLIMITED_YEARLY_PRICE_ID: Optional[str] = Field(None, description="Agency Unlimited Yearly Plan Price ID")
+    
+    # Legacy Paddle Product IDs (for backward compatibility)
+    PADDLE_BASIC_MONTHLY_ID: Optional[str] = Field(None, description="[LEGACY] Paddle Basic Monthly Product ID")
+    PADDLE_PRO_MONTHLY_ID: Optional[str] = Field(None, description="[LEGACY] Paddle Pro Monthly Product ID")
+    PADDLE_BASIC_YEARLY_ID: Optional[str] = Field(None, description="[LEGACY] Paddle Basic Yearly Product ID")
+    PADDLE_PRO_YEARLY_ID: Optional[str] = Field(None, description="[LEGACY] Paddle Pro Yearly Product ID")
     
     # Monitoring & Error Tracking
     SENTRY_DSN: Optional[str] = Field(None, description="Sentry DSN for error tracking")
@@ -296,10 +314,11 @@ class Settings(BaseSettings):
     
     @validator('PADDLE_API_URL', pre=True)
     def set_paddle_api_url(cls, v, values):
+        """Auto-configure Paddle API URL based on environment"""
         environment = values.get('PADDLE_ENVIRONMENT', 'sandbox')
         if environment == 'production':
-            return "https://vendors.paddle.com/api"
-        return "https://sandbox-vendors.paddle.com/api"
+            return "https://api.paddle.com"  # New Paddle Billing API
+        return "https://sandbox-api.paddle.com"  # New Paddle Billing API Sandbox
     
     @property
     def is_production(self) -> bool:

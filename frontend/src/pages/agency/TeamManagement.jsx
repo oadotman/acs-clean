@@ -66,7 +66,7 @@ const roles = Object.entries(ROLE_CONFIG).map(([value, config]) => ({
 const AgencyTeamManagement = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, subscription } = useAuth();
   
   // UI State
   const [anchorEl, setAnchorEl] = useState(null);
@@ -106,16 +106,61 @@ const AgencyTeamManagement = () => {
   useEffect(() => {
     if (!user || !isAuthenticated) return;
     
-    loadAgencyData();
-  }, [user, isAuthenticated]);
+    // Prevent duplicate calls
+    let cancelled = false;
+    
+    const loadData = async () => {
+      if (cancelled) return;
+      await loadAgencyData();
+    };
+    
+    loadData();
+    
+    // Add timeout fallback to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (loading && !cancelled) {
+        console.warn('⚠️ Loading timeout - forcing completion');
+        setLoading(false);
+      }
+    }, 10000);
+    
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [user?.id, isAuthenticated]); // Only re-run if user ID or auth status changes
 
   const loadAgencyData = async () => {
+    console.log('\n==================== LOAD AGENCY DATA START ====================');
+    
+    // Prevent concurrent calls
+    if (loading) {
+      console.log('⚠️ Already loading, skipping duplicate call');
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
       
+      console.log('🏬 Loading agency data for user:', {
+        userId: user?.id, 
+        email: user?.email,
+        isAuthenticated,
+        hasUser: !!user
+      });
+      
+      if (!user?.id) {
+        console.error('❌ No user ID available');
+        setError('User session not found. Please refresh the page.');
+        setLoading(false);
+        return;
+      }
+      
       // Get or create agency for the user
+      console.log('🔍 Calling teamService.getOrCreateUserAgency...');
       const agencyData = await teamService.getOrCreateUserAgency(user.id);
+      console.log('✅ Agency data received:', agencyData);
       setAgency(agencyData);
       
       // Load team members and analytics
@@ -132,17 +177,39 @@ const AgencyTeamManagement = () => {
       setClients(agencyClients);
       
       // Check team member limits based on subscription
-      const userTier = user?.subscription?.tier || 'free';
+      // Read subscription_tier from the subscription object (user_profiles row)
+      const userTier = subscription?.subscription_tier || subscription?.tier || 'free';
+      
+      console.log('\n========== TEAM LIMITS DEBUG ==========');
+      console.log('📊 Raw subscription object:', subscription);
+      console.log('📊 Subscription tier field:', subscription?.subscription_tier);
+      console.log('📊 User tier field:', user?.subscription_tier);
+      console.log('🔑 Final userTier determined:', userTier);
+      console.log('👥 Current member count:', members.length);
+      
+      // Import PLAN_LIMITS to check
+      console.log('📋 Available SUBSCRIPTION_TIERS:', SUBSCRIPTION_TIERS);
+      
       const limits = getTeamMemberLimits(userTier);
+      console.log('🚧 Limits returned from getTeamMemberLimits:', limits);
+      
       const inviteCheck = canInviteTeamMembers(userTier, members.length);
+      console.log('✅ Invite check result:', inviteCheck);
+      console.log('========================================\n');
       
       setTeamLimits(limits);
       setCanInvite(inviteCheck.canInvite);
     } catch (err) {
-      console.error('Error loading agency data:', err);
+      console.error('\n❌ ==================== ERROR IN LOAD AGENCY DATA ====================');
+      console.error('Error object:', err);
+      console.error('Error message:', err?.message);
+      console.error('Error stack:', err?.stack);
+      console.error('==================== END ERROR ====================\n');
       setError(err.message || 'Failed to load team data');
     } finally {
+      console.log('🏁 loadAgencyData finally block - setting loading to false');
       setLoading(false);
+      console.log('==================== LOAD AGENCY DATA END ====================\n');
     }
   };
 
@@ -273,12 +340,49 @@ const AgencyTeamManagement = () => {
     );
   }
   
-  // Ensure user is authenticated
-  if (!isAuthenticated || !user || !agency) {
+  // Ensure user is authenticated and has agency tier
+  if (!isAuthenticated || !user) {
+    console.log('🚫 Auth check failed:', { isAuthenticated, hasUser: !!user });
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Alert severity="warning">
           Please sign in to access team management.
+        </Alert>
+      </Container>
+    );
+  }
+  
+  // Check if user has agency tier
+  const userTier = subscription?.subscription_tier || subscription?.tier || 'free';
+  if (!userTier.includes('agency') && userTier !== 'agency_unlimited') {
+    console.log('🚫 User does not have agency tier:', userTier);
+    return (
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Alert severity="info" action={
+          <Button color="inherit" size="small" href="/pricing">
+            Upgrade
+          </Button>
+        }>
+          Team management is available for Agency tier subscribers. Current tier: {userTier}
+        </Alert>
+      </Container>
+    );
+  }
+  
+  // If agency is null but we have user, show appropriate message
+  if (!agency && !loading) {
+    console.log('⚠️ No agency data but user is authenticated');
+    return (
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Alert 
+          severity="info"
+          action={
+            <Button color="inherit" size="small" onClick={loadAgencyData}>
+              Retry
+            </Button>
+          }
+        >
+          Unable to load agency data. {error || 'Please try again.'}
         </Alert>
       </Container>
     );

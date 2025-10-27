@@ -205,12 +205,12 @@ async def create_paddle_checkout(
     if not plan_id:
         raise HTTPException(status_code=400, detail="Invalid subscription tier")
     
-    # Create pay link
+    # Create pay link with production URLs
     result = paddle_service.create_pay_link(
         plan_id=plan_id,
         user=current_user,
-        success_redirect="http://localhost:3000/dashboard?success=true",
-        cancel_redirect="http://localhost:3000/pricing"
+        success_redirect="https://adcopysurge.com/analysis/new?success=true",
+        cancel_redirect="https://adcopysurge.com/pricing"
     )
     
     if not result.get("success"):
@@ -226,24 +226,28 @@ async def paddle_webhook(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """Handle Paddle webhooks"""
+    """Handle Paddle webhooks (New Paddle Billing API)"""
     if PaddleService is None:
         raise HTTPException(status_code=503, detail="Paddle service not available")
         
     try:
         # Get raw body and headers
         body = await request.body()
-        signature = request.headers.get("X-Paddle-Signature", "")
+        signature = request.headers.get("Paddle-Signature", "")  # Note: New Paddle uses "Paddle-Signature" header
         
         paddle_service = PaddleService(db)
         
-        # Verify webhook signature (optional but recommended)
-        # if not paddle_service.verify_webhook(body, signature):
-        #     raise HTTPException(status_code=401, detail="Invalid webhook signature")
+        # Verify webhook signature (CRITICAL FOR SECURITY)
+        if signature and paddle_service.webhook_secret:
+            if not paddle_service.verify_webhook_signature(body, signature):
+                logger.warning("Webhook signature verification failed")
+                raise HTTPException(status_code=401, detail="Invalid webhook signature")
+        else:
+            logger.warning("Webhook signature not verified (no signature or secret)")
         
-        # Parse form data (Paddle sends form-encoded data)
-        form_data = await request.form()
-        webhook_data = dict(form_data)
+        # Parse JSON body (New Paddle API sends JSON)
+        import json
+        webhook_data = json.loads(body)
         
         # Process the webhook
         result = paddle_service.process_webhook(webhook_data)
@@ -254,6 +258,9 @@ async def paddle_webhook(
             logger.error(f"Webhook processing failed: {result}")
             return {"status": "error", "message": result.get("error")}
             
+    except json.JSONDecodeError as e:
+        logger.error(f"Webhook JSON parsing error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid JSON in webhook payload")
     except Exception as e:
         logger.error(f"Webhook error: {e}")
         raise HTTPException(status_code=500, detail="Webhook processing failed")

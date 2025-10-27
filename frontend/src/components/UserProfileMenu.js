@@ -47,10 +47,14 @@ const UserProfileMenu = ({ collapsed = false }) => {
   const handleLogout = async () => {
     handleClose();
     try {
+      console.log('🚪 Starting logout process...');
       await logout();
-      navigate('/');
+      console.log('✅ Logout complete, navigating to login...');
+      navigate('/login', { replace: true });
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('❌ Logout failed:', error);
+      // Force navigation even if logout fails
+      navigate('/login', { replace: true });
     }
   };
 
