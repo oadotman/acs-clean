@@ -125,7 +125,7 @@ class PaddleService {
   }
 
   /**
-   * Open Paddle checkout overlay
+   * Open Paddle checkout overlay (Paddle Billing v2 API)
    */
   async openCheckout(options) {
     try {
@@ -134,23 +134,38 @@ class PaddleService {
       if (!this.paddleInstance) {
         throw new Error('Paddle not loaded');
       }
+      
+      console.log('🛒 Opening Paddle checkout with options:', {
+        priceId: options.priceId,
+        email: options.email,
+        userId: options.userId
+      });
 
-      // Open checkout overlay
+      // Open checkout overlay using NEW Paddle Billing v2 API
       this.paddleInstance.Checkout.open({
-        method: 'overlay',
-        product: options.productId,
-        email: options.email || '',
-        passthrough: JSON.stringify({
+        items: [{
+          priceId: options.priceId,
+          quantity: 1
+        }],
+        customer: {
+          email: options.email || ''
+        },
+        customData: {
           user_id: options.userId,
           plan: options.planName,
           source: 'web_app'
-        }),
-        successCallback: options.successCallback || this.handleCheckoutComplete.bind(this),
-        closeCallback: options.closeCallback || (() => console.log('Checkout closed'))
+        },
+        settings: {
+          displayMode: 'overlay',
+          theme: 'light',
+          locale: 'en'
+        }
       });
       
+      console.log('✅ Paddle checkout opened successfully');
+      
     } catch (error) {
-      console.error('Failed to open Paddle checkout:', error);
+      console.error('❌ Failed to open Paddle checkout:', error);
       throw error;
     }
   }

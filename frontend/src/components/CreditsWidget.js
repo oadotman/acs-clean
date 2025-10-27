@@ -104,10 +104,21 @@ const CreditsWidget = ({ collapsed = false }) => {
       setUpgrading(true);
       
       const productMapping = paddleService.getPaddleProductMapping();
-      const targetPlan = credits?.tier === 'basic' ? 'pro' : 'pro';
+      // Default to growth plan for free users, otherwise suggest next tier up
+      const targetPlan = credits?.tier === 'free' ? 'growth' : 'agency_unlimited';
+      const billingPeriod = 'monthly'; // Default to monthly, can be made configurable
+      
+      // Get the correct price ID from the nested structure
+      const priceId = productMapping[targetPlan]?.[billingPeriod]?.priceId || productMapping[targetPlan]?.priceId;
+      
+      if (!priceId) {
+        throw new Error(`Invalid plan configuration: ${targetPlan}`);
+      }
+      
+      console.log('Opening checkout with priceId:', priceId);
       
       await paddleService.openCheckout({
-        productId: productMapping[targetPlan].productId,
+        priceId: priceId,
         email: user.email,
         userId: user.id,
         planName: targetPlan,
@@ -120,12 +131,12 @@ const CreditsWidget = ({ collapsed = false }) => {
         },
         closeCallback: () => {
           console.log('Upgrade cancelled');
+          setUpgrading(false);
         }
       });
     } catch (error) {
       console.error('Upgrade failed:', error);
-      toast.error('Failed to start upgrade process. Please try again.');
-    } finally {
+      toast.error(`Failed to start upgrade: ${error.message}`);
       setUpgrading(false);
     }
   };
