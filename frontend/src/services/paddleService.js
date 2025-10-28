@@ -148,17 +148,18 @@ class PaddleService {
           quantity: 1
         }],
         customer: {
-          email: options.email || ''
+          email: options.email || undefined
         },
         customData: {
-          user_id: options.userId,
-          plan: options.planName,
+          userId: options.userId,
+          planName: options.planName,
           source: 'web_app'
         },
         settings: {
           displayMode: 'overlay',
           theme: 'light',
-          locale: 'en'
+          locale: 'en',
+          allowLogout: false
         }
       });
       
