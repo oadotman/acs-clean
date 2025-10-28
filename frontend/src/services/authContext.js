@@ -300,7 +300,7 @@ export const AuthProvider = ({ children }) => {
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();  // Use maybeSingle() to avoid 406 errors
       
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
       

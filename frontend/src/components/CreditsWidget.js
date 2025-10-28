@@ -103,6 +103,18 @@ const CreditsWidget = ({ collapsed = false }) => {
     try {
       setUpgrading(true);
       
+      // CRITICAL: Get email from authenticated user
+      const userEmail = user.email;
+      
+      if (!userEmail) {
+        console.error('❌ No email found for user:', user.id);
+        toast.error('Cannot process upgrade: User email not found. Please try logging in again.');
+        setUpgrading(false);
+        return;
+      }
+      
+      console.log('📝 User email verified for checkout:', userEmail);
+      
       const productMapping = paddleService.getPaddleProductMapping();
       // Default to growth plan for free users, otherwise suggest next tier up
       const targetPlan = credits?.tier === 'free' ? 'growth' : 'agency_unlimited';
@@ -115,11 +127,11 @@ const CreditsWidget = ({ collapsed = false }) => {
         throw new Error(`Invalid plan configuration: ${targetPlan}`);
       }
       
-      console.log('Opening checkout with priceId:', priceId);
+      console.log('🛍️ Opening checkout with:', { priceId, email: userEmail, userId: user.id });
       
       await paddleService.openCheckout({
         priceId: priceId,
-        email: user.email,
+        email: userEmail,  // Ensured non-null email
         userId: user.id,
         planName: targetPlan,
         successCallback: () => {

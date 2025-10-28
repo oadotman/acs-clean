@@ -129,6 +129,21 @@ class PaddleService {
    */
   async openCheckout(options) {
     try {
+      // CRITICAL: Validate email before proceeding
+      if (!options.email) {
+        const error = new Error('User email is required for checkout');
+        console.error('❌ Cannot open checkout: Email is missing');
+        throw error;
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(options.email)) {
+        const error = new Error('Invalid email format');
+        console.error('❌ Cannot open checkout: Invalid email format:', options.email);
+        throw error;
+      }
+      
       await this.loadPaddleScript();
       
       if (!this.paddleInstance) {
