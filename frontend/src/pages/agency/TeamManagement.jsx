@@ -161,6 +161,13 @@ const AgencyTeamManagement = () => {
       console.log('🔍 Calling teamService.getOrCreateUserAgency...');
       const agencyData = await teamService.getOrCreateUserAgency(user.id);
       console.log('✅ Agency data received:', agencyData);
+      
+      // Validate agency data
+      if (!agencyData || !agencyData.id) {
+        console.error('❌ No valid agency data returned');
+        throw new Error('Failed to load or create agency. Please contact support.');
+      }
+      
       setAgency(agencyData);
       
       // Load team members and analytics

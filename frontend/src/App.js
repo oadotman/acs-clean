@@ -522,8 +522,7 @@ function App() {
                   <Route path="/projects/:id" element={<ProjectDetailNew />} />
                   <Route path="/history" element={<AnalysisHistoryNew />} />
                   <Route path="/profile" element={<Profile />} />
-                  <Route path="/team" element={<div>Team Management - Coming Soon</div>} />
-                  <Route path="/integrations" element={<div>Integrations - Coming Soon</div>} />
+                  {/* /team removed - use /agency/team instead */}
                   <Route path="/billing" element={<BillingCredits />} />
                   {/* Agency Routes */}
                   <Route path="/agency/integrations" element={<AgencyIntegrations />} />
