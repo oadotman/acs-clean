@@ -163,18 +163,18 @@ class PaddleService {
           quantity: 1
         }],
         customer: {
-          email: options.email || undefined
+          email: options.email  // Must not be undefined
         },
         customData: {
-          userId: options.userId,
-          planName: options.planName,
+          user_id: options.userId,
+          plan_name: options.planName,
           source: 'web_app'
         },
         settings: {
           displayMode: 'overlay',
           theme: 'light',
-          locale: 'en',
-          allowLogout: false
+          locale: 'en'
+          // Remove allowLogout - it's not a valid setting and causes 400 errors
         }
       });
       

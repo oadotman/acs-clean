@@ -94,63 +94,10 @@ const CreditsWidget = ({ collapsed = false }) => {
     }
   }, [user, subscription?.tier]);
 
-  const handleUpgrade = async () => {
-    if (!user) {
-      toast.error('Please log in to upgrade your plan');
-      return;
-    }
-
-    try {
-      setUpgrading(true);
-      
-      // CRITICAL: Get email from authenticated user
-      const userEmail = user.email;
-      
-      if (!userEmail) {
-        console.error('❌ No email found for user:', user.id);
-        toast.error('Cannot process upgrade: User email not found. Please try logging in again.');
-        setUpgrading(false);
-        return;
-      }
-      
-      console.log('📝 User email verified for checkout:', userEmail);
-      
-      const productMapping = paddleService.getPaddleProductMapping();
-      // Default to growth plan for free users, otherwise suggest next tier up
-      const targetPlan = credits?.tier === 'free' ? 'growth' : 'agency_unlimited';
-      const billingPeriod = 'monthly'; // Default to monthly, can be made configurable
-      
-      // Get the correct price ID from the nested structure
-      const priceId = productMapping[targetPlan]?.[billingPeriod]?.priceId || productMapping[targetPlan]?.priceId;
-      
-      if (!priceId) {
-        throw new Error(`Invalid plan configuration: ${targetPlan}`);
-      }
-      
-      console.log('🛍️ Opening checkout with:', { priceId, email: userEmail, userId: user.id });
-      
-      await paddleService.openCheckout({
-        priceId: priceId,
-        email: userEmail,  // Ensured non-null email
-        userId: user.id,
-        planName: targetPlan,
-        successCallback: () => {
-          toast.success('Upgrade successful! Your account will be updated shortly.');
-          // Refresh credits after successful upgrade
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        },
-        closeCallback: () => {
-          console.log('Upgrade cancelled');
-          setUpgrading(false);
-        }
-      });
-    } catch (error) {
-      console.error('Upgrade failed:', error);
-      toast.error(`Failed to start upgrade: ${error.message}`);
-      setUpgrading(false);
-    }
+  const handleUpgrade = () => {
+    // Navigate to pricing page instead of directly opening checkout
+    // This allows users to see all plans and choose what they want
+    window.location.href = '/pricing';
   };
 
   const getCreditsColor = () => {
