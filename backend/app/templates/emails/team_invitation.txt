@@ -1,0 +1,37 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 YOU'RE INVITED TO JOIN {{ agency_name|upper }}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{{ invited_by }} has invited you to collaborate on {{ branding.app_name }}.
+
+INVITATION DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Agency: {{ agency_name }}
+Your Role: {{ role_name }}
+Invited By: {{ invited_by }}
+
+{% if personal_message %}
+PERSONAL MESSAGE:
+{{ personal_message }}
+
+{% endif %}
+ACCEPT YOUR INVITATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{{ invitation_url }}
+
+⚠️  This invitation will expire in 7 days.
+
+
+WHAT YOU CAN DO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 Collaborate - Work together on ad copy analysis
+📊 Analyze - Get AI-powered insights
+🎨 Create - Generate better ads
+
+
+NEED HELP?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Contact us at {{ branding.support_email }}
+Visit: {{ branding.website_url }}
+
+© {{ current_year }} {{ branding.company_name }}. All rights reserved.

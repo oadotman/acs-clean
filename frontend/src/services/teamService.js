@@ -295,78 +295,41 @@ class TeamService {
       const { email, role, projectAccess = [], clientAccess = [] } = invitationData;
       console.log('📧 Sending invitation to:', email);
 
-      // Check if user already exists and is in the agency
-      const { data: existingUser } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (existingUser) {
-        const { data: existingMember } = await supabase
-          .from('agency_team_members')
-          .select('id')
-          .eq('agency_id', agencyId)
-          .eq('user_id', existingUser.id)
-          .single();
-
-        if (existingMember) {
-          throw new Error('User is already a member of this agency');
-        }
-      }
-
-      // Check for existing pending invitation and delete it
-      const { data: existingInvitation } = await supabase
-        .from('agency_invitations')
-        .select('id')
-        .eq('agency_id', agencyId)
-        .eq('email', email.toLowerCase())
-        .single();
-
-      if (existingInvitation) {
-        console.log('🗑️ Deleting existing invitation for:', email);
-        await supabase
-          .from('agency_invitations')
-          .delete()
-          .eq('id', existingInvitation.id);
-      }
-
-      // Generate invitation token
-      const invitationToken = this.generateInvitationToken();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
-
-      // Create invitation record
-      const { data: invitation, error: invitationError } = await supabase
-        .from('agency_invitations')
-        .insert({
-          agency_id: agencyId,
+      // Use backend API endpoint for invitation (includes email sending)
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      
+      const response = await fetch(`${API_URL}/api/team/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           email: email.toLowerCase(),
+          agency_id: agencyId,
+          inviter_user_id: inviterUserId,
           role,
-          status: 'pending',
-          invitation_token: invitationToken,
-          expires_at: expiresAt.toISOString(),
-          invited_by: inviterUserId,
           project_access: projectAccess,
           client_access: clientAccess
         })
-        .select()
-        .single();
-
-      if (invitationError) {
-        console.error('Error creating invitation:', invitationError);
-        throw new Error('Failed to create invitation');
-      }
-
-      // TODO: Send actual email with invitation link
-      console.log('📬 Invitation created (email sending not implemented):', {
-        email,
-        token: invitationToken,
-        expiresAt
       });
 
-      toast.success(`Invitation sent to ${email}`);
-      return invitation;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to send invitation' }));
+        throw new Error(errorData.detail || 'Failed to send invitation');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        if (result.email_sent) {
+          toast.success(`✉️ Invitation email sent to ${email}`);
+        } else {
+          toast.success(`✅ Invitation created for ${email} (email sending failed, but invitation is active)`);
+        }
+        return result;
+      } else {
+        throw new Error(result.message || 'Failed to send invitation');
+      }
     } catch (error) {
       console.error('Error in sendInvitation:', error);
       toast.error(error.message || 'Failed to send invitation');

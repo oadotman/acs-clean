@@ -230,13 +230,17 @@ Reply to: {ticket.email}
         """
         
         # Send email using Resend
-        email_result = await email_service._send_email(
-            to=settings.RESEND_FROM_EMAIL,  # Send to your support email
-            subject=email_subject,
-            html=html_content,
-            text=text_content,
-            from_email=settings.RESEND_FROM_EMAIL
-        )
+        try:
+            email_result = await email_service._send_email(
+                to=settings.RESEND_FROM_EMAIL,  # Send to your support email
+                subject=email_subject,
+                html=html_content,
+                text=text_content,
+                from_email=settings.RESEND_FROM_EMAIL
+            )
+        except Exception as email_error:
+            logger.error(f"Email service error: {str(email_error)}", exc_info=True)
+            email_result = {'success': False, 'error': str(email_error)}
         
         if not email_result.get('success'):
             logger.error(f"Failed to send support email: {email_result.get('error')}")

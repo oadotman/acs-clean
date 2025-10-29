@@ -9,6 +9,8 @@ from app.api.creative import router as creative_router
 from app.api.health_fixed import router as health_router
 from app.api.v1.auth_status import router as auth_status_router
 from api.integrations import router as integrations_router
+from app.routers.team import router as team_router
+from app.routers.support import router as support_router
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
 
@@ -103,6 +105,8 @@ app.include_router(creative_router, prefix="/api/creative", tags=["creative-cont
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
 app.include_router(integrations_router, prefix="/api", tags=["integrations"])
+app.include_router(team_router, tags=["team"])  # Team invitation and management
+app.include_router(support_router, tags=["support"])  # Support tickets
 
 # Include blog router if enabled and available
 if blog_router is not None:
