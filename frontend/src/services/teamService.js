@@ -315,6 +315,22 @@ class TeamService {
         }
       }
 
+      // Check for existing pending invitation and delete it
+      const { data: existingInvitation } = await supabase
+        .from('agency_invitations')
+        .select('id')
+        .eq('agency_id', agencyId)
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (existingInvitation) {
+        console.log('🗑️ Deleting existing invitation for:', email);
+        await supabase
+          .from('agency_invitations')
+          .delete()
+          .eq('id', existingInvitation.id);
+      }
+
       // Generate invitation token
       const invitationToken = this.generateInvitationToken();
       const expiresAt = new Date();
