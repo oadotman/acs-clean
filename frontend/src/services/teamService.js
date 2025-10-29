@@ -298,7 +298,7 @@ class TeamService {
       // Use backend API endpoint for invitation (includes email sending)
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
       
-      const response = await fetch(`${API_URL}/api/team/invite`, {
+      const response = await fetch(`${API_URL}/team/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
