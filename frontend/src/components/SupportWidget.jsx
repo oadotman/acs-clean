@@ -153,7 +153,7 @@ const SupportWidget = () => {
         user_id: user?.id || null
       };
 
-      const response = await axios.post(`${API_URL}/api/support/send`, payload);
+      const response = await axios.post(`${API_URL}/support/send`, payload);
 
       if (response.data.success) {
         setShowSuccess(true);

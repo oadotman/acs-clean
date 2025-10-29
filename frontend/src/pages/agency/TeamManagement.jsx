@@ -197,10 +197,11 @@ const AgencyTeamManagement = () => {
       
       // Check team member limits based on subscription
       // Read subscription_tier from the subscription object (user_profiles row)
-      const userTier = subscription?.subscription_tier || subscription?.tier || 'free';
+      const userTier = subscription?.subscription_tier || subscription?.tier || agencyData?.subscription_tier || 'free';
       
       console.log('\n========== TEAM LIMITS DEBUG ==========');
       console.log('📊 Raw subscription object:', subscription);
+      console.log('📊 Agency subscription_tier:', agencyData?.subscription_tier);
       console.log('📊 Subscription tier field:', subscription?.subscription_tier);
       console.log('📊 User tier field:', user?.subscription_tier);
       console.log('🔑 Final userTier determined:', userTier);

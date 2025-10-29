@@ -556,7 +556,7 @@ function App() {
                 <Route path="/app" element={<Navigate to="/analysis/new" replace />} />
                 </Routes>
                 <Toaster position="top-right" />
-                <SupportWidget />
+                {/* <SupportWidget /> */} {/* Disabled until AWS SES is configured */}
               </Router>
               </BlogProvider>
             </AuthProvider>
