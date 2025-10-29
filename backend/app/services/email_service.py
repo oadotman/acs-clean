@@ -3,7 +3,7 @@ Email service implementation using Resend API for production-ready email deliver
 Supports white-label branding, team invitations, and transactional emails.
 """
 
-import resend
+import httpx
 from typing import Dict, Any, Optional, List
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 import os
@@ -19,12 +19,14 @@ class EmailService:
     """Production email service using Resend API with template support and white-label branding."""
     
     def __init__(self):
-        """Initialize email service with Resend API and template engine."""
+        """Initialize email service with FreeResend API and template engine."""
         if not settings.RESEND_API_KEY:
             logger.warning("RESEND_API_KEY not configured - emails will be logged only")
             self._mock_mode = True
         else:
-            resend.api_key = settings.RESEND_API_KEY
+            self.api_key = settings.RESEND_API_KEY
+            # Use FreeResend instance (Resend-compatible)
+            self.api_url = getattr(settings, 'FREERESEND_API_URL', 'http://localhost:3000/api/emails')
             self._mock_mode = False
         
         # Set up Jinja2 template environment
@@ -379,23 +381,42 @@ class EmailService:
             }
         
         try:
-            result = resend.Emails.send({
-                "from": from_email or settings.RESEND_FROM_EMAIL,
-                "to": [to],
-                "subject": subject,
-                "html": html,
-                "text": text or self._html_to_text(html)
-            })
-            
-            logger.info(f"Email sent successfully to {to} via Resend (ID: {result.get('id')})")
-            return {
-                'success': True,
-                'message_id': result.get('id'),
-                'resend_result': result
-            }
+            # Use FreeResend API (Resend-compatible)
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    self.api_url,
+                    json={
+                        "from": from_email or settings.RESEND_FROM_EMAIL,
+                        "to": [to],
+                        "subject": subject,
+                        "html": html,
+                        "text": text or self._html_to_text(html)
+                    },
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    timeout=30.0
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    logger.info(f"Email sent successfully to {to} via FreeResend (ID: {result.get('id')})")
+                    return {
+                        'success': True,
+                        'message_id': result.get('id'),
+                        'resend_result': result
+                    }
+                else:
+                    error_msg = f"FreeResend API error: {response.status_code} - {response.text}"
+                    logger.error(error_msg)
+                    return {
+                        'success': False,
+                        'error': error_msg
+                    }
             
         except Exception as e:
-            logger.error(f"Failed to send email via Resend to {to}: {e}")
+            logger.error(f"Failed to send email via FreeResend to {to}: {e}")
             return {
                 'success': False,
                 'error': str(e)
