@@ -52,6 +52,12 @@ class TeamInvitationResponse(BaseModel):
     email_sent: bool = False
 
 
+class ResendInvitationRequest(BaseModel):
+    """Resend invitation request model."""
+    invitation_id: str = Field(..., description="Invitation ID to resend")
+    inviter_user_id: str = Field(..., description="User ID of person resending")
+
+
 def generate_invitation_token() -> str:
     """Generate a secure invitation token."""
     return secrets.token_hex(32)
@@ -180,10 +186,9 @@ async def send_team_invitation(
         )
 
 
-@router.post("/invite/resend")
+@router.post("/invite/resend", response_model=TeamInvitationResponse)
 async def resend_team_invitation(
-    invitation_id: str = Field(..., description="Invitation ID to resend"),
-    inviter_user_id: str = Field(..., description="User ID of person resending")
+    resend_request: ResendInvitationRequest
 ):
     """
     Resend a team invitation email.
@@ -193,7 +198,7 @@ async def resend_team_invitation(
         email_service = EmailService()
         
         # Get invitation details
-        invitation_result = supabase.table('agency_invitations').select('*').eq('id', invitation_id).execute()
+        invitation_result = supabase.table('agency_invitations').select('*').eq('id', resend_request.invitation_id).execute()
         
         if not invitation_result.data:
             raise HTTPException(status_code=404, detail="Invitation not found")
@@ -209,14 +214,14 @@ async def resend_team_invitation(
             'invitation_token': new_token,
             'expires_at': new_expiration.isoformat(),
             'status': 'pending'
-        }).eq('id', invitation_id).execute()
+        }).eq('id', resend_request.invitation_id).execute()
         
         # Get agency details
         agency_result = supabase.table('agencies').select('name').eq('id', invitation_data['agency_id']).execute()
         agency_name = agency_result.data[0]['name'] if agency_result.data else "the team"
         
         # Get inviter details
-        inviter_result = supabase.table('user_profiles').select('full_name, email').eq('id', inviter_user_id).execute()
+        inviter_result = supabase.table('user_profiles').select('full_name, email').eq('id', resend_request.inviter_user_id).execute()
         invited_by_name = inviter_result.data[0]['full_name'] if inviter_result.data and inviter_result.data[0].get('full_name') else inviter_result.data[0]['email'] if inviter_result.data else "A team member"
         
         # Send email
@@ -238,7 +243,7 @@ async def resend_team_invitation(
         return TeamInvitationResponse(
             success=True,
             message="Invitation resent successfully",
-            invitation_id=invitation_id,
+            invitation_id=resend_request.invitation_id,
             email_sent=email_result.get('success', False)
         )
         
