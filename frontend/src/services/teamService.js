@@ -36,21 +36,32 @@ class TeamService {
     try {
       console.log('🏫 Fetching agency for user:', userId);
       
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+      
       // Step 1: Check if user owns an agency
       console.log('🔍 Step 1: Checking for owned agency...');
       const { data: ownedAgency, error: ownedError } = await supabase
         .from('agencies')
         .select('*')
         .eq('owner_id', userId)
-        .maybeSingle(); // Use maybeSingle() instead of single() to avoid error when not found
+        .maybeSingle();
       
       console.log('🔍 Step 1 complete:', { 
         hasOwnedAgency: !!ownedAgency, 
+        agencyData: ownedAgency,
         error: ownedError?.message,
         errorCode: ownedError?.code 
       });
+      
+      // If there's a real error (not just "no rows"), log it but DON'T throw yet
+      if (ownedError && ownedError.code !== 'PGRST116') {
+        console.error('❌ Database error checking owned agency:', ownedError);
+        // Don't throw - try membership check instead
+      }
 
-      if (!ownedError && ownedAgency) {
+      if (ownedAgency && !ownedError) {
         console.log('✅ Found existing owned agency:', ownedAgency.name);
         return {
           ...ownedAgency,
@@ -71,31 +82,36 @@ class TeamService {
             description,
             subscription_tier,
             created_at,
-            updated_at
+            updated_at,
+            owner_id,
+            status
           )
         `)
         .eq('user_id', userId)
         .eq('status', 'active')
-        .maybeSingle(); // Use maybeSingle() to avoid error when not found
+        .maybeSingle();
       
       console.log('🔍 Step 2 complete:', { 
-        hasMembership: !!existingMember, 
+        hasMembership: !!existingMember,
+        membershipData: existingMember,
         error: memberError?.message,
         errorCode: memberError?.code 
       });
+      
+      // If there's a real database error (not just "no rows"), log it
+      if (memberError && memberError.code !== 'PGRST116') {
+        console.error('❌ Database error checking membership:', memberError);
+        console.error('Full error:', memberError);
+        // Don't throw - we'll try to create an agency instead
+      }
 
-      if (!memberError && existingMember?.agencies) {
+      if (existingMember?.agencies && !memberError) {
         console.log('✅ Found existing agency via membership:', existingMember.agencies.name);
+        console.log('Agency data:', existingMember.agencies);
         return {
           ...existingMember.agencies,
           userRole: existingMember.role
         };
-      }
-      
-      // If PGRST116 error (no rows), that's expected - continue to create agency
-      if (memberError && memberError.code !== 'PGRST116') {
-        console.error('❌ Unexpected error checking membership:', memberError);
-        // Don't throw, continue to agency creation
       }
 
       // No existing agency, check if user can create one

@@ -79,6 +79,9 @@ import { BlogProvider } from './contexts/BlogContext';
 
 // Settings
 import { SettingsProvider } from './contexts/SettingsContext';
+
+// Support Widget
+import SupportWidget from './components/SupportWidget';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import BlogCategory from './pages/BlogCategory';
@@ -522,7 +525,8 @@ function App() {
                   <Route path="/projects/:id" element={<ProjectDetailNew />} />
                   <Route path="/history" element={<AnalysisHistoryNew />} />
                   <Route path="/profile" element={<Profile />} />
-                  {/* /team removed - use /agency/team instead */}
+                  {/* Redirect old /team route to new /agency/team */}
+                  <Route path="/team" element={<Navigate to="/agency/team" replace />} />
                   <Route path="/billing" element={<BillingCredits />} />
                   {/* Agency Routes */}
                   <Route path="/agency/integrations" element={<AgencyIntegrations />} />
@@ -552,6 +556,7 @@ function App() {
                 <Route path="/app" element={<Navigate to="/analysis/new" replace />} />
                 </Routes>
                 <Toaster position="top-right" />
+                <SupportWidget />
               </Router>
               </BlogProvider>
             </AuthProvider>

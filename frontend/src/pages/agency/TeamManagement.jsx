@@ -104,40 +104,50 @@ const AgencyTeamManagement = () => {
 
   // Load agency data and team members
   useEffect(() => {
-    if (!user || !isAuthenticated) return;
+    if (!user || !isAuthenticated || authLoading) {
+      console.log('⏳ Waiting for auth to complete', { user: !!user, isAuthenticated, authLoading });
+      return;
+    }
     
     // Prevent duplicate calls
     let cancelled = false;
+    let timeoutId = null;
     
     const loadData = async () => {
       if (cancelled) return;
-      await loadAgencyData();
+      
+      console.log('🚀 Starting agency data load for user:', user?.id);
+      
+      try {
+        await loadAgencyData();
+      } catch (err) {
+        console.error('❌ Error loading agency data:', err);
+        if (!cancelled) {
+          setError(err.message || 'Failed to load agency data');
+          setLoading(false);
+        }
+      }
     };
     
     loadData();
     
     // Add timeout fallback to prevent infinite loading
-    const timeoutId = setTimeout(() => {
+    timeoutId = setTimeout(() => {
       if (loading && !cancelled) {
         console.warn('⚠️ Loading timeout - forcing completion');
+        setError('Loading timeout. Please refresh the page.');
         setLoading(false);
       }
-    }, 10000);
+    }, 15000); // Increased to 15 seconds
     
     return () => {
       cancelled = true;
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [user?.id, isAuthenticated]); // Only re-run if user ID or auth status changes
+  }, [user?.id, isAuthenticated, authLoading]); // Added authLoading dependency
 
   const loadAgencyData = async () => {
     console.log('\n==================== LOAD AGENCY DATA START ====================');
-    
-    // Prevent concurrent calls
-    if (loading) {
-      console.log('⚠️ Already loading, skipping duplicate call');
-      return;
-    }
     
     try {
       setLoading(true);
@@ -152,20 +162,22 @@ const AgencyTeamManagement = () => {
       
       if (!user?.id) {
         console.error('❌ No user ID available');
-        setError('User session not found. Please refresh the page.');
-        setLoading(false);
-        return;
+        throw new Error('User session not found. Please refresh the page.');
       }
       
-      // Get or create agency for the user
+      // Get or create agency for the user with proper error handling
       console.log('🔍 Calling teamService.getOrCreateUserAgency...');
-      const agencyData = await teamService.getOrCreateUserAgency(user.id);
+      const agencyData = await teamService.getOrCreateUserAgency(user.id).catch(err => {
+        console.error('❌ teamService.getOrCreateUserAgency failed:', err);
+        throw new Error(err.message || 'Unable to load agency data. Please try again.');
+      });
+      
       console.log('✅ Agency data received:', agencyData);
       
       // Validate agency data
       if (!agencyData || !agencyData.id) {
         console.error('❌ No valid agency data returned');
-        throw new Error('Failed to load or create agency. Please contact support.');
+        throw new Error('Failed to load or create agency. Please try refreshing the page.');
       }
       
       setAgency(agencyData);
@@ -376,9 +388,10 @@ const AgencyTeamManagement = () => {
     );
   }
   
-  // If agency is null but we have user, show appropriate message
-  if (!agency && !loading) {
-    console.log('⚠️ No agency data but user is authenticated');
+  // If agency is null but we have user and not loading, this should not trigger a loop
+  // Only show this if there's no error (error state is handled above)
+  if (!agency && !loading && !error) {
+    console.log('⚠️ No agency data but user is authenticated (no error yet)');
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Alert 
@@ -389,7 +402,7 @@ const AgencyTeamManagement = () => {
             </Button>
           }
         >
-          Unable to load agency data. {error || 'Please try again.'}
+          Unable to load agency data. Please try again.
         </Alert>
       </Container>
     );
