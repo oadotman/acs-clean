@@ -16,7 +16,7 @@ from supabase import create_client, Client
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/team", tags=["team"])
+router = APIRouter(prefix="/team", tags=["team"])
 
 # Initialize Supabase client
 def get_supabase_client() -> Client:

@@ -16,7 +16,7 @@ from supabase import create_client, Client
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/support", tags=["support"])
+router = APIRouter(prefix="/support", tags=["support"])
 
 # In-memory rate limiting (for production, use Redis)
 rate_limit_store = defaultdict(list)
