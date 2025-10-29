@@ -105,8 +105,8 @@ app.include_router(creative_router, prefix="/api/creative", tags=["creative-cont
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
 app.include_router(integrations_router, prefix="/api", tags=["integrations"])
-app.include_router(team_router, tags=["team"])  # Team invitation and management
-app.include_router(support_router, tags=["support"])  # Support tickets
+app.include_router(team_router, prefix="/api", tags=["team"])  # Team invitation and management
+app.include_router(support_router, prefix="/api", tags=["support"])  # Support tickets
 
 # Include blog router if enabled and available
 if blog_router is not None:
