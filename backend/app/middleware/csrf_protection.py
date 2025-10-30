@@ -55,6 +55,8 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
             "/api/auth/register",  # Initial registration doesn't have CSRF token yet
             "/api/team/invite",    # Team invitations (authenticated via session)
             "/api/support/send",   # Support tickets (rate-limited separately)
+            "/api/ads/analyze",    # Main ad analysis endpoint (authenticated via JWT)
+            "/api/ads/generate-alternatives",  # Ad generation (authenticated via JWT)
         }
         
         # Paths that need CSRF protection (all others by default)
