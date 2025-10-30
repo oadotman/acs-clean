@@ -86,6 +86,9 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import BlogCategory from './pages/BlogCategory';
 
+// Google Analytics
+import GoogleAnalytics from './components/Analytics/GoogleAnalytics';
+
 // Agency Pages
 import AgencyIntegrations from './pages/agency/Integrations';
 import AgencyTeamManagement from './pages/agency/TeamManagement';
@@ -478,7 +481,8 @@ function App() {
               <AuthProvider>
                 <BlogProvider>
                 <Router>
-              <Routes>
+                  <GoogleAnalytics />
+                  <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<LegacyAppLayout><LandingPage /></LegacyAppLayout>} />
                 <Route path="/login" element={<LegacyAppLayout><Login /></LegacyAppLayout>} />
