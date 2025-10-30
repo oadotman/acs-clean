@@ -1,0 +1,9 @@
+# AdCopySurge Robots.txt
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://adcopysurge.com/sitemap.xml
