@@ -291,9 +291,9 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('📋 Fetching user profile for:', userId);
       
-      // Add timeout to profile fetch to prevent hanging
+      // Increased timeout and better error handling to prevent re-login during analysis
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000);
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 90000); // 90 seconds for long operations
       });
       
       const fetchPromise = supabase
@@ -305,24 +305,28 @@ export const AuthProvider = ({ children }) => {
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
       
       if (error && error.code !== 'PGRST116') {
-        console.error('❌ Error fetching user profile:', error);
-        return;
+        console.warn('⚠️ Profile fetch failed (non-critical):', error.message);
+        // Don't return - continue with cached subscription data
       }
       
-      console.log('✅ User profile fetched:', {
-        email: data?.email,
-        tier: data?.subscription_tier,
-        agency_id: data?.agency_id
-      });
-      
-      // Set the subscription with the subscription_tier field properly mapped
-      setSubscription({
-        ...data,
-        tier: data?.subscription_tier, // Ensure 'tier' field exists
-        subscription_tier: data?.subscription_tier // Ensure both fields exist
-      });
+      if (data) {
+        console.log('✅ User profile fetched:', {
+          email: data?.email,
+          tier: data?.subscription_tier,
+          agency_id: data?.agency_id
+        });
+        
+        // Set the subscription with the subscription_tier field properly mapped
+        setSubscription({
+          ...data,
+          tier: data?.subscription_tier, // Ensure 'tier' field exists
+          subscription_tier: data?.subscription_tier // Ensure both fields exist
+        });
+      }
     } catch (error) {
-      console.error('❌ Error fetching user profile:', error);
+      // Profile fetch timeout is not critical - don't force re-login
+      console.warn('⚠️ Error fetching user profile (non-critical):', error.message);
+      // Keep the user logged in even if profile fetch fails
     }
   };
 
