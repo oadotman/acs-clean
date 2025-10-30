@@ -158,7 +158,16 @@ async def analyze_ad(
                         "predicted_score": alt.get("expected_score", 85)
                     })
                 
-                feedback_text = " ".join(ai_feedback) if isinstance(ai_feedback, list) else str(ai_feedback)
+                # Properly convert feedback to string to avoid Pydantic validation error
+                if isinstance(ai_feedback, list):
+                    # Join list items with newlines for better readability
+                    feedback_text = "\n".join(str(f) for f in ai_feedback if f)
+                elif isinstance(ai_feedback, dict):
+                    # Convert dict to string representation
+                    feedback_text = str(ai_feedback)
+                else:
+                    # Ensure we always have a string, never None
+                    feedback_text = str(ai_feedback) if ai_feedback else "Analysis completed successfully"
                 
             except Exception as ai_error:
                 print(f"AI service failed: {ai_error}")
