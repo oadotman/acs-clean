@@ -402,7 +402,7 @@ async def _fallback_to_enhanced_service(request: AdAnalysisRequest, db: Session,
             "cta_strength_score": analysis.scores.cta_strength,
             "platform_fit_score": analysis.scores.platform_fit_score,
             "analysis_data": {
-                "feedback": "\n".join(analysis.feedback) if isinstance(analysis.feedback, list) else analysis.feedback,
+                "feedback": "\n".join(str(f) for f in analysis.feedback if f) if isinstance(analysis.feedback, list) else (str(analysis.feedback) if analysis.feedback else "Analysis completed successfully"),
                 "quick_wins": analysis.quick_wins,
                 "competitor_comparison": analysis.competitor_comparison,
                 "tools_used": getattr(analysis, 'tools_used', []),
@@ -418,7 +418,7 @@ async def _fallback_to_enhanced_service(request: AdAnalysisRequest, db: Session,
             "improvement_reason": alt.improvement_reason if hasattr(alt, 'improvement_reason') else "Enhanced analysis",
             "predicted_score": alt.expected_improvement if hasattr(alt, 'expected_improvement') else 75
         } for alt in analysis.alternatives],
-        "feedback": "\n".join(analysis.feedback) if isinstance(analysis.feedback, list) else analysis.feedback
+        "feedback": "\n".join(str(f) for f in analysis.feedback if f) if isinstance(analysis.feedback, list) else (str(analysis.feedback) if analysis.feedback else "Analysis completed successfully")
     }
 
 
