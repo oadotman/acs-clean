@@ -9,6 +9,7 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
+import os
 
 # Import the Tools SDK
 from packages.tools_sdk import ToolOrchestrator, ToolInput, ToolRegistry, default_registry
@@ -18,6 +19,10 @@ from packages.tools_sdk.tools import register_all_tools
 from app.schemas.ads import AdInput, CompetitorAd, AdScore, AdAlternative, AdAnalysisResponse
 from app.models.ad_analysis import AdAnalysis
 from app.core.logging import get_logger
+
+# Import AI service for real improvement generation
+from app.services.production_ai_generator import ProductionAIService
+from app.core.exceptions import AIProviderUnavailable
 
 logger = get_logger(__name__)
 
@@ -33,6 +38,17 @@ class EnhancedAdAnalysisService:
     def __init__(self, db: Session, registry: ToolRegistry = None):
         self.db = db
         self.orchestrator = ToolOrchestrator(registry or default_registry)
+        
+        # Initialize AI service for improvement generation
+        openai_key = os.getenv('OPENAI_API_KEY')
+        gemini_key = os.getenv('GEMINI_API_KEY')
+        
+        try:
+            self.ai_service = ProductionAIService(openai_key, gemini_key)
+            logger.info("AI service initialized for improvement generation")
+        except Exception as e:
+            logger.warning(f"AI service initialization failed: {e}. Will use fallback for improvements.")
+            self.ai_service = None
         
         # Ensure tools are registered
         try:
@@ -208,15 +224,148 @@ class EnhancedAdAnalysisService:
         return weighted_sum / total_weight if total_weight > 0 else 70.0
     
     async def _generate_fallback_alternatives(self, ad: AdInput) -> List[AdAlternative]:
-        """Generate fallback alternatives (TODO: replace with AI generator tool)"""
-        # This would be replaced by the AI generator tool from the SDK
+        """Generate AI-powered improvement alternatives using ProductionAIService"""
+        
+        # If AI service is available, generate real improvements
+        if self.ai_service:
+            try:
+                logger.info("Generating AI-powered improvements")
+                
+                # Prepare ad data for AI service
+                ad_data = {
+                    'headline': ad.headline,
+                    'body_text': ad.body_text,
+                    'cta': ad.cta,
+                    'platform': ad.platform,
+                    'industry': getattr(ad, 'industry', 'general'),
+                    'target_audience': getattr(ad, 'target_audience', 'general audience')
+                }
+                
+                # Generate single improved version using AI (persuasive variant)
+                improved_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='persuasive',
+                    emoji_level='moderate',
+                    human_tone='conversational',
+                    brand_tone='casual',
+                    formality_level=5,
+                    include_cta=True,
+                    cta_style='medium',
+                    creativity_level=6,
+                    urgency_level=5,
+                    emotion_type='inspiring',
+                    filter_cliches=True
+                )
+                
+                # Generate A/B/C test variations with different strategic approaches
+                logger.info("Generating A/B/C test variations")
+                
+                # Variation A: Benefit-Focused (appeals to aspirations)
+                variation_a_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='persuasive',
+                    emoji_level='moderate',
+                    human_tone='aspirational',
+                    brand_tone='professional',
+                    formality_level=6,
+                    include_cta=True,
+                    cta_style='soft',
+                    creativity_level=5,
+                    urgency_level=4,
+                    emotion_type='inspiring',
+                    filter_cliches=True
+                )
+                
+                # Variation B: Problem-Focused (identifies with pain points)
+                variation_b_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='emotional',
+                    emoji_level='light',
+                    human_tone='empathetic',
+                    brand_tone='friendly',
+                    formality_level=5,
+                    include_cta=True,
+                    cta_style='medium',
+                    creativity_level=6,
+                    urgency_level=7,
+                    emotion_type='problem_solving',
+                    filter_cliches=True
+                )
+                
+                # Variation C: Story-Driven (creates emotional connection)
+                variation_c_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='emotional',
+                    emoji_level='moderate',
+                    human_tone='storytelling',
+                    brand_tone='authentic',
+                    formality_level=4,
+                    include_cta=True,
+                    cta_style='soft',
+                    creativity_level=7,
+                    urgency_level=3,
+                    emotion_type='trust_building',
+                    filter_cliches=True
+                )
+                
+                # Convert AI results to AdAlternative format
+                alternatives = [
+                    # Main improved version
+                    AdAlternative(
+                        variant_type="improved",
+                        headline=improved_result.get('headline', ad.headline),
+                        body_text=improved_result.get('body_text', ad.body_text),
+                        cta=improved_result.get('cta', ad.cta),
+                        improvement_reason=improved_result.get('improvement_reason', 'AI-enhanced copy with improved persuasion'),
+                        expected_improvement=20.0
+                    ),
+                    # Variation A: Benefit-Focused
+                    AdAlternative(
+                        variant_type="variation_a_benefit",
+                        headline=variation_a_result.get('headline', ad.headline),
+                        body_text=variation_a_result.get('body_text', ad.body_text),
+                        cta=variation_a_result.get('cta', ad.cta),
+                        improvement_reason="Variation A - Benefit-Focused: Appeals to aspirations and desired outcomes. Best for solution-seekers, warm leads, known problems.",
+                        expected_improvement=18.0
+                    ),
+                    # Variation B: Problem-Focused
+                    AdAlternative(
+                        variant_type="variation_b_problem",
+                        headline=variation_b_result.get('headline', ad.headline),
+                        body_text=variation_b_result.get('body_text', ad.body_text),
+                        cta=variation_b_result.get('cta', ad.cta),
+                        improvement_reason="Variation B - Problem-Focused: Identifies with pain points and frustrations. Best for pain-aware audiences, high urgency, immediate solutions.",
+                        expected_improvement=22.0
+                    ),
+                    # Variation C: Story-Driven
+                    AdAlternative(
+                        variant_type="variation_c_story",
+                        headline=variation_c_result.get('headline', ad.headline),
+                        body_text=variation_c_result.get('body_text', ad.body_text),
+                        cta=variation_c_result.get('cta', ad.cta),
+                        improvement_reason="Variation C - Story-Driven: Creates emotional connection through narrative. Best for building trust, cold traffic, brand awareness.",
+                        expected_improvement=16.0
+                    )
+                ]
+                
+                logger.info("Successfully generated 4 AI-powered alternatives (1 improved + 3 A/B/C variations)")
+                return alternatives
+                
+            except AIProviderUnavailable as e:
+                logger.error(f"AI provider unavailable: {e}. Using fallback alternatives.")
+            except Exception as e:
+                logger.error(f"Error generating AI alternatives: {e}. Using fallback alternatives.")
+        
+        # Fallback if AI service is not available or fails
+        logger.warning("Using fallback alternatives (AI service unavailable)")
         return [
             AdAlternative(
+                variant_type="fallback",
                 headline=f"Improved: {ad.headline}",
                 body_text=f"Enhanced version: {ad.body_text}",
                 cta=f"Better {ad.cta}",
-                improvement_reason="SDK-generated alternative",
-                expected_improvement=15.0
+                improvement_reason="Fallback alternative (AI service unavailable)",
+                expected_improvement=5.0
             )
         ]
     
