@@ -175,10 +175,13 @@ class EnhancedAdAnalysisService:
         # Generate quick wins from tool insights
         quick_wins = self._extract_quick_wins(orchestration_result)
         
+        # Convert feedback list to string to match Pydantic schema expectations
+        feedback_text = "\n".join(str(f) for f in feedback if f) if feedback else "Analysis completed successfully"
+        
         return AdAnalysisResponse(
             analysis_id=orchestration_result.request_id,
             scores=ad_scores,
-            feedback=feedback,
+            feedback=feedback_text,
             alternatives=alternatives,
             competitor_comparison=competitor_comparison,
             quick_wins=quick_wins
