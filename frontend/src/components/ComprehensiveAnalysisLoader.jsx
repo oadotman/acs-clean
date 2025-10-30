@@ -325,17 +325,34 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
         }, 1500); // Increased delay to show completion state
       } catch (error) {
         console.error('❌ Analysis error:', error);
+        console.error('❌ Full error details:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack,
+          response: error.response?.data,
+          status: error.response?.status,
+          statusText: error.response?.statusText
+        });
+        
         isCompleted = true;
         
         // Clear interval and safety timeout
         if (intervalId) clearInterval(intervalId);
         if (safetyTimeoutId) clearTimeout(safetyTimeoutId);
         
-        // Show error without mock data fallback
-        const errorMessage = error.message || 'Analysis failed. Please check your connection and try again.';
-        toast.error(errorMessage);
+        // Show detailed error message
+        let errorMessage = error.message || 'Analysis failed. Please check your connection and try again.';
+        if (error.response?.status === 403) {
+          errorMessage = '🔒 Access Denied: CSRF protection or authentication issue. Please refresh and try again.';
+        } else if (error.response?.status === 401) {
+          errorMessage = '🔐 Session Expired: Please log in again.';
+        } else if (error.response?.status === 500) {
+          errorMessage = '⚠️ Server Error: Our team has been notified. Please try again later.';
+        }
         
-        console.error('❌ Analysis failed:', error);
+        toast.error(errorMessage, { duration: 6000 });
+        
+        console.error('❌ Analysis failed with error:', errorMessage);
         
         // Call onError callback instead of providing mock data
         if (onError) {

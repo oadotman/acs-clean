@@ -317,12 +317,39 @@ class ApiService {
       
     } catch (error) {
       console.error('❌ ApiService: Error in analyzeAd:', error);
+      console.error('❌ ApiService: Full error object:', JSON.stringify(error, null, 2));
       console.error('❌ ApiService: Error details:', {
         message: error.message,
+        name: error.name,
+        stack: error.stack,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        headers: error.response?.headers,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          baseURL: error.config?.baseURL,
+          headers: error.config?.headers
+        }
       });
-      throw new Error(`Analysis failed: ${error.response?.data?.detail || error.message}`);
+      
+      // More detailed error message
+      let errorMessage = 'Analysis failed: ';
+      if (error.response?.status === 403) {
+        errorMessage += 'Access forbidden. This may be due to CSRF protection or authentication issues.';
+      } else if (error.response?.status === 401) {
+        errorMessage += 'Authentication required. Please log in again.';
+      } else if (error.response?.status === 500) {
+        errorMessage += 'Server error. Please try again later.';
+      } else if (error.response?.data?.detail) {
+        errorMessage += error.response.data.detail;
+      } else {
+        errorMessage += error.message;
+      }
+      
+      console.error('❌ Final error message:', errorMessage);
+      throw new Error(errorMessage);
     }
   }
 
