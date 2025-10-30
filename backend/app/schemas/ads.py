@@ -37,7 +37,7 @@ class AdScore(BaseModel):
 
 
 class AdAlternative(BaseModel):
-    variant_type: str  # persuasive, emotional, stats_heavy, platform_optimized
+    variant_type: str = "improved"  # persuasive, emotional, stats_heavy, platform_optimized
     headline: str
     body_text: str
     cta: str
