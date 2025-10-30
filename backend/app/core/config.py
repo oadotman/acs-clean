@@ -147,7 +147,7 @@ class Settings(BaseSettings):
     # Security Headers
     HSTS_MAX_AGE: int = Field(default=31536000, description="HSTS max age")
     CONTENT_SECURITY_POLICY: str = Field(
-        default="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.paddle.com; style-src 'self' 'unsafe-inline'",
+        default="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.paddle.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://www.google-analytics.com https://analytics.google.com",
         description="Content Security Policy"
     )
     
