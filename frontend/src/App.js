@@ -50,6 +50,9 @@ import LegalRiskScanner from './pages/LegalRiskScanner';
 import ProjectsList from './pages/ProjectsList';
 import ProjectWorkspace from './pages/ProjectWorkspace';
 
+// Debug Pages
+import AnalysisDebugPage from './pages/AnalysisDebugPage';
+
 // NEW Projects Feature (for organizing ad analyses)
 import ProjectsListNew from './pages/ProjectsListNew';
 import ProjectDetailNew from './pages/ProjectDetailNew';
@@ -553,6 +556,8 @@ function App() {
                   {/* Workspace Routes */}
                   <Route path="/project/new/workspace" element={<ProjectWorkspace />} />
                   <Route path="/project/:projectId/workspace" element={<ProjectWorkspace />} />
+                  {/* Debug Tools */}
+                  <Route path="/debug/analysis" element={<AnalysisDebugPage />} />
                 </Route>
                 
                 
