@@ -52,3 +52,4 @@ class AdAnalysisResponse(BaseModel):
     alternatives: List[AdAlternative]
     competitor_comparison: Optional[dict] = None
     quick_wins: List[str]
+    tool_results: Optional[dict] = None  # Individual tool outputs (compliance, psychology, legal, ROI, etc.)

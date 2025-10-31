@@ -129,66 +129,51 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
 
   // Real API analysis process
   useEffect(() => {
-    let intervalId;
-    let safetyTimeoutId;
+    let progressIntervalId;
     let isCompleted = false;
     
     const runRealAnalysis = async () => {
       try {
-        // Start visual progress animation
-        let currentIndex = 0;
-        intervalId = setInterval(() => {
-          if (currentIndex < analysisTools.length && !isCompleted) {
-            // Mark current tool as complete
-            const toolToComplete = analysisTools[currentIndex];
-            console.log(`✅ Completing tool ${currentIndex + 1}/${analysisTools.length}: ${toolToComplete.name}`);
+        console.log('🚀 Starting REAL analysis - visual progress will sync with backend...');
+        
+        // Start the API call IMMEDIATELY
+        console.log('🚀 Starting API call at:', new Date().toISOString());
+        const startTime = Date.now();
+        
+        // Simulate gradual progress as API processes (more honest UX)
+        // Progress moves slowly to match typical API duration (60-120s)
+        let currentProgress = 0;
+        let currentToolIndex = 0;
+        
+        progressIntervalId = setInterval(() => {
+          if (!isCompleted && currentProgress < 95) {
+            // Slow, steady progress - completes in ~100 seconds (matching typical API time)
+            currentProgress += 1; // 1% every 1.2 seconds = ~120s to reach 95%
+            setOverallProgress(currentProgress);
             
-            // Update both index and completed tools simultaneously to avoid race condition
-            const nextIndex = currentIndex + 1;
+            // Update tool completion based on progress
+            // Each tool represents ~11% of progress (100/9)
+            const toolsShouldBeComplete = Math.floor(currentProgress / 11.11);
             
-            setCompletedTools(prev => {
-              // Ensure we don't add duplicates
-              if (!prev.includes(toolToComplete.id)) {
-                const newCompleted = [...prev, toolToComplete.id];
-                console.log(`   Total completed: ${newCompleted.length}/${analysisTools.length}`);
-                return newCompleted;
-              }
-              return prev;
-            });
-            
-            // Update current index and progress together
-            setCurrentToolIndex(nextIndex);
-            
-            // Calculate accurate progress: each tool = 11.11% (100/9)
-            const progressPercentage = (nextIndex / analysisTools.length) * 100;
-            setOverallProgress(progressPercentage);
-            console.log(`   Progress: ${Math.round(progressPercentage)}%`);
-            
-            // Increment for next iteration
-            currentIndex = nextIndex;
-            
-            // If we've completed all tools visually but API hasn't finished yet
-            if (currentIndex >= analysisTools.length) {
-              console.log('🎯 All tools completed visually, waiting for API...');
-              clearInterval(intervalId);
+            if (toolsShouldBeComplete > currentToolIndex && toolsShouldBeComplete <= analysisTools.length) {
+              const toolToComplete = analysisTools[currentToolIndex];
+              console.log(`✅ Tool ${currentToolIndex + 1}/${analysisTools.length} processing: ${toolToComplete.name}`);
               
-              // Set a safety timeout - if API doesn't respond in 90 seconds, show error
-              // This should be less than the Axios timeout (120s) to provide user feedback
-              safetyTimeoutId = setTimeout(() => {
-                if (!isCompleted) {
-                  console.error('⏰ API timeout after 90 seconds');
-                  isCompleted = true;
-                  throw new Error('Analysis is taking longer than expected. Please try again.');
+              setCompletedTools(prev => {
+                if (!prev.includes(toolToComplete.id)) {
+                  return [...prev, toolToComplete.id];
                 }
-              }, 90000); // 90 seconds - gives API plenty of time while still providing timeout protection
+                return prev;
+              });
+              
+              currentToolIndex++;
+              setCurrentToolIndex(currentToolIndex);
             }
           }
-        }, 2500); // Update UI every 2.5 seconds
-
-        // Call real API using the working analyzeAd method
-        console.log('💾 Using the working analyzeAd method to ensure database saving');
+        }, 1200); // Update every 1.2 seconds for smooth, realistic progress
         
-        // Extract headline from ad copy - first line or first sentence up to 100 chars
+        // Now make the REAL API call while progress bar moves
+        // When API completes, we jump to 100% and show results
         let headline = adCopy.split('\n')[0] || adCopy.split('.')[0] || adCopy.substring(0, 100);
         if (headline.length > 100) {
           headline = headline.substring(0, 97) + '...';
@@ -232,12 +217,13 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
           hasCompetitors: Array.isArray(adData.competitor_ads)
         });
         
-        // Use the working analyzeAd method (this handles DB creation + backend call)
-        console.log('🚀 Starting API call at:', new Date().toISOString());
-        const startTime = Date.now();
+        // Make the actual API call
         const standardResponse = await apiService.analyzeAd(adData);
         const apiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`⏱️ API responded in ${apiDuration} seconds`);
+        
+        // Stop the progress interval now that API is complete
+        if (progressIntervalId) clearInterval(progressIntervalId);
         console.log('💾 StandardResponse received:', standardResponse);
         console.log('💾 Response validation:', {
           hasAnalysisId: !!standardResponse.analysis_id,
@@ -310,19 +296,14 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
         // Mark as completed
         isCompleted = true;
         
-        // Clear interval and safety timeout
-        if (intervalId) clearInterval(intervalId);
-        if (safetyTimeoutId) clearTimeout(safetyTimeoutId);
+        console.log('✅ Analysis API complete! Jumping to 100%...');
         
-        console.log('✅ Analysis API complete! Forcing all tools to complete...');
-        
-        // Ensure all tools are marked complete with proper synchronization
-        // Use functional update to ensure we get the latest state
+        // NOW jump to 100% since API is actually done
         setCompletedTools(() => analysisTools.map(t => t.id));
         setCurrentToolIndex(analysisTools.length);
         setOverallProgress(100);
         
-        // Give user time to see all tools completed before transition
+        // Brief delay to let user see 100% completion before showing results
         setTimeout(() => {
           console.log('🚀 Transitioning to results...');
           console.log('Response data:', response);
@@ -342,7 +323,7 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
             console.error('❌ Error calling onComplete:', callbackError);
             toast.error('Failed to display results: ' + callbackError.message);
           }
-        }, 1500); // Increased delay to show completion state
+          }, 800); // Brief pause to show 100% before transition
       } catch (error) {
         console.error('❌ Analysis error:', error);
         console.error('❌ Full error details:', {
@@ -356,9 +337,8 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
         
         isCompleted = true;
         
-        // Clear interval and safety timeout
-        if (intervalId) clearInterval(intervalId);
-        if (safetyTimeoutId) clearTimeout(safetyTimeoutId);
+        // Clear progress interval
+        if (progressIntervalId) clearInterval(progressIntervalId);
         
         // Show detailed error message
         let errorMessage = error.message || 'Analysis failed. Please check your connection and try again.';
@@ -387,11 +367,8 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
     runRealAnalysis();
 
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-      if (safetyTimeoutId) {
-        clearTimeout(safetyTimeoutId);
+      if (progressIntervalId) {
+        clearInterval(progressIntervalId);
       }
       isCompleted = true;
     };

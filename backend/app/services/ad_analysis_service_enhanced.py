@@ -200,13 +200,26 @@ class EnhancedAdAnalysisService:
         # Convert feedback list to string to match Pydantic schema expectations
         feedback_text = "\n".join(str(f) for f in feedback if f) if feedback else "Analysis completed successfully"
         
+        # Extract tool-specific results for frontend display
+        tool_results_dict = {}
+        for tool_name, tool_output in orchestration_result.tool_results.items():
+            if tool_output.success:
+                tool_results_dict[tool_name] = {
+                    'success': True,
+                    'scores': tool_output.scores,
+                    'insights': tool_output.insights,
+                    'recommendations': tool_output.recommendations,
+                    'metadata': tool_output.metadata
+                }
+        
         return AdAnalysisResponse(
             analysis_id=orchestration_result.request_id,
             scores=ad_scores,
             feedback=feedback_text,
             alternatives=alternatives,
             competitor_comparison=competitor_comparison,
-            quick_wins=quick_wins
+            quick_wins=quick_wins,
+            tool_results=tool_results_dict  # Include all tool-specific results
         )
     
     def _calculate_fallback_overall_score(self, scores_dict: Dict[str, float]) -> float:

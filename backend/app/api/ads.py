@@ -118,6 +118,14 @@ async def analyze_ad(
         print(f"✅ Analysis complete. Generated {len(analysis.alternatives)} alternatives")
         
         # Format response for frontend compatibility
+        # Include tool_results if available (from SDK orchestration)
+        tool_results = {}
+        if hasattr(analysis, 'tool_results'):
+            tool_results = analysis.tool_results
+        elif hasattr(analysis, 'analysis_data') and isinstance(analysis.analysis_data, dict):
+            # Try to extract from analysis_data if stored there
+            tool_results = analysis.analysis_data.get('tool_results', {})
+        
         return {
             "analysis_id": analysis.analysis_id,
             "scores": {
@@ -143,7 +151,9 @@ async def analyze_ad(
                 "improvement_reason": alt.improvement_reason,
                 "predicted_score": alt.expected_improvement if hasattr(alt, 'expected_improvement') else 75
             } for alt in analysis.alternatives],
-            "feedback": analysis.feedback
+            "feedback": analysis.feedback,
+            # Include detailed tool results for comprehensive display
+            "tool_results": tool_results
         }
         
     except Exception as e:
