@@ -22,6 +22,7 @@ from app.core.logging import get_logger
 
 # Import AI service for real improvement generation
 from app.services.production_ai_generator import ProductionAIService
+from app.services.agent_system import MultiAgentOptimizer
 from app.core.exceptions import AIProviderUnavailable
 
 logger = get_logger(__name__)
@@ -46,9 +47,14 @@ class EnhancedAdAnalysisService:
         try:
             self.ai_service = ProductionAIService(openai_key, gemini_key)
             logger.info("AI service initialized for improvement generation")
+            
+            # Initialize multi-agent optimizer
+            self.multi_agent_optimizer = MultiAgentOptimizer(self.ai_service)
+            logger.info("Multi-agent optimizer initialized")
         except Exception as e:
             logger.warning(f"AI service initialization failed: {e}. Will use fallback for improvements.")
             self.ai_service = None
+            self.multi_agent_optimizer = None
         
         # Ensure tools are registered
         try:
@@ -368,6 +374,50 @@ class EnhancedAdAnalysisService:
                 expected_improvement=5.0
             )
         ]
+    
+    async def analyze_with_multi_agent(
+        self,
+        user_id: int,
+        ad: AdInput,
+        max_iterations: int = 1
+    ) -> Dict[str, Any]:
+        """
+        Advanced multi-agent optimization (optional premium feature)
+        
+        Uses 4 specialized agents:
+        1. Analyzer - Scores and identifies issues
+        2. Strategist - Plans improvement strategy
+        3. Writer - Generates 4 variations (Improved + A/B/C)
+        4. Quality Control - Validates output
+        
+        Args:
+            user_id: User ID
+            ad: Ad input
+            max_iterations: Number of refinement iterations (1-4)
+        
+        Returns:
+            Structured optimization result with reasoning and scores
+        """
+        if not self.multi_agent_optimizer:
+            raise Exception("Multi-agent optimizer not available. AI service may not be initialized.")
+        
+        logger.info(f"🤖 Starting multi-agent optimization for user {user_id}")
+        
+        ad_data = {
+            'headline': ad.headline,
+            'body_text': ad.body_text,
+            'cta': ad.cta,
+            'platform': ad.platform,
+            'industry': getattr(ad, 'industry', None),
+            'target_audience': getattr(ad, 'target_audience', None)
+        }
+        
+        # Run multi-agent optimization
+        result = await self.multi_agent_optimizer.optimize(ad_data, max_iterations)
+        
+        logger.info(f"✅ Multi-agent optimization complete. Improvement: {result.improved_score.overall - result.original_score.overall:.1f} points")
+        
+        return result.to_dict()
     
     async def _analyze_competitors_sdk(
         self,
