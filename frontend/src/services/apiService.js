@@ -38,10 +38,11 @@ class ApiService {
     console.log('🚑 Final check - baseURL starts with http:', this.baseURL.startsWith('http'));
     this.client = axios.create({
       baseURL: this.baseURL,
-      timeout: 30000, // Increased timeout for AI processing
+      timeout: 120000, // 2 minutes for AI analysis (comprehensive analysis can take longer)
       headers: {
         'Content-Type': 'application/json',
-  },
+      }
+    });
 
   // Integration endpoints
   async createIntegration(userId, integrationData) {
@@ -300,9 +301,10 @@ class ApiService {
       };
 
       console.log('🤖 ApiService: Sending request to backend...', aiRequest);
+      console.log('⏱️ ApiService: Using 120 second timeout for AI processing...');
       
       const aiResponse = await this.client.post('/ads/analyze', aiRequest, {
-        timeout: 30000
+        timeout: 120000 // 2 minutes for comprehensive AI analysis
       });
       
       console.log('✅ ApiService: AI analysis completed successfully', aiResponse);

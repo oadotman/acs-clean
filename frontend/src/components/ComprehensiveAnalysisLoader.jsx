@@ -322,7 +322,21 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
           console.log('🚀 Transitioning to results...');
           console.log('Response data:', response);
           console.log('Improved copy in response:', response?.improved?.copy);
-          onComplete(response);
+          console.log('onComplete callback type:', typeof onComplete);
+          console.log('onComplete callback exists:', !!onComplete);
+          
+          try {
+            if (onComplete && typeof onComplete === 'function') {
+              onComplete(response);
+              console.log('✅ onComplete callback executed successfully');
+            } else {
+              console.error('❌ onComplete is not a function:', onComplete);
+              toast.error('Failed to display results - callback error');
+            }
+          } catch (callbackError) {
+            console.error('❌ Error calling onComplete:', callbackError);
+            toast.error('Failed to display results: ' + callbackError.message);
+          }
         }, 1500); // Increased delay to show completion state
       } catch (error) {
         console.error('❌ Analysis error:', error);

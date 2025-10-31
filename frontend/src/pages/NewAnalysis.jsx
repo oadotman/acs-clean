@@ -327,18 +327,43 @@ const NewAnalysis = () => {
 
   // Handle completion of comprehensive analysis
   const handleComprehensiveAnalysisComplete = (results) => {
-    console.log('🎯 Analysis complete! Results received:', results);
-    console.log('📊 Analysis ID:', results?.analysis_id);
-    
-    // Initialize improvement count if not present
-    results.improvementCount = results.improvementCount || 0;
-    setComprehensiveResults(results);
-    
-    // Show results in the current component using ComprehensiveResults
-    setStep('comprehensive-results');
-    toast.success('Comprehensive analysis complete! 🎉');
-    
-    console.log('✅ Results will be displayed using ComprehensiveResults component');
+    try {
+      console.log('🎯 Analysis complete! Results received:', results);
+      console.log('📊 Analysis ID:', results?.analysis_id);
+      console.log('🔍 Results structure:', {
+        hasOriginal: !!results?.original,
+        hasImproved: !!results?.improved,
+        hasAnalysisId: !!results?.analysis_id,
+        keys: Object.keys(results || {})
+      });
+      
+      // Validate results object
+      if (!results || typeof results !== 'object') {
+        console.error('❌ Invalid results object:', results);
+        toast.error('Invalid analysis results received');
+        setStep('input');
+        return;
+      }
+      
+      // Initialize improvement count if not present
+      results.improvementCount = results.improvementCount || 0;
+      
+      console.log('📦 Setting comprehensiveResults state...');
+      setComprehensiveResults(results);
+      
+      console.log('📦 Setting step to comprehensive-results...');
+      // Show results in the current component using ComprehensiveResults
+      setStep('comprehensive-results');
+      
+      console.log('✅ State updates complete, should now render ComprehensiveResults component');
+      toast.success('Comprehensive analysis complete! 🎉');
+      
+    } catch (error) {
+      console.error('❌ Error in handleComprehensiveAnalysisComplete:', error);
+      console.error('Error stack:', error.stack);
+      toast.error('Failed to display results: ' + error.message);
+      setStep('input');
+    }
   };
 
   // Handle further improvement requests
@@ -1097,11 +1122,27 @@ const NewAnalysis = () => {
         platform={selectedPlatform}
         brandVoice={brandVoice}
         onComplete={handleComprehensiveAnalysisComplete}
+        onError={(error) => {
+          console.error('❌ Analysis error in parent:', error);
+          toast.error('Analysis failed: ' + (error.message || 'Unknown error'));
+          setStep('input');
+        }}
       />
     );
   }
 
-  if (step === 'comprehensive-results' && comprehensiveResults) {
+  if (step === 'comprehensive-results') {
+    console.log('🔍 Rendering comprehensive-results step');
+    console.log('🔍 comprehensiveResults exists:', !!comprehensiveResults);
+    console.log('🔍 comprehensiveResults keys:', comprehensiveResults ? Object.keys(comprehensiveResults) : 'null');
+    
+    if (!comprehensiveResults) {
+      console.error('❌ comprehensiveResults is null/undefined, redirecting to input');
+      toast.error('Analysis results not found');
+      setStep('input');
+      return null;
+    }
+    
     return (
       <ComprehensiveResults
         results={comprehensiveResults}
