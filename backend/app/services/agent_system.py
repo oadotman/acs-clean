@@ -428,15 +428,15 @@ class WriterAgent:
         )
     
     async def _generate_benefit_focused(self, ad_data: Dict[str, Any], strategy: AgentOutput, original_score: QualityScore) -> VariationOutput:
-        """Generate Variation A: Benefit-Focused"""
+        """Generate Variation A: Benefit-Focused (Aspirational)"""
         result = await self.ai_service.generate_ad_alternative(
             ad_data=ad_data,
-            variant_type='persuasive',
-            human_tone='aspirational',
+            variant_type='benefit_focused',  # Use new premium framework
+            human_tone='conversational',  # Natural, not forced
             brand_tone='professional',
-            creativity_level=5,
-            urgency_level=4,
-            emotion_type='inspiring',
+            creativity_level=6,  # Higher creativity for aspirational language
+            urgency_level=3,  # Low urgency - focus on benefits, not pressure
+            emotion_type='aspirational',
             filter_cliches=True
         )
         
@@ -451,20 +451,21 @@ class WriterAgent:
             score=new_score,
             improvement_delta=round(delta, 1),
             reasoning=[
-                "Emphasizes aspirational outcomes and benefits",
-                "Best for solution-seekers and warm leads"
+                "Aspirational transformation approach - paints the 'after' picture",
+                "Premium tone with positive emotions, no problem language",
+                "Best for solution-seekers and warm leads ready to buy"
             ]
         )
     
     async def _generate_problem_focused(self, ad_data: Dict[str, Any], strategy: AgentOutput, original_score: QualityScore) -> VariationOutput:
-        """Generate Variation B: Problem-Focused"""
+        """Generate Variation B: Problem-Focused (Pain → Solution)"""
         result = await self.ai_service.generate_ad_alternative(
             ad_data=ad_data,
-            variant_type='emotional',
+            variant_type='problem_focused',  # Use new premium framework
             human_tone='empathetic',
             brand_tone='friendly',
-            creativity_level=6,
-            urgency_level=7,
+            creativity_level=5,  # Balanced - empathy, not hype
+            urgency_level=7,  # Higher urgency for problem-solving
             emotion_type='problem_solving',
             filter_cliches=True
         )
@@ -480,20 +481,21 @@ class WriterAgent:
             score=new_score,
             improvement_delta=round(delta, 1),
             reasoning=[
-                "Addresses pain points and frustrations directly",
-                "Best for pain-aware audiences with high urgency"
+                "Pain point → solution approach with empathetic validation",
+                "Agitates frustration then presents product as relief",
+                "Best for pain-aware audiences needing immediate solutions"
             ]
         )
     
     async def _generate_story_driven(self, ad_data: Dict[str, Any], strategy: AgentOutput, original_score: QualityScore) -> VariationOutput:
-        """Generate Variation C: Story-Driven"""
+        """Generate Variation C: Story-Driven (Narrative Connection)"""
         result = await self.ai_service.generate_ad_alternative(
             ad_data=ad_data,
-            variant_type='emotional',
-            human_tone='storytelling',
+            variant_type='story_driven',  # Use new premium framework
+            human_tone='conversational',  # Natural storytelling
             brand_tone='authentic',
-            creativity_level=7,
-            urgency_level=3,
+            creativity_level=7,  # High creativity for storytelling
+            urgency_level=3,  # Low urgency - stories build trust
             emotion_type='trust_building',
             filter_cliches=True
         )
@@ -509,8 +511,9 @@ class WriterAgent:
             score=new_score,
             improvement_delta=round(delta, 1),
             reasoning=[
-                "Creates emotional connection through narrative",
-                "Best for building trust with cold traffic"
+                "Mini-narrative with setup → tension → resolution structure",
+                "Builds emotional connection through relatable scenarios",
+                "Best for building trust with cold audiences and skeptics"
             ]
         )
     

@@ -261,12 +261,17 @@ class ProductionAIService:
             # Use new OpenAI client
             client = openai.AsyncOpenAI(api_key=openai.api_key)
             
+            # Import premium copywriting standards
+            from app.constants.premium_copywriting_standards import build_premium_system_prompt
+            
+            premium_system_prompt = build_premium_system_prompt()
+            
             response = await client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {
                         "role": "system", 
-                        "content": "You are an expert copywriter with 15+ years creating high-converting ads. Respond only with the requested format, no extra text."
+                        "content": premium_system_prompt
                     },
                     {
                         "role": "user", 
@@ -285,7 +290,7 @@ class ProductionAIService:
             self._track_usage('openai', tokens_used)
             
             # Parse and validate response
-            parsed_result = self._parse_structured_response(content, variant_type)
+            parsed_result = self._parse_structured_response(content, variant_type, platform)
             
             # Ensure we got real content, not placeholder text
             if self._is_placeholder_content(parsed_result):
@@ -371,8 +376,12 @@ class ProductionAIService:
                 creativity_level, urgency_level, emotion_type, filter_cliches
             )
             
+            # Import premium copywriting standards and prepend to prompt
+            from app.constants.premium_copywriting_standards import build_premium_system_prompt
+            premium_system_prompt = build_premium_system_prompt()
+
             response = await model.generate_content_async(
-                prompt,
+                f"{premium_system_prompt}\n\n{prompt}",
                 generation_config=genai.types.GenerationConfig(
                     max_output_tokens=500,
                     temperature=ai_params["temperature"],
@@ -384,7 +393,7 @@ class ProductionAIService:
             self._track_usage('gemini', int(estimated_tokens))
             
             # Parse and validate response
-            parsed_result = self._parse_structured_response(response.text, variant_type)
+            parsed_result = self._parse_structured_response(response.text, variant_type, platform)
             
             # Ensure we got real content
             if self._is_placeholder_content(parsed_result):
@@ -555,6 +564,10 @@ CALL-TO-ACTION:
 ⚠️ AVOID if filtering clichés is enabled: overused phrases like "game-changer", "next-level", "cutting-edge", "revolutionary", "world-class", "amazing results", "transform your life", etc.
 """ if filter_cliches else ""
         
+        # Import premium variant framework prompts
+        from app.constants.premium_copywriting_standards import build_variant_framework_prompts
+        frameworks = build_variant_framework_prompts()
+
         # Production-quality prompts for each variant type
         variant_prompts = {
             'persuasive': f"""
@@ -641,14 +654,78 @@ HEADLINE: [platform-optimized headline]
 BODY: [platform-optimized body text]
 CTA: [platform-appropriate call-to-action]
 REASON: [specific platform optimizations applied]
+""",
+            'benefit_focused': f"""
+{base_context}{tiktok_note}{creative_instructions}
+{frameworks['benefit_focused']}
+
+STRICT REQUIREMENTS:
+- 50–100 words
+- No problem language
+- Premium, aspirational tone; one emoji max if platform allows
+- Respond ONLY with:
+HEADLINE: ...
+BODY: ...
+CTA: ...
+REASON: [what changed and why it persuades]
+""",
+            'problem_focused': f"""
+{base_context}{tiktok_note}{creative_instructions}
+{frameworks['problem_focused']}
+
+STRICT REQUIREMENTS:
+- 50–100 words
+- Start with pain point; show clear before/after
+- Empathetic tone; one emoji max if platform allows
+- Respond ONLY with:
+HEADLINE: ...
+BODY: ...
+CTA: ...
+REASON: [what changed and why it persuades]
+""",
+            'story_driven': f"""
+{base_context}{tiktok_note}{creative_instructions}
+{frameworks['story_driven']}
+
+STRICT REQUIREMENTS:
+- 50–100 words
+- Mini-narrative (setup → tension → resolution)
+- Authentic tone; one emoji max if platform allows
+- Respond ONLY with:
+HEADLINE: ...
+BODY: ...
+CTA: ...
+REASON: [what changed and why it persuades]
 """
         }
         
         return variant_prompts.get(variant_type, variant_prompts['persuasive'])
     
-    def _parse_structured_response(self, response: str, variant_type: str) -> Dict:
-        """Parse AI response into structured format - production validation"""
+    def _parse_structured_response(self, response: str, variant_type: str, platform: str) -> Dict:
+        """Parse AI response into structured format - production validation with platform-aware limits"""
         try:
+            from app.constants.platform_limits import get_platform_limits_detailed, Platform
+            # Determine platform-aware soft limits
+            pl = platform or 'facebook'
+            detailed = get_platform_limits_detailed(pl)
+            # Set conservative caps that allow premium-length copy while remaining safe
+            if pl == Platform.GOOGLE:
+                max_headline = 90
+                max_body = 180
+                max_cta = 40
+            elif pl == Platform.LINKEDIN:
+                max_headline = 120
+                max_body = 600
+                max_cta = 50
+            elif pl == Platform.TWITTER:
+                max_headline = 120
+                max_body = 260
+                max_cta = 40
+            else:
+                max_headline = 140
+                max_body = 1200
+                max_cta = 60
+
             lines = response.strip().split('\n')
             parsed = {}
             
@@ -660,13 +737,13 @@ REASON: [specific platform optimizations applied]
                     value = value.strip()
                     
                     if key == 'HEADLINE':
-                        parsed['headline'] = value[:80]  # Platform limits
+                        parsed['headline'] = value[:max_headline]
                     elif key == 'BODY':
-                        parsed['body_text'] = value[:250]
+                        parsed['body_text'] = value[:max_body]
                     elif key == 'CTA':
-                        parsed['cta'] = value[:40]
+                        parsed['cta'] = value[:max_cta]
                     elif key == 'REASON':
-                        parsed['improvement_reason'] = value[:200]
+                        parsed['improvement_reason'] = value[:300]
             
             # Validate required fields are present and not empty
             required_fields = ['headline', 'body_text', 'cta', 'improvement_reason']
@@ -690,7 +767,7 @@ REASON: [specific platform optimizations applied]
             raise ProductionError(
                 f"Failed to parse AI response: {str(e)}",
                 "AI_RESPONSE_PARSE_FAILED",
-                {"response": response, "variant_type": variant_type}
+                {"response": response, "variant_type": variant_type, "platform": platform}
             )
     
     def _is_placeholder_content(self, parsed_result: Dict) -> bool:

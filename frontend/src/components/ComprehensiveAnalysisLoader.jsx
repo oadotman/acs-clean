@@ -212,7 +212,8 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
               formality: brandVoice.formality,
               target_audience: brandVoice.targetAudience,
               brand_values: brandVoice.brandValues,
-              past_ads: brandVoice.pastAds || null // Include past ads for learning
+              past_ads: brandVoice.pastAds || null, // Include past ads for learning
+              emoji_preference: brandVoice.emojiPreference || 'auto' // Include emoji preference
             } : null
           },
           competitor_ads: [] // Empty array as we don't have competitors in comprehensive analysis

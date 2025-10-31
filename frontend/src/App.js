@@ -98,6 +98,9 @@ import AgencyTeamManagement from './pages/agency/TeamManagement';
 import AgencyReportsBranding from './pages/agency/ReportsBranding';
 import AgencyWhiteLabelSettings from './pages/agency/WhiteLabelSettings';
 
+// Team Invitation
+import InviteAccept from './pages/InviteAccept';
+
 // Theme
 import { ThemeModeProvider } from './contexts/ThemeContext';
 import { WhiteLabelProvider } from './contexts/WhiteLabelContext';
@@ -505,6 +508,9 @@ function App() {
                 <Route path="/blog/:slug" element={<LegacyAppLayout><BlogPost /></LegacyAppLayout>} />
                 <Route path="/blog/category/:category" element={<LegacyAppLayout><BlogCategory /></LegacyAppLayout>} />
                 <Route path="/blog/tag/:tag" element={<LegacyAppLayout><BlogCategory /></LegacyAppLayout>} />
+                
+                {/* Team Invitation Acceptance - Public Route */}
+                <Route path="/invite/accept/:token" element={<LegacyAppLayout><InviteAccept /></LegacyAppLayout>} />
                 
                 {/* Legal and Company Pages */}
                 <Route path="/privacy" element={<LegacyAppLayout><Privacy /></LegacyAppLayout>} />

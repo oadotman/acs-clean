@@ -173,7 +173,8 @@ const NewAnalysis = () => {
     formality: 'casual',
     targetAudience: '',
     brandValues: '',
-    pastAds: '' // For learning from existing content
+    pastAds: '', // For learning from existing content
+    emojiPreference: 'auto' // 'auto', 'include', 'exclude'
   });
   
   // Brand voice collapsible state
@@ -1564,11 +1565,26 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                         variant="outlined"
                       />
                     </Grid>
+                    
+                    <Grid item xs={12} md={4}>
+                      <FormControl fullWidth>
+                        <InputLabel>Emoji Usage</InputLabel>
+                        <Select
+                          value={brandVoice.emojiPreference}
+                          onChange={(e) => setBrandVoice(prev => ({ ...prev, emojiPreference: e.target.value }))}
+                          label="Emoji Usage"
+                        >
+                          <MenuItem value="auto">Auto (Platform-appropriate) 🤖</MenuItem>
+                          <MenuItem value="include">Include Emojis 😊</MenuItem>
+                          <MenuItem value="exclude">No Emojis 🚫</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
                   </Grid>
                 </Box>
                 
                 {/* Brand Voice Status Indicator */}
-                {(brandVoice.pastAds.trim() || brandVoice.targetAudience.trim() || brandVoice.brandValues.trim()) && (
+                {(brandVoice.pastAds.trim() || brandVoice.targetAudience.trim() || brandVoice.brandValues.trim() || brandVoice.emojiPreference !== 'auto') && (
                   <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(124, 58, 237, 0.05)', borderRadius: 2 }}>
                     <Box display="flex" alignItems="center" gap={1}>
                       <CheckCircle sx={{ color: 'success.main', fontSize: '1.2rem' }} />
@@ -1579,7 +1595,8 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                       {brandVoice.pastAds.trim() ? '✅ Learning from past ads • ' : ''}
                       {brandVoice.targetAudience.trim() ? '✅ Target audience defined • ' : ''}
-                      {brandVoice.brandValues.trim() ? '✅ Brand values set' : ''}
+                      {brandVoice.brandValues.trim() ? '✅ Brand values set • ' : ''}
+                      {brandVoice.emojiPreference === 'include' ? '✅ Emojis: Include' : brandVoice.emojiPreference === 'exclude' ? '✅ Emojis: Exclude' : ''}
                     </Typography>
                   </Box>
                 )}

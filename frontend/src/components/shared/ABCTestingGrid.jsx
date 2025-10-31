@@ -305,30 +305,51 @@ const ABCTestingGrid = ({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
+        style={{ height: '100%' }}
       >
         <Card
-          elevation={isOriginal ? 1 : 3}
+          elevation={isOriginal ? 1 : 2}
           sx={{
             height: '100%',
-            minHeight: '450px',
+            minHeight: '500px',
             display: 'flex',
             flexDirection: 'column',
             position: 'relative',
-            border: isOriginal ? `2px solid ${alpha(theme.palette.grey[400], 0.3)}` : 'none',
+            border: `2px solid`,
+            borderColor: isOriginal 
+              ? theme.palette.divider
+              : {
+                  'variation_a': theme.palette.success.main,
+                  'benefit_focused': theme.palette.success.main,
+                  'variation_b': theme.palette.warning.main,
+                  'problem_focused': theme.palette.warning.main,
+                  'variation_c': theme.palette.info.main,
+                  'story_driven': theme.palette.info.main,
+                  'improved': theme.palette.primary.main
+                }[variation.type] || theme.palette.primary.main,
             background: isOriginal 
-              ? alpha(theme.palette.grey[100], 0.3)
-              : `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)} 0%, ${alpha(theme.palette.background.paper, 1)} 100%)`,
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              transform: isOriginal ? 'none' : 'translateY(-4px)',
-              boxShadow: isOriginal ? theme.shadows[2] : theme.shadows[8]
-            }
+              ? alpha(theme.palette.background.paper, 0.5)
+              : alpha(theme.palette.background.paper, 0.95),
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': !isOriginal ? {
+              transform: 'translateY(-2px)',
+              boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.15)}`,
+              borderColor: {
+                'variation_a': theme.palette.success.light,
+                'benefit_focused': theme.palette.success.light,
+                'variation_b': theme.palette.warning.light,
+                'problem_focused': theme.palette.warning.light,
+                'variation_c': theme.palette.info.light,
+                'story_driven': theme.palette.info.light,
+                'improved': theme.palette.primary.light
+              }[variation.type] || theme.palette.primary.light
+            } : {}
           }}>
-          <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
+          <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2.5 }}>
             {/* Header */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="h6" fontWeight={600}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+                <Typography variant="h6" fontWeight={700} sx={{ fontSize: '1rem' }}>
                   {isOriginal ? 'Original' : variation.title}
                 </Typography>
                 {!isOriginal && (
@@ -336,7 +357,7 @@ const ABCTestingGrid = ({
                     label={variation.badge}
                     color={variation.badgeColor}
                     size="small"
-                    sx={{ fontWeight: 600 }}
+                    sx={{ fontWeight: 700, fontSize: '0.7rem', height: 24 }}
                   />
                 )}
               </Box>
@@ -547,7 +568,7 @@ const ABCTestingGrid = ({
             <Grid item xs={12} md={6} key={i}>
               <Card sx={{ height: 300 }}>
                 <CardContent>
-                  <Box sx={{ animation: 'pulse 1.5s ease-in-out infinite' }}>
+                  <Box>
                     <Box sx={{ height: 20, bgcolor: 'grey.200', borderRadius: 1, mb: 2 }} />
                     <Box sx={{ height: 60, bgcolor: 'grey.100', borderRadius: 1, mb: 2 }} />
                     <Box sx={{ height: 80, bgcolor: 'grey.100', borderRadius: 1 }} />
