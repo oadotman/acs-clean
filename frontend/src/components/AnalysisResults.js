@@ -34,6 +34,7 @@ import {
 } from '../utils/evidenceUtils';
 import UserFeedback from './shared/UserFeedback';
 import ABCTestVariants from './shared/ABCTestVariants';
+import ABCTestingGrid from './shared/ABCTestingGrid';
 import creativeControlsService from '../services/creativeControlsService';
 
 const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, onExport }) => {
@@ -445,7 +446,39 @@ const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, o
         compact={false}
       />
 
-      {/* A/B/C Test Results */}
+      {/* NEW Dynamic A/B/C Testing Grid */}
+      {results.variations && results.variations.length > 0 && (
+        <Card elevation={3} sx={{ mb: 4 }}>
+          <CardContent>
+            <ABCTestingGrid
+              originalCopy={{
+                headline: originalText?.split('\n')[0] || '',
+                body_text: originalText || '',
+                cta: ''
+              }}
+              improvedCopy={{
+                headline: results.improved.text.split('\n')[0] || '',
+                body_text: results.improved.text.split('\n').slice(1).join('\n') || '',
+                cta: '',
+                score: results.improved.score
+              }}
+              variations={analysisData?.fullAnalysis?.alternatives || results.variations}
+              platform={analysisData?.platform || 'facebook'}
+              onImprove={(variation) => {
+                console.log('Further improve:', variation);
+                toast('Iterative improvement coming soon!', { icon: '🚀' });
+              }}
+              onExport={(variations) => {
+                console.log('Export variations:', variations);
+                if (onExport) onExport();
+              }}
+              isLoading={false}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* OLD A/B/C Test Results (Legacy - kept for compatibility) */}
       <AnimatePresence>
         {showABCResults && abcVariants.length > 0 && (
           <motion.div
