@@ -295,7 +295,6 @@ const ABCTestingGrid = ({
             }
           }}>
           <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
-          <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
