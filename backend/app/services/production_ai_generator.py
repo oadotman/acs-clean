@@ -689,24 +689,28 @@ REASON: [specific platform optimizations applied]
     
     def _is_placeholder_content(self, parsed_result: Dict) -> bool:
         """Check if AI returned placeholder/template content"""
+        # Only check for actual placeholders (bracketed text) in critical fields
         placeholder_indicators = [
-            '[new]', '[headline]', '[body]', '[cta]', '[reason]',
-            'enhanced copy', 'optimized copy', 'improved copy',
-            'take action', 'click here', 'learn more'
+            '[new headline]', '[new body]', '[new cta]', '[headline]', '[body]', '[cta]', '[reason]',
+            '[insert', '[replace', '[add', '[modify'
         ]
         
+        # Only check headline, body, and CTA (not improvement_reason which can contain "improved")
         content_to_check = [
             parsed_result.get('headline', ''),
             parsed_result.get('body_text', ''),
-            parsed_result.get('cta', ''),
-            parsed_result.get('improvement_reason', '')
+            parsed_result.get('cta', '')
         ]
         
         for content in content_to_check:
             content_lower = content.lower()
+            # Check for bracketed placeholders
             for indicator in placeholder_indicators:
                 if indicator in content_lower:
                     return True
+            # Check if content is too generic/empty
+            if len(content.strip()) < 5:
+                return True
         
         return False
     

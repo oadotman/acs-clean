@@ -133,8 +133,10 @@ const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, o
       scoreImprovement: analysisData.improvement || Math.max(0, (analysisData.score || 75) - (analysisData.originalScore || 60)),
       text: (() => {
         // Try to get the best alternative from AI analysis
-        if (analysisData.fullAnalysis?.alternatives && analysisData.fullAnalysis.alternatives.length > 0) {
-          const bestAlt = analysisData.fullAnalysis.alternatives.reduce((best, current) => 
+        // Backend returns alternatives directly, not in fullAnalysis
+        const alternatives = analysisData.alternatives || analysisData.fullAnalysis?.alternatives || [];
+        if (alternatives.length > 0) {
+          const bestAlt = alternatives.reduce((best, current) => 
             (current.predicted_score || 0) > (best.predicted_score || 0) ? current : best
           );
           return `${bestAlt.headline}\n\n${bestAlt.body_text}\n\n${bestAlt.cta}`;
@@ -160,8 +162,10 @@ const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, o
       ];
     })(),
     variations: (() => {
-      if (analysisData.fullAnalysis?.alternatives && analysisData.fullAnalysis.alternatives.length > 0) {
-        return analysisData.fullAnalysis.alternatives.map((alt, index) => ({
+      // Backend returns alternatives directly, not in fullAnalysis
+      const alternatives = analysisData.alternatives || analysisData.fullAnalysis?.alternatives || [];
+      if (alternatives.length > 0) {
+        return alternatives.map((alt, index) => ({
           name: alt.variant_type || `Variation ${index + 1}`,
           score: alt.predicted_score || 75,
           text: `${alt.headline}\n\n${alt.body_text}\n\n${alt.cta}`,
@@ -462,7 +466,7 @@ const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, o
                 cta: '',
                 score: results.improved.score
               }}
-              variations={analysisData?.fullAnalysis?.alternatives || results.variations}
+              variations={analysisData?.alternatives || results.variations}
               platform={analysisData?.platform || 'facebook'}
               onImprove={(variation) => {
                 console.log('Further improve:', variation);
