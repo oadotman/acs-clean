@@ -233,7 +233,11 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
         });
         
         // Use the working analyzeAd method (this handles DB creation + backend call)
+        console.log('🚀 Starting API call at:', new Date().toISOString());
+        const startTime = Date.now();
         const standardResponse = await apiService.analyzeAd(adData);
+        const apiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`⏱️ API responded in ${apiDuration} seconds`);
         console.log('💾 StandardResponse received:', standardResponse);
         console.log('💾 Response validation:', {
           hasAnalysisId: !!standardResponse.analysis_id,
