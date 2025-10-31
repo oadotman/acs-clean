@@ -172,14 +172,15 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
               console.log('🎯 All tools completed visually, waiting for API...');
               clearInterval(intervalId);
               
-              // Set a safety timeout - if API doesn't respond in 10 seconds, show error
+              // Set a safety timeout - if API doesn't respond in 90 seconds, show error
+              // This should be less than the Axios timeout (120s) to provide user feedback
               safetyTimeoutId = setTimeout(() => {
                 if (!isCompleted) {
-                  console.error('⏰ API timeout after 10 seconds');
+                  console.error('⏰ API timeout after 90 seconds');
                   isCompleted = true;
-                  throw new Error('Analysis timed out. Please try again.');
+                  throw new Error('Analysis is taking longer than expected. Please try again.');
                 }
-              }, 10000);
+              }, 90000); // 90 seconds - gives API plenty of time while still providing timeout protection
             }
           }
         }, 2500); // Update UI every 2.5 seconds
