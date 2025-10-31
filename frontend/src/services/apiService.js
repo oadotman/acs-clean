@@ -44,116 +44,6 @@ class ApiService {
       }
     });
 
-  // Integration endpoints
-  async createIntegration(userId, integrationData) {
-    const response = await fetch(`${this.baseURL}/integrations/user/${userId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(integrationData)
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to create integration');
-    }
-
-    return response.json();
-  },
-
-  async getUserIntegrations(userId) {
-    const response = await fetch(`${this.baseURL}/integrations/user/${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch integrations');
-    }
-
-    return response.json();
-  },
-
-  async updateIntegration(integrationId, updateData) {
-    const response = await fetch(`${this.baseURL}/integrations/${integrationId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(updateData)
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to update integration');
-    }
-
-    return response.json();
-  },
-
-  async deleteIntegration(integrationId) {
-    const response = await fetch(`${this.baseURL}/integrations/${integrationId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to delete integration');
-    }
-
-    return response.json();
-  },
-
-  async testIntegration(integrationId) {
-    const response = await fetch(`${this.baseURL}/integrations/${integrationId}/test`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to test integration');
-    }
-
-    return response.json();
-  },
-
-  async sendToIntegrations(userId, eventType, data) {
-    const response = await fetch(`${this.baseURL}/integrations/send-to-integrations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        event_type: eventType,
-        data: data
-      })
-    });
-
-    if (!response.ok) {
-      console.warn('Failed to send to integrations:', response.statusText);
-    }
-
-    return response.json();
-  },
-
-  getAuthToken() {
-    // Get token from localStorage or auth service
-    return localStorage.getItem('auth_token') || 'dummy_token_for_dev';
-  }
-    });
-
     // Request interceptor to add Supabase auth token
     this.client.interceptors.request.use(
       async (config) => {
@@ -198,6 +88,115 @@ class ApiService {
 
   setAuthToken(token) {
     this.authToken = token;
+  }
+
+  // Integration endpoints
+  async createIntegration(userId, integrationData) {
+    const response = await fetch(`${this.baseURL}/integrations/user/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      },
+      body: JSON.stringify(integrationData)
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create integration');
+    }
+
+    return response.json();
+  }
+
+  async getUserIntegrations(userId) {
+    const response = await fetch(`${this.baseURL}/integrations/user/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch integrations');
+    }
+
+    return response.json();
+  }
+
+  async updateIntegration(integrationId, updateData) {
+    const response = await fetch(`${this.baseURL}/integrations/${integrationId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      },
+      body: JSON.stringify(updateData)
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to update integration');
+    }
+
+    return response.json();
+  }
+
+  async deleteIntegration(integrationId) {
+    const response = await fetch(`${this.baseURL}/integrations/${integrationId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to delete integration');
+    }
+
+    return response.json();
+  }
+
+  async testIntegration(integrationId) {
+    const response = await fetch(`${this.baseURL}/integrations/${integrationId}/test`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to test integration');
+    }
+
+    return response.json();
+  }
+
+  async sendToIntegrations(userId, eventType, data) {
+    const response = await fetch(`${this.baseURL}/integrations/send-to-integrations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        event_type: eventType,
+        data: data
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to send to integrations:', response.statusText);
+    }
+
+    return response.json();
+  }
+
+  getAuthToken() {
+    // Get token from localStorage or auth service
+    return localStorage.getItem('auth_token') || 'dummy_token_for_dev';
   }
 
   clearAuthToken() {
