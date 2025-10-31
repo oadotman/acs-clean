@@ -251,6 +251,79 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
                             standardResponse.alternatives?.[0]?.body_text || 
                             adCopy.replace(/Learn More/gi, 'Get Started Free').replace(/Click Here/gi, 'Shop Now');
         
+        // Extract REAL tool results from backend (no more mock data!)
+        const toolResults = standardResponse.tool_results || {};
+        console.log('🔧 Tool results from backend:', toolResults);
+        
+        // Helper function to extract tool data
+        const getToolData = (toolName) => {
+          const tool = toolResults[toolName];
+          return tool?.success ? tool : null;
+        };
+        
+        // Map real compliance data
+        const complianceTool = getToolData('compliance_checker');
+        const compliance = complianceTool ? {
+          status: complianceTool.insights?.compliance_status || 'COMPLIANT',
+          totalIssues: complianceTool.insights?.issues?.length || 0,
+          issues: complianceTool.insights?.issues || []
+        } : { status: 'PENDING', totalIssues: 0, issues: [] };
+        
+        // Map real psychology data
+        const psychologyTool = getToolData('psychology_scorer');
+        const psychology = psychologyTool ? {
+          overallScore: psychologyTool.scores?.psychology_score || 0,
+          topOpportunity: psychologyTool.recommendations?.[0] || 'Analysis complete',
+          triggers: psychologyTool.insights?.triggers || [],
+          opportunities: psychologyTool.insights?.opportunities || []
+        } : { overallScore: 0, triggers: [], opportunities: [] };
+        
+        // Map real legal data
+        const legalTool = getToolData('legal_risk_scanner');
+        const legal = legalTool ? {
+          riskLevel: legalTool.insights?.risk_level || 'Low',
+          issues: legalTool.insights?.issues || [],
+          recommendations: legalTool.recommendations || []
+        } : { riskLevel: 'PENDING', issues: [], recommendations: [] };
+        
+        // Map real ROI data
+        const roiTool = getToolData('roi_copy_generator');
+        const roi = roiTool ? {
+          segment: roiTool.insights?.target_segment || 'General',
+          premiumVersions: roiTool.insights?.premium_versions || [],
+          recommendations: roiTool.recommendations || []
+        } : { segment: 'PENDING', premiumVersions: [], recommendations: [] };
+        
+        // Map real brand voice data
+        const brandVoiceTool = getToolData('brand_voice_engine');
+        const brandVoiceData = brandVoiceTool ? {
+          tone: brandVoiceTool.insights?.detected_tone || brandVoice?.tone || 'Conversational',
+          personality: brandVoiceTool.insights?.personality || brandVoice?.personality || 'Friendly',
+          formality: brandVoiceTool.insights?.formality || brandVoice?.formality || 'Casual',
+          targetAudience: brandVoice?.targetAudience || '',
+          brandValues: brandVoice?.brandValues || '',
+          pastAds: brandVoice?.pastAds || '',
+          consistency: brandVoiceTool.scores?.consistency_score || 0,
+          learningFromPastAds: brandVoice?.pastAds && brandVoice.pastAds.trim().length > 50,
+          recommendations: brandVoiceTool.recommendations || []
+        } : {
+          tone: brandVoice?.tone || 'Conversational',
+          personality: brandVoice?.personality || 'Friendly',
+          formality: brandVoice?.formality || 'Casual',
+          targetAudience: brandVoice?.targetAudience || '',
+          brandValues: brandVoice?.brandValues || '',
+          pastAds: brandVoice?.pastAds || '',
+          consistency: 0,
+          learningFromPastAds: false,
+          recommendations: ['Brand voice analysis pending']
+        };
+        
+        // Get improvements from AI alternatives (real data)
+        const improvements = standardResponse.alternatives?.slice(0, 3).map(alt => ({
+          category: alt.variant_type || 'Optimization',
+          description: alt.improvement_reason || 'AI-powered enhancement'
+        })) || [];
+        
         const response = {
           original: {
             copy: adCopy,
@@ -259,39 +332,31 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
           improved: {
             copy: improvedCopy,
             score: Math.min(95, (standardResponse.scores?.overall_score || 65) + 15),
-            improvements: [
-              { category: 'Headline', description: 'Enhanced for better engagement' },
-              { category: 'CTA', description: 'Optimized call-to-action' },
-              { category: 'Platform', description: `Tailored for ${platform}` }
+            improvements: improvements.length > 0 ? improvements : [
+              { category: 'Analysis', description: 'Comprehensive analysis complete' }
             ]
           },
-          compliance: { status: 'COMPLIANT', totalIssues: 0, issues: [] },
-          psychology: { overallScore: Math.round((standardResponse.scores?.overall_score || 65) * 1.1), topOpportunity: 'Add social proof', triggers: [] },
+          compliance: compliance,
+          psychology: psychology,
           abTests: { variations: standardResponse.alternatives || [] },
-          roi: { segment: 'Mass market', premiumVersions: [] },
-          legal: { riskLevel: 'Low', issues: [] },
-          brandVoice: { 
-            tone: brandVoice?.tone || (platform === 'linkedin' ? 'Professional' : platform === 'tiktok' ? 'Casual' : platform === 'facebook' ? 'Friendly' : 'Conversational'),
-            personality: brandVoice?.personality || 'Friendly',
-            formality: brandVoice?.formality || 'Casual',
-            targetAudience: brandVoice?.targetAudience || '',
-            brandValues: brandVoice?.brandValues || '',
-            pastAds: brandVoice?.pastAds || '',
-            consistency: Math.round(75 + Math.random() * 20),
-            learningFromPastAds: brandVoice?.pastAds && brandVoice.pastAds.trim().length > 50,
-            recommendations: [
-              brandVoice?.pastAds && brandVoice.pastAds.trim().length > 50 ? 'AI has learned from your past successful ads to match your winning style' : 'Consider providing past successful ads for better style matching',
-              brandVoice?.tone ? `Maintain ${brandVoice.tone} tone across campaigns` : 'Maintain consistent tone across campaigns',
-              'Use active voice for stronger impact',
-              brandVoice?.targetAudience ? `Tailor messaging to ${brandVoice.targetAudience}` : 'Match audience expectations for the platform'
-            ]
-          },
+          roi: roi,
+          legal: legal,
+          brandVoice: brandVoiceData,
           platform: platform,
           // Preserve the database analysis ID and response
           analysis_id: standardResponse.analysis_id,
           databaseSaved: true,
-          analysisRecord: standardResponse.analysis // Include the full analysis record from DB
+          analysisRecord: standardResponse.analysis,
+          tool_results: toolResults // Include raw tool results for debugging
         };
+        
+        console.log('✅ Mapped REAL tool results to UI format:', {
+          compliance: compliance.status,
+          psychology: psychology.overallScore,
+          legal: legal.riskLevel,
+          roi: roi.segment,
+          brandVoice: brandVoiceData.consistency
+        });
         
         // Mark as completed
         isCompleted = true;
