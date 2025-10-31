@@ -73,9 +73,28 @@ const ComprehensiveResults = ({ results, adCopy, platform, onBack, onFurtherImpr
     evidenceLevel: results?.evidence_level || (isAIPowered ? 'high' : 'low')
   });
 
-  // Debug: Log results to console
+  // Map alternatives to abTests.variations if not already mapped
   React.useEffect(() => {
-    console.log('ComprehensiveResults received:', { results, adCopy, platform });
+    console.log('📦 ComprehensiveResults received:', { results, adCopy, platform });
+    console.log('📦 results.alternatives:', results?.alternatives);
+    console.log('📦 results.abTests?.variations:', results?.abTests?.variations);
+    
+    // If alternatives exist but abTests doesn't, map them
+    if (results?.alternatives && !results?.abTests?.variations) {
+      console.log('⚠️ Mapping alternatives to abTests.variations...');
+      results.abTests = {
+        variations: results.alternatives.map((alt, index) => ({
+          angle: alt.variant_type || `Variation ${index + 1}`,
+          copy: `${alt.headline}\n\n${alt.body_text}${alt.cta ? '\n\n' + alt.cta : ''}`,
+          generated_body_text: alt.body_text,
+          strategy: alt.improvement_reason,
+          improvement_reason: alt.improvement_reason,
+          predictedCTR: alt.predicted_score || 75
+        }))
+      };
+      console.log('✅ Mapped', results.abTests.variations.length, 'alternatives to abTests.variations');
+    }
+    
     console.log('Improved copy:', results?.improved?.copy);
     console.log('Evidence level:', evidenceLevel);
   }, [results, adCopy, platform, evidenceLevel]);
