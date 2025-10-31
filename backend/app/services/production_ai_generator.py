@@ -560,41 +560,47 @@ CALL-TO-ACTION:
             'persuasive': f"""
 {base_context}{tiktok_note}{creative_instructions}
 
-Create a HIGHLY PERSUASIVE ad variation that:
-1. Uses specific social proof (numbers, testimonials, popularity indicators)
-2. Creates urgency with time-sensitive language
-3. Emphasizes concrete benefits over features  
-4. Addresses common objections preemptively
-5. Uses power words that drive immediate action
-6. Includes scarcity or limited-time elements
-7. Leverages authority and credibility markers
+⚠️ CRITICAL: PRESERVE the original ad's SPECIFIC PRODUCT DETAILS, unique features, and actual offers (discounts, guarantees, etc.).
+Do NOT make up fake statistics or social proof. Use only what's in the original ad.
+
+IMPROVE the original ad by:
+1. Making the headline more attention-grabbing while keeping the core product/offer
+2. Restructuring the body for better flow and impact
+3. Strengthening emotional appeal WITHOUT changing factual claims
+4. Making the CTA more action-oriented and urgent
+5. Using power words strategically (but don't overdo it)
+6. Improving readability with better structure/formatting
+7. Maintaining ALL specific features, benefits, and offers from the original
 {char_limit_note}
 
 CRITICAL: Respond ONLY in this exact format:
-HEADLINE: [new persuasive headline]
-BODY: [new persuasive body text]  
-CTA: [new persuasive call-to-action]
-REASON: [specific persuasion tactics used]
+HEADLINE: [improved persuasive headline]
+BODY: [restructured body with better flow]
+CTA: [stronger call-to-action]
+REASON: [specific improvements made]
 """,
             
             'emotional': f"""
 {base_context}{tiktok_note}{creative_instructions}
 
-Create an EMOTIONALLY COMPELLING ad variation that:
-1. Identifies and targets the core emotion (fear, desire, aspiration, frustration)
-2. Creates a relatable scenario or micro-story that connects
-3. Uses sensory language and vivid, specific imagery
-4. Appeals to identity and self-image transformation
-5. Builds emotional tension that resolves with action
-6. Uses emotional triggers appropriate for the target audience
-7. Incorporates aspirational outcomes and future-state benefits
+⚠️ CRITICAL: KEEP all specific product details, features, and offers from the original ad.
+Do NOT create fictional scenarios or make up stories. Stay grounded in the actual product.
+
+IMPROVE emotional impact by:
+1. Starting with an emotional hook that relates to the target audience's pain point or desire
+2. Connecting the product's ACTUAL features to emotional benefits
+3. Using vivid, sensory language to describe the REAL experience of using the product
+4. Building to an emotionally resonant CTA
+5. Maintaining all factual claims, features, and offers from the original
+6. Adding emotional depth WITHOUT creating fake testimonials or stories
+7. Making the reader FEEL the problem and solution
 {char_limit_note}
 
 CRITICAL: Respond ONLY in this exact format:
-HEADLINE: [emotionally compelling headline]
-BODY: [emotional story/scenario body text]
+HEADLINE: [emotionally engaging headline]
+BODY: [emotionally enhanced body copy]
 CTA: [emotion-driven call-to-action]
-REASON: [specific emotional triggers and tactics used]
+REASON: [emotional improvements made]
 """,
             
             'data_driven': f"""
