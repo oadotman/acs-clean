@@ -95,7 +95,7 @@ async def analyze_ad(
     db: Session = Depends(get_db)
     # Auth handled by frontend Supabase session - no backend DB user needed
 ):
-    """Analyze an ad using real OpenAI and generate alternatives"""
+    """Analyze an ad using EnhancedAdAnalysisService with AI-powered improvements"""
     analysis_id = str(uuid.uuid4())
     
     # Use user_id from request if provided, otherwise use a default
@@ -105,98 +105,51 @@ async def analyze_ad(
     current_user = SimpleNamespace(id=user_id, email='user@app.com')
     
     try:
-        # Prepare ad data for AI analysis
-        ad_data = {
-            "headline": request.ad.headline,
-            "body_text": request.ad.body_text,
-            "cta": request.ad.cta,
-            "platform": request.ad.platform,
-            "industry": getattr(request.ad, 'industry', None),
-            "target_audience": getattr(request.ad, 'target_audience', None)
-        }
+        print(f"🔍 Starting analysis for ad: {request.ad.headline[:50]}...")
         
-        # Use real AI service if available, otherwise fallback to enhanced service
-        if ai_service:
-            try:
-                # Generate AI-powered analysis and improvement
-                ai_result = await ai_service.generate_ad_alternative(
-                    ad_data=ad_data,
-                    variant_type="comprehensive_analysis"
-                )
-                
-                # Extract scores from AI result
-                ai_scores = ai_result.get('scores', {})
-                ai_feedback = ai_result.get('feedback', [])
-                ai_alternatives = ai_result.get('alternatives', [])
-                
-                # Create comprehensive scores
-                scores = {
-                    "overall_score": ai_scores.get('overall_score', 75),
-                    "clarity_score": ai_scores.get('clarity_score', 75),
-                    "persuasion_score": ai_scores.get('persuasion_score', 75),
-                    "emotion_score": ai_scores.get('emotion_score', 75),
-                    "cta_strength_score": ai_scores.get('cta_strength_score', 75),
-                    "platform_fit_score": ai_scores.get('platform_fit_score', 75),
-                    "analysis_data": {
-                        "feedback": ai_feedback,
-                        "ai_powered": True,
-                        "model_used": "gpt-4",
-                        "timestamp": datetime.utcnow().isoformat(),
-                        "full_ai_response": ai_result
-                    }
-                }
-                
-                # Format alternatives from AI
-                alternatives = []
-                for alt in ai_alternatives:
-                    alternatives.append({
-                        "variant_type": alt.get("type", "ai_improved"),
-                        "headline": alt.get("headline", request.ad.headline),
-                        "body_text": alt.get("body_text", request.ad.body_text),
-                        "cta": alt.get("cta", request.ad.cta),
-                        "improvement_reason": alt.get("reason", "AI-generated improvement"),
-                        "predicted_score": alt.get("expected_score", 85)
-                    })
-                
-                # Properly convert feedback to string to avoid Pydantic validation error
-                if isinstance(ai_feedback, list):
-                    # Join list items with newlines for better readability
-                    feedback_text = "\n".join(str(f) for f in ai_feedback if f)
-                elif isinstance(ai_feedback, dict):
-                    # Convert dict to string representation
-                    feedback_text = str(ai_feedback)
-                else:
-                    # Ensure we always have a string, never None
-                    feedback_text = str(ai_feedback) if ai_feedback else "Analysis completed successfully"
-                
-            except Exception as ai_error:
-                print(f"AI service failed: {ai_error}")
-                # Fallback to enhanced service if AI fails
-                return await _fallback_to_enhanced_service(request, db, current_user, analysis_id)
-        else:
-            # AI service not available, use enhanced service
-            return await _fallback_to_enhanced_service(request, db, current_user, analysis_id)
-        
-        # Save analysis to database
-        await _save_analysis_to_supabase(
-            analysis_id=analysis_id,
+        # ALWAYS use EnhancedAdAnalysisService - it has all our AI improvements
+        ad_service = EnhancedAdAnalysisService(db)
+        analysis = await ad_service.analyze_ad(
             user_id=current_user.id,
-            ad_data=ad_data,
-            scores=scores,
-            alternatives=alternatives,
-            feedback=feedback_text,
-            db=db
+            ad=request.ad,
+            competitor_ads=request.competitor_ads
         )
         
+        print(f"✅ Analysis complete. Generated {len(analysis.alternatives)} alternatives")
+        
+        # Format response for frontend compatibility
         return {
-            "analysis_id": analysis_id,
-            "scores": scores,
-            "alternatives": alternatives,
-            "feedback": feedback_text
+            "analysis_id": analysis.analysis_id,
+            "scores": {
+                "overall_score": analysis.scores.overall_score,
+                "clarity_score": analysis.scores.clarity_score,
+                "persuasion_score": analysis.scores.persuasion_score,
+                "emotion_score": analysis.scores.emotion_score,
+                "cta_strength_score": analysis.scores.cta_strength,
+                "platform_fit_score": analysis.scores.platform_fit_score,
+                "analysis_data": {
+                    "feedback": analysis.feedback,
+                    "quick_wins": analysis.quick_wins,
+                    "competitor_comparison": analysis.competitor_comparison,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "ai_powered": True
+                }
+            },
+            "alternatives": [{
+                "variant_type": alt.variant_type,
+                "headline": alt.headline,
+                "body_text": alt.body_text,
+                "cta": alt.cta,
+                "improvement_reason": alt.improvement_reason,
+                "predicted_score": alt.expected_improvement if hasattr(alt, 'expected_improvement') else 75
+            } for alt in analysis.alternatives],
+            "feedback": analysis.feedback
         }
         
     except Exception as e:
-        print(f"Analysis failed: {str(e)}")
+        print(f"❌ Analysis failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 @router.get("/history", response_model=List[dict])

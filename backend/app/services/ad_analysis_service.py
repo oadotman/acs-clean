@@ -1,3 +1,19 @@
+"""
+⚠️ DEPRECATED LEGACY SERVICE
+
+This is the old ad analysis service that does NOT include AI-powered improvements.
+
+USE INSTEAD: app.services.ad_analysis_service_enhanced.EnhancedAdAnalysisService
+
+The EnhancedAdAnalysisService includes:
+- Real AI-powered improvements (not templates)
+- 4 distinct alternatives (1 improved + 3 A/B/C variations)
+- Benefit-focused, Problem-focused, and Story-driven variations
+- Integration with ProductionAIService for GPT-4 generation
+
+This file is kept for backwards compatibility only.
+"""
+
 import uuid
 from datetime import datetime
 from typing import Dict, Any, List, Optional
