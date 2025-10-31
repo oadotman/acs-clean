@@ -26,7 +26,7 @@ import {
   AutoAwesome as ImproveIcon,
   CompareArrows as CompareIcon,
   FileDownload as ExportIcon,
-  TrendingUp as PredictorIcon,
+  TrendingUp,
   Science as BeakerIcon
 } from '@mui/icons-material';
 import toast from 'react-hot-toast';
@@ -46,6 +46,18 @@ const ABCTestingGrid = ({
   onExport,
   isLoading = false
 }) => {
+  console.log('🧪 ABCTestingGrid MOUNTED');
+  console.log('📥 Props received:', { 
+    hasOriginalCopy: !!originalCopy, 
+    hasImprovedCopy: !!improvedCopy, 
+    variationsCount: variations?.length || 0,
+    platform,
+    isLoading,
+    originalCopy,
+    improvedCopy,
+    variations
+  });
+  
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
@@ -67,6 +79,9 @@ const ABCTestingGrid = ({
   const limits = platformLimits[platform] || platformLimits.facebook;
 
   // Process variations to ensure we have all 4
+  console.log('🔧 Processing variations...');
+  console.log('📦 Raw variations array:', variations);
+  
   const processedVariations = [
     {
       id: 'improved',
@@ -144,6 +159,15 @@ const ABCTestingGrid = ({
       patterns: ['Like you...', 'Meet [name]...', "Here's how...", 'Imagine...']
     }
   ];
+  
+  console.log('✅ Processed variations:', processedVariations);
+  console.log('📊 Variation summary:', processedVariations.map(v => ({
+    id: v.id,
+    title: v.title,
+    hasHeadline: !!v.headline,
+    hasBody: !!v.body_text,
+    score: v.score
+  })));
 
   const handleCopy = (text, id) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -324,7 +348,6 @@ const ABCTestingGrid = ({
                     label={`${Math.round(variation.score)}/100`}
                     color={getScoreColor(variation.score)}
                     size="small"
-                    icon={<TrendingUp />}
                     sx={{ fontWeight: 700 }}
                   />
                 </Box>
@@ -514,6 +537,7 @@ const ABCTestingGrid = ({
   };
 
   if (isLoading) {
+    console.log('⏳ ABCTestingGrid: Rendering loading state...');
     return (
       <Box sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>Generating A/B/C Test Variations...</Typography>
@@ -537,6 +561,8 @@ const ABCTestingGrid = ({
     );
   }
 
+  console.log('🎨 ABCTestingGrid: Rendering main grid...');
+  
   return (
     <Box>
       {/* Header Actions */}
@@ -617,7 +643,7 @@ const ABCTestingGrid = ({
         border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-          <PredictorIcon sx={{ color: theme.palette.info.main, fontSize: '1.5rem' }} />
+          <TrendingUp sx={{ color: theme.palette.info.main, fontSize: '1.5rem' }} />
           <Typography variant="h6" fontWeight={700} color="info.main">
             A/B/C Performance Predictions
           </Typography>
