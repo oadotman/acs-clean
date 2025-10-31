@@ -163,15 +163,25 @@ const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, o
     })(),
     variations: (() => {
       // Backend returns alternatives directly, not in fullAnalysis
+      console.log('🔍 AnalysisResults: analysisData =', analysisData);
+      console.log('🔍 AnalysisResults: analysisData.alternatives =', analysisData?.alternatives);
+      console.log('🔍 AnalysisResults: analysisData.fullAnalysis?.alternatives =', analysisData?.fullAnalysis?.alternatives);
+      
       const alternatives = analysisData.alternatives || analysisData.fullAnalysis?.alternatives || [];
+      console.log('🔍 AnalysisResults: Final alternatives =', alternatives);
+      console.log('🔍 AnalysisResults: alternatives.length =', alternatives.length);
+      
       if (alternatives.length > 0) {
-        return alternatives.map((alt, index) => ({
+        const mapped = alternatives.map((alt, index) => ({
           name: alt.variant_type || `Variation ${index + 1}`,
           score: alt.predicted_score || 75,
           text: `${alt.headline}\n\n${alt.body_text}\n\n${alt.cta}`,
           description: alt.improvement_reason || "AI-generated alternative"
         }));
+        console.log('✅ AnalysisResults: Mapped variations =', mapped);
+        return mapped;
       }
+      console.log('❌ AnalysisResults: No alternatives found, returning empty array');
       return [];
     })()
   } : {
@@ -451,9 +461,17 @@ const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, o
       />
 
       {/* NEW Dynamic A/B/C Testing Grid */}
-      {results.variations && results.variations.length > 0 && (
+      {(() => {
+        console.log('🎨 AnalysisResults: Checking if should render ABCTestingGrid');
+        console.log('🎨 AnalysisResults: results.variations =', results.variations);
+        console.log('🎨 AnalysisResults: results.variations.length =', results.variations?.length);
+        const shouldRender = results.variations && results.variations.length > 0;
+        console.log('🎨 AnalysisResults: Should render =', shouldRender);
+        return shouldRender;
+      })() && (
         <Card elevation={3} sx={{ mb: 4 }}>
           <CardContent>
+            {console.log('✅ AnalysisResults: Rendering ABCTestingGrid with variations:', results.variations)}
             <ABCTestingGrid
               originalCopy={{
                 headline: originalText?.split('\n')[0] || '',
