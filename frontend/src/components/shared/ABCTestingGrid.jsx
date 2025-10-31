@@ -11,6 +11,8 @@ import {
   LinearProgress,
   Tooltip,
   Grid,
+  Menu,
+  MenuItem,
   alpha,
   useTheme,
   useMediaQuery
@@ -51,6 +53,7 @@ const ABCTestingGrid = ({
   const [expandedReasons, setExpandedReasons] = useState({});
   const [compareMode, setCompareMode] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState([]);
+  const [exportMenuAnchor, setExportMenuAnchor] = useState(null);
 
   // Platform character limits
   const platformLimits = {
@@ -71,11 +74,14 @@ const ABCTestingGrid = ({
       title: 'Improved',
       badge: 'Optimized',
       badgeColor: 'primary',
-      ...improvedCopy,
-      score: improvedCopy?.score || 85,
-      reasoning: [
+      headline: improvedCopy?.headline || '',
+      body_text: improvedCopy?.body_text || '',
+      cta: improvedCopy?.cta || '',
+      score: improvedCopy?.score || improvedCopy?.predicted_score || 85,
+      reasoning: improvedCopy?.reasoning || [
         'Balanced approach incorporating best practices',
-        'Enhanced clarity and emotional appeal'
+        'Enhanced clarity and emotional appeal',
+        'Optimized for platform-specific engagement'
       ],
       targetAudience: 'General audience',
       approach: 'Combines proven conversion tactics'
@@ -161,33 +167,71 @@ const ABCTestingGrid = ({
     }
   };
 
-  const handleExportAll = () => {
-    if (onExport) {
-      onExport(processedVariations);
-    } else {
-      // Default export as JSON
-      const exportData = {
-        platform,
-        original: originalCopy,
-        variations: processedVariations.map(v => ({
-          type: v.type,
-          headline: v.headline,
-          body_text: v.body_text,
-          cta: v.cta,
-          score: v.score,
-          reasoning: v.reasoning
-        }))
-      };
+  const handleExportAll = (format = 'json') => {
+    if (format === 'csv') {
+      // Export as CSV
+      const csvContent = [
+        ['Type', 'Strategy', 'Headline', 'Body Text', 'CTA', 'Score', 'Target Audience', 'Best For'],
+        // Original
+        ['Original', 'Baseline', 
+         originalCopy?.headline || '', 
+         originalCopy?.body_text || '', 
+         originalCopy?.cta || '',
+         originalCopy?.score || 60,
+         'General',
+         'Baseline comparison'],
+        // Processed variations
+        ...processedVariations.map(v => [
+          v.title,
+          v.approach || v.badge,
+          v.headline || '',
+          v.body_text || '',
+          v.cta || '',
+          v.score || 0,
+          v.targetAudience || '',
+          (v.patterns || []).join('; ')
+        ])
+      ].map(row => row.map(field => `"${field}"`).join(',')).join('\n');
       
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const blob = new Blob([csvContent], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ad-variations-${Date.now()}.json`;
+      a.download = `abc-test-variations-${platform}-${Date.now()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
       
-      toast.success('Exported all variations!');
+      toast.success('Exported as CSV!');
+    } else {
+      // Default export as JSON
+      if (onExport) {
+        onExport(processedVariations);
+      } else {
+        const exportData = {
+          platform,
+          original: originalCopy,
+          improved: processedVariations[0],
+          variations: processedVariations.slice(1).map(v => ({
+            type: v.type,
+            headline: v.headline,
+            body_text: v.body_text,
+            cta: v.cta,
+            score: v.score,
+            reasoning: v.reasoning,
+            targetAudience: v.targetAudience
+          }))
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ad-variations-${platform}-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        toast.success('Exported as JSON!');
+      }
     }
   };
 
@@ -236,17 +280,21 @@ const ABCTestingGrid = ({
           elevation={isOriginal ? 1 : 3}
           sx={{
             height: '100%',
+            minHeight: '450px',
             display: 'flex',
             flexDirection: 'column',
             position: 'relative',
             border: isOriginal ? `2px solid ${alpha(theme.palette.grey[400], 0.3)}` : 'none',
+            background: isOriginal 
+              ? alpha(theme.palette.grey[100], 0.3)
+              : `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)} 0%, ${alpha(theme.palette.background.paper, 1)} 100%)`,
             transition: 'all 0.3s ease',
             '&:hover': {
               transform: isOriginal ? 'none' : 'translateY(-4px)',
-              boxShadow: theme.shadows[8]
+              boxShadow: isOriginal ? theme.shadows[2] : theme.shadows[8]
             }
-          }}
-        >
+          }}>
+          <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
           <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -511,7 +559,7 @@ const ABCTestingGrid = ({
               variant="outlined"
               size="small"
               startIcon={<ExportIcon />}
-              onClick={handleExportAll}
+              onClick={(e) => setExportMenuAnchor(e.currentTarget)}
               sx={{ textTransform: 'none' }}
             >
               Export
@@ -520,60 +568,77 @@ const ABCTestingGrid = ({
         </Box>
       </Box>
 
-      {/* 2x2 Grid Layout */}
+      {/* 2x2 Grid Layout - Top row: Original + Improved, Bottom row: A/B/C variants */}
       <Grid container spacing={3}>
-        {/* Original (Top Left) */}
+        {/* Top Row - Original and Improved */}
         <Grid item xs={12} md={6}>
           <VariationCard
             variation={{
               id: 'original',
+              title: 'Original',
               headline: originalCopy?.headline || '',
               body_text: originalCopy?.body_text || '',
-              cta: originalCopy?.cta || ''
+              cta: originalCopy?.cta || '',
+              score: originalCopy?.score || 60
             }}
             isOriginal={true}
           />
         </Grid>
 
-        {/* Improved (Top Right) */}
         <Grid item xs={12} md={6}>
           <VariationCard variation={processedVariations[0]} />
         </Grid>
 
-        {/* Variation A (Bottom Left) */}
+        {/* Bottom Row - A/B/C Variations */}
         <Grid item xs={12} md={4}>
           <VariationCard variation={processedVariations[1]} />
         </Grid>
 
-        {/* Variation B (Bottom Center) */}
         <Grid item xs={12} md={4}>
           <VariationCard variation={processedVariations[2]} />
         </Grid>
 
-        {/* Variation C (Bottom Right) */}
         <Grid item xs={12} md={4}>
           <VariationCard variation={processedVariations[3]} />
         </Grid>
       </Grid>
 
-      {/* Performance Predictor (Optional Feature) */}
-      <Box sx={{ mt: 4, p: 3, backgroundColor: alpha(theme.palette.info.main, 0.05), borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <PredictorIcon color="info" />
-          <Typography variant="h6" fontWeight={600}>
-            Performance Prediction
+      {/* Performance Predictor */}
+      <Box sx={{ 
+        mt: 4, 
+        p: 3, 
+        backgroundColor: alpha(theme.palette.info.main, 0.08), 
+        borderRadius: 2,
+        border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+          <PredictorIcon sx={{ color: theme.palette.info.main, fontSize: '1.5rem' }} />
+          <Typography variant="h6" fontWeight={700} color="info.main">
+            A/B/C Performance Predictions
           </Typography>
         </Box>
         
-        <Grid container spacing={2}>
-          {processedVariations.map((variation, idx) => (
-            <Grid item xs={12} sm={6} md={3} key={idx}>
-              <Box>
-                <Typography variant="caption" fontWeight={600}>
+        <Grid container spacing={3}>
+          {[{ title: 'Original', score: originalCopy?.score || 60 }, ...processedVariations].map((variation, idx) => (
+            <Grid item xs={6} sm={4} md={2.4} key={idx}>
+              <Box sx={{ 
+                p: 2, 
+                borderRadius: 1, 
+                backgroundColor: alpha(theme.palette.background.paper, 0.8),
+                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+                textAlign: 'center'
+              }}>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
                   {variation.title}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Est. CTR: {(variation.score / 100 * 3.5).toFixed(2)}%
+                <Typography variant="h5" fontWeight={700} color="primary" gutterBottom>
+                  {variation.score || 75}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Est. CTR: {((variation.score || 75) / 100 * 3.5).toFixed(2)}%
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Conv: {((variation.score || 75) / 100 * 2.1).toFixed(2)}%
                 </Typography>
               </Box>
             </Grid>
@@ -581,9 +646,31 @@ const ABCTestingGrid = ({
         </Grid>
         
         <Typography variant="caption" color="text.secondary" display="block" mt={2}>
-          * Predictions based on {platform} benchmarks and historical performance data
+          * Predictions based on {platform} benchmarks and AI analysis of copy effectiveness
         </Typography>
       </Box>
+
+      {/* Export Menu */}
+      <Menu
+        anchorEl={exportMenuAnchor}
+        open={Boolean(exportMenuAnchor)}
+        onClose={() => setExportMenuAnchor(null)}
+      >
+        <MenuItem onClick={() => {
+          handleExportAll('json');
+          setExportMenuAnchor(null);
+        }}>
+          <ExportIcon sx={{ mr: 1 }} />
+          Export as JSON
+        </MenuItem>
+        <MenuItem onClick={() => {
+          handleExportAll('csv');
+          setExportMenuAnchor(null);
+        }}>
+          <ExportIcon sx={{ mr: 1 }} />
+          Export as CSV
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };

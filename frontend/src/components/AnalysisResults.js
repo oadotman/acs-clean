@@ -33,7 +33,6 @@ import {
   EVIDENCE_LEVELS 
 } from '../utils/evidenceUtils';
 import UserFeedback from './shared/UserFeedback';
-import ABCTestVariants from './shared/ABCTestVariants';
 import ABCTestingGrid from './shared/ABCTestingGrid';
 import creativeControlsService from '../services/creativeControlsService';
 
@@ -500,27 +499,7 @@ const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, o
         </Card>
       )}
 
-      {/* OLD A/B/C Test Results (Legacy - kept for compatibility) */}
-      <AnimatePresence>
-        {showABCResults && abcVariants.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.4 }}
-          >
-            <ABCTestVariants
-              variants={abcVariants}
-              onGenerate={handleGenerateABCVariants}
-              onRegenerateVariant={handleRegenerateABCVariant}
-              onSaveVariant={(variant) => console.log('Save variant:', variant)}
-              onFeedbackSubmit={handleFeedbackSubmit}
-              isGenerating={isGeneratingABC}
-              platform={analysisData?.platform || 'facebook'}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* A/B/C Test Results now handled by ABCTestingGrid above */}
 
       {/* A/B Variations Section */}
       <Collapse in={showVariations}>
