@@ -25,8 +25,8 @@ class ApiService {
     } else {
       // In development, ALWAYS use full localhost URL for proper authentication
       this.baseURL = envApiUrl || 
-                     (envBaseUrl ? envBaseUrl + '/api' : null) || 
-                     'http://localhost:8000/api';
+                     envBaseUrl || 
+                     'http://localhost:8000';
       console.log('🔧 Development mode: Using full URL for authentication compatibility');
       console.log('🔗 Development baseURL:', this.baseURL);
     }
