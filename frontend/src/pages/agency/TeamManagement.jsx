@@ -39,7 +39,10 @@ import {
   PersonAdd as PersonAddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Email as EmailIcon
+  Email as EmailIcon,
+  ContentCopy as CopyIcon,
+  WhatsApp as WhatsAppIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 
 // Import services
@@ -77,6 +80,9 @@ const AgencyTeamManagement = () => {
   const [selectedProjects, setSelectedProjects] = useState([]);
   const [selectedClients, setSelectedClients] = useState([]);
   const [isClientUser, setIsClientUser] = useState(false);
+  const [invitationCode, setInvitationCode] = useState('');
+  const [codeDialogOpen, setCodeDialogOpen] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   
   // Data State
   const [agency, setAgency] = useState(null);
@@ -246,11 +252,18 @@ const AgencyTeamManagement = () => {
         clientAccess: selectedClients
       };
       
-      await teamService.sendInvitation(agency.id, user.id, invitationData);
+      const response = await teamService.sendInvitation(agency.id, user.id, invitationData);
       
       // Refresh team members to show the pending invitation
       const updatedMembers = await teamService.getTeamMembers(agency.id);
       setTeamMembers(updatedMembers);
+      
+      // Show invitation code dialog if code is returned
+      if (response?.invitation_code) {
+        setInvitationCode(response.invitation_code);
+        setCodeDialogOpen(true);
+        setCodeCopied(false);
+      }
       
       // Reset form
       setInviteDialogOpen(false);
@@ -265,6 +278,23 @@ const AgencyTeamManagement = () => {
     } finally {
       setActionLoading(false);
     }
+  };
+  
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(invitationCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
+  
+  const handleShareWhatsApp = () => {
+    const message = encodeURIComponent(`Join our team on AdCopySurge! Use this invitation code: ${invitationCode}`);
+    window.open(`https://wa.me/?text=${message}`, '_blank');
+  };
+  
+  const handleShareEmail = () => {
+    const subject = encodeURIComponent('Team Invitation - AdCopySurge');
+    const body = encodeURIComponent(`You've been invited to join our team on AdCopySurge!\n\nInvitation Code: ${invitationCode}\n\nPlease use this code to accept the invitation.`);
+    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
   };
   
   const handleUpdateMember = async (memberId, updates) => {
@@ -855,6 +885,120 @@ const AgencyTeamManagement = () => {
             startIcon={actionLoading ? <CircularProgress size={16} /> : null}
           >
             {actionLoading ? 'Sending...' : 'Send Invite'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Invitation Code Dialog */}
+      <Dialog 
+        open={codeDialogOpen} 
+        onClose={() => setCodeDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: 'white', pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CheckCircleIcon />
+            <Typography variant="h6" component="span">
+              Invitation Created!
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Box sx={{ 
+            bgcolor: 'rgba(255, 255, 255, 0.95)', 
+            p: 3, 
+            borderRadius: 2,
+            textAlign: 'center'
+          }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Share this code with your team member:
+            </Typography>
+            
+            <Box sx={{ 
+              bgcolor: '#f5f5f5', 
+              p: 2, 
+              borderRadius: 1, 
+              mb: 3,
+              border: '2px dashed #667eea'
+            }}>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 700, 
+                  letterSpacing: 4,
+                  fontFamily: 'monospace',
+                  color: '#667eea'
+                }}
+              >
+                {invitationCode}
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
+              <Button
+                variant="contained"
+                fullWidth
+                startIcon={codeCopied ? <CheckCircleIcon /> : <CopyIcon />}
+                onClick={handleCopyCode}
+                sx={{ 
+                  bgcolor: codeCopied ? '#4caf50' : '#667eea',
+                  '&:hover': { bgcolor: codeCopied ? '#45a049' : '#5568d3' }
+                }}
+              >
+                {codeCopied ? 'Copied!' : 'Copy Code'}
+              </Button>
+              
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<WhatsAppIcon />}
+                  onClick={handleShareWhatsApp}
+                  sx={{ 
+                    borderColor: '#25D366',
+                    color: '#25D366',
+                    '&:hover': { 
+                      borderColor: '#25D366',
+                      bgcolor: 'rgba(37, 211, 102, 0.1)'
+                    }
+                  }}
+                >
+                  WhatsApp
+                </Button>
+                
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<EmailIcon />}
+                  onClick={handleShareEmail}
+                  sx={{ 
+                    borderColor: '#667eea',
+                    color: '#667eea',
+                    '&:hover': { 
+                      borderColor: '#667eea',
+                      bgcolor: 'rgba(102, 126, 234, 0.1)'
+                    }
+                  }}
+                >
+                  Email
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button 
+            onClick={() => setCodeDialogOpen(false)}
+            sx={{ color: 'white' }}
+          >
+            Close
           </Button>
         </DialogActions>
       </Dialog>
