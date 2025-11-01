@@ -189,11 +189,30 @@ const ABCTestingGrid = ({
     }));
   };
 
-  const handleFurtherImprove = (variation) => {
-    if (onImprove) {
-      onImprove(variation);
-    } else {
-      toast('Further improvement coming soon!', { icon: '🚀' });
+  const handleFurtherImprove = async (variation) => {
+    // Check if user has sufficient credits (need 2 credits)
+    try {
+      // Import credit check utility
+      const { checkCredits, deductCredits } = await import('../../services/apiService');
+      
+      const hasCredits = await checkCredits(2);
+      if (!hasCredits) {
+        toast.error('Insufficient credits. You need 2 credits to improve a variant.');
+        return;
+      }
+      
+      // Deduct 2 credits
+      await deductCredits(2, 'variant_improvement');
+      
+      if (onImprove) {
+        toast.success('Improving variant... (2 credits deducted)');
+        onImprove(variation);
+      } else {
+        toast('Further improvement coming soon!', { icon: '🚀' });
+      }
+    } catch (error) {
+      console.error('Credit check/deduction error:', error);
+      toast.error('Failed to process improvement request');
     }
   };
 
@@ -687,10 +706,10 @@ const ABCTestingGrid = ({
                   {variation.score || 75}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" display="block">
-                  Est. CTR: {((variation.score || 75) / 100 * 3.5).toFixed(2)}%
+                  Est. CTR: {(((variation.score || 75) / 100 * 3.5)).toFixed(2)}%
                 </Typography>
                 <Typography variant="caption" color="text.secondary" display="block">
-                  Conv: {((variation.score || 75) / 100 * 2.1).toFixed(2)}%
+                  Conv: {(((variation.score || 75) / 100 * 2.1)).toFixed(2)}%
                 </Typography>
               </Box>
             </Grid>

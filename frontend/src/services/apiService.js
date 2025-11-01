@@ -778,7 +778,123 @@ class ApiService {
       throw error;
     }
   }
+  
+  // === CREDIT MANAGEMENT ===
+  
+  /**
+   * Check if user has sufficient credits
+   * @param {number} requiredCredits - Number of credits needed
+   * @returns {Promise<boolean>} - True if user has enough credits
+   */
+  async checkCredits(requiredCredits) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        // For unauthenticated users, assume they have credits (dev mode)
+        console.log('⚠️ No auth session - assuming credits available (dev mode)');
+        return true;
+      }
+      
+      // Get user's current credit balance from Supabase
+      const { data, error } = await supabase
+        .from('user_credits')
+        .select('credits')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error checking credits:', error);
+        // Assume user has credits if we can't check
+        return true;
+      }
+      
+      const currentCredits = data?.credits || 0;
+      console.log(`💳 Credit check: ${currentCredits} available, ${requiredCredits} required`);
+      
+      return currentCredits >= requiredCredits;
+    } catch (error) {
+      console.error('Credit check error:', error);
+      // Assume user has credits on error
+      return true;
+    }
+  }
+  
+  /**
+   * Deduct credits from user's account
+   * @param {number} amount - Number of credits to deduct
+   * @param {string} reason - Reason for deduction (for logging)
+   * @returns {Promise<object>} - Updated credit balance
+   */
+  async deductCredits(amount, reason = 'action') {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        console.log('⚠️ No auth session - skipping credit deduction (dev mode)');
+        return { success: true, credits: 999999 };
+      }
+      
+      // Get current credits
+      const { data: currentData, error: fetchError } = await supabase
+        .from('user_credits')
+        .select('credits')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      if (fetchError) {
+        console.error('Error fetching credits:', fetchError);
+        throw new Error('Could not fetch credit balance');
+      }
+      
+      const currentCredits = currentData?.credits || 0;
+      const newCredits = currentCredits - amount;
+      
+      if (newCredits < 0) {
+        throw new Error(`Insufficient credits. Have ${currentCredits}, need ${amount}`);
+      }
+      
+      // Deduct credits
+      const { data, error } = await supabase
+        .from('user_credits')
+        .update({ 
+          credits: newCredits,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', session.user.id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error deducting credits:', error);
+        throw new Error('Could not deduct credits');
+      }
+      
+      // Log the transaction
+      await supabase.from('credit_transactions').insert({
+        user_id: session.user.id,
+        amount: -amount,
+        reason: reason,
+        balance_after: newCredits,
+        created_at: new Date().toISOString()
+      });
+      
+      console.log(`💳 Deducted ${amount} credits for ${reason}. New balance: ${newCredits}`);
+      
+      return {
+        success: true,
+        credits: newCredits,
+        deducted: amount
+      };
+    } catch (error) {
+      console.error('Credit deduction error:', error);
+      throw error;
+    }
+  }
 }
 
 const apiService = new ApiService();
+
+// Export both the instance and the functions for direct import
+export const checkCredits = (amount) => apiService.checkCredits(amount);
+export const deductCredits = (amount, reason) => apiService.deductCredits(amount, reason);
+
 export default apiService;
