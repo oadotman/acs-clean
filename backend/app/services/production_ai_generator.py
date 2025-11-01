@@ -589,11 +589,14 @@ IMPROVE the original ad by:
 7. Maintaining ALL specific features, benefits, and offers from the original
 {char_limit_note}
 
-CRITICAL: Respond ONLY in this exact format:
-HEADLINE: [improved persuasive headline]
-BODY: [restructured body with better flow]
-CTA: [stronger call-to-action]
-REASON: [specific improvements made]
+⚠️ CRITICAL OUTPUT FORMAT - Follow this EXACT structure (no bullets, no dashes, no extra text):
+
+HEADLINE: [your improved headline here]
+BODY: [your body text here]
+CTA: [your call-to-action here]
+REASON: [brief explanation of changes]
+
+Do NOT add bullet points, dashes, or section labels like "IMPROVED AD COPY:". Just the four lines above.
 """,
             
             'emotional': f"""
@@ -612,11 +615,14 @@ IMPROVE emotional impact by:
 7. Making the reader FEEL the problem and solution
 {char_limit_note}
 
-CRITICAL: Respond ONLY in this exact format:
-HEADLINE: [emotionally engaging headline]
-BODY: [emotionally enhanced body copy]
-CTA: [emotion-driven call-to-action]
-REASON: [emotional improvements made]
+⚠️ CRITICAL OUTPUT FORMAT - Follow this EXACT structure (no bullets, no dashes, no extra text):
+
+HEADLINE: [your improved headline here]
+BODY: [your body text here]
+CTA: [your call-to-action here]
+REASON: [brief explanation of changes]
+
+Do NOT add bullet points, dashes, or section labels. Just the four lines above.
 """,
             
             'data_driven': f"""
@@ -632,11 +638,14 @@ Create a DATA-RICH and EVIDENCE-BASED ad variation that:
 7. Use concrete before/after numbers and success metrics
 {char_limit_note}
 
-CRITICAL: Respond ONLY in this exact format:
-HEADLINE: [data-rich headline with numbers]
-BODY: [statistically-heavy body text with metrics]
-CTA: [results-focused call-to-action]
-REASON: [specific data points and proof elements used]
+⚠️ CRITICAL OUTPUT FORMAT - Follow this EXACT structure (no bullets, no dashes, no extra text):
+
+HEADLINE: [your improved headline here]
+BODY: [your body text here]
+CTA: [your call-to-action here]
+REASON: [brief explanation of changes]
+
+Do NOT add bullet points, dashes, or section labels. Just the four lines above.
 """,
             
             'platform_optimized': f"""
@@ -652,11 +661,14 @@ Create a {ad_data.get('platform', 'FACEBOOK').upper()}-OPTIMIZED ad variation th
 7. Aligns with how successful ads perform on this specific platform
 {char_limit_note}
 
-CRITICAL: Respond ONLY in this exact format:
-HEADLINE: [platform-optimized headline]
-BODY: [platform-optimized body text]
-CTA: [platform-appropriate call-to-action]
-REASON: [specific platform optimizations applied]
+⚠️ CRITICAL OUTPUT FORMAT - Follow this EXACT structure (no bullets, no dashes, no extra text):
+
+HEADLINE: [your improved headline here]
+BODY: [your body text here]
+CTA: [your call-to-action here]
+REASON: [brief explanation of changes]
+
+Do NOT add bullet points, dashes, or section labels. Just the four lines above.
 """,
             'benefit_focused': f"""
 {base_context}{tiktok_note}{creative_instructions}
