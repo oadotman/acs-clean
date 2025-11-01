@@ -289,6 +289,9 @@ class ProductionAIService:
             
             self._track_usage('openai', tokens_used)
             
+            # Log raw AI response for debugging
+            logger.info(f"Raw OpenAI response:\n{content}")
+            
             # Parse and validate response
             parsed_result = self._parse_structured_response(content, variant_type, platform)
             
@@ -736,19 +739,22 @@ REASON: [what changed and why it persuades]
                     key = key.strip().upper()
                     value = value.strip()
                     
-                    if key == 'HEADLINE':
+                    if key == 'HEADLINE' or key == 'HEAD':
                         parsed['headline'] = value[:max_headline]
-                    elif key == 'BODY':
+                    elif key == 'BODY' or key == 'BODY_TEXT' or key == 'BODY TEXT':
                         parsed['body_text'] = value[:max_body]
-                    elif key == 'CTA':
+                    elif key == 'CTA' or key == 'CALL-TO-ACTION' or key == 'CALL TO ACTION':
                         parsed['cta'] = value[:max_cta]
-                    elif key == 'REASON':
+                    elif key == 'REASON' or key == 'IMPROVEMENT_REASON' or key == 'WHY':
                         parsed['improvement_reason'] = value[:300]
             
             # Validate required fields are present and not empty
             required_fields = ['headline', 'body_text', 'cta', 'improvement_reason']
             for field in required_fields:
                 if not parsed.get(field) or len(parsed[field].strip()) < 5:
+                    logger.error(f"AI parsing failed - Missing/insufficient field: {field}")
+                    logger.error(f"Parsed so far: {parsed}")
+                    logger.error(f"Original AI response:\n{response}")
                     raise ProductionError(
                         f"AI response missing or insufficient {field}",
                         "AI_RESPONSE_INCOMPLETE",
