@@ -501,30 +501,6 @@ const ABCTestingGrid = ({
               >
                 {copiedStates[variation.id] ? 'Copied!' : 'Copy'}
               </Button>
-              
-              {!isOriginal && (
-                <Tooltip title="Further refine this variation (2 credits)">
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    startIcon={<ImproveIcon sx={{ fontSize: 16 }} />}
-                    onClick={() => handleFurtherImprove(variation)}
-                    sx={{ 
-                      textTransform: 'none',
-                      borderColor: alpha(theme.palette.primary.main, 0.3),
-                      color: theme.palette.text.secondary,
-                      '&:hover': {
-                        borderColor: theme.palette.primary.main,
-                        color: theme.palette.primary.main,
-                        bgcolor: alpha(theme.palette.primary.main, 0.04)
-                      }
-                    }}
-                  >
-                    Improve
-                  </Button>
-                </Tooltip>
-              )}
             </Box>
 
             {/* Collapsible "Why This Works" Section */}
@@ -783,7 +759,7 @@ const ABCTestingGrid = ({
                   {variation.title}
                 </Typography>
                 <Typography variant="h5" fontWeight={700} color="primary" gutterBottom>
-                  {variation.score || 75}
+                  {Math.round(variation.score || 75)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" display="block">
                   Est. CTR: {(((variation.score || 75) / 100 * 3.5)).toFixed(2)}%
