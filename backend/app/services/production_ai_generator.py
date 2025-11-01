@@ -734,6 +734,10 @@ REASON: [what changed and why it persuades]
             
             for line in lines:
                 line = line.strip()
+                # Remove leading bullet points/dashes
+                line = line.lstrip('- •*')
+                line = line.strip()
+                
                 if ':' in line:
                     key, value = line.split(':', 1)
                     key = key.strip().upper()
