@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ContentCopy as CopyIcon,
   CheckCircle as CheckIcon,
+  CheckCircle,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   AutoAwesome as ImproveIcon,
@@ -292,10 +293,20 @@ const ABCTestingGrid = ({
 
   const getCharCountColor = (text, limit) => {
     const length = text?.length || 0;
+    // More subtle: only show red when OVER limit, otherwise gray
     if (length > limit) return theme.palette.error.main;
-    if (length > limit * 0.9) return theme.palette.warning.main;
-    return theme.palette.success.main;
+    return theme.palette.text.secondary; // Subtle gray
   };
+  
+  // Find the winning variation (highest score)
+  const getWinningVariation = () => {
+    const allVariations = [originalCopy, ...processedVariations];
+    return allVariations.reduce((winner, current) => 
+      (current.score || 0) > (winner.score || 0) ? current : winner
+    , allVariations[0]);
+  };
+  
+  const winningVariation = getWinningVariation();
 
   const highlightPowerWords = (text) => {
     const powerWords = [
@@ -318,6 +329,9 @@ const ABCTestingGrid = ({
     const headlineLength = variation.headline?.length || 0;
     const bodyLength = variation.body_text?.length || 0;
     const ctaLength = variation.cta?.length || 0;
+    
+    // Check if this is the winning variation
+    const isWinner = !isOriginal && (variation.score || 0) === (winningVariation.score || 0) && variation.id === winningVariation.id;
 
     return (
       <motion.div
@@ -335,39 +349,28 @@ const ABCTestingGrid = ({
             flexDirection: 'column',
             position: 'relative',
             border: `2px solid`,
+            // Purposeful color: green border ONLY for winner, otherwise subtle gray
             borderColor: isOriginal 
               ? theme.palette.divider
-              : {
-                  'variation_a': theme.palette.success.main,
-                  'benefit_focused': theme.palette.success.main,
-                  'variation_b': theme.palette.warning.main,
-                  'problem_focused': theme.palette.warning.main,
-                  'variation_c': theme.palette.info.main,
-                  'story_driven': theme.palette.info.main,
-                  'improved': theme.palette.primary.main
-                }[variation.type] || theme.palette.primary.main,
+              : isWinner
+                ? theme.palette.success.main
+                : alpha(theme.palette.divider, 0.5),
             background: isOriginal 
               ? alpha(theme.palette.background.paper, 0.5)
-              : alpha(theme.palette.background.paper, 0.95),
+              : isWinner
+                ? alpha(theme.palette.success.main, 0.02)
+                : alpha(theme.palette.background.paper, 0.95),
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             '&:hover': !isOriginal ? {
               transform: 'translateY(-2px)',
               boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.15)}`,
-              borderColor: {
-                'variation_a': theme.palette.success.light,
-                'benefit_focused': theme.palette.success.light,
-                'variation_b': theme.palette.warning.light,
-                'problem_focused': theme.palette.warning.light,
-                'variation_c': theme.palette.info.light,
-                'story_driven': theme.palette.info.light,
-                'improved': theme.palette.primary.light
-              }[variation.type] || theme.palette.primary.light
+              borderColor: isWinner ? theme.palette.success.main : theme.palette.primary.light
             } : {}
           }}>
-          <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2.5 }}>
+          <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
             {/* Header */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5, flexWrap: 'wrap' }}>
                 <Typography variant="h6" fontWeight={700} sx={{ fontSize: '1rem' }}>
                   {isOriginal ? 'Original' : variation.title}
                 </Typography>
@@ -375,6 +378,16 @@ const ABCTestingGrid = ({
                   <Chip
                     label={variation.badge}
                     color={variation.badgeColor}
+                    size="small"
+                    sx={{ fontWeight: 700, fontSize: '0.7rem', height: 24 }}
+                  />
+                )}
+                {/* Winner Badge */}
+                {isWinner && (
+                  <Chip
+                    icon={<CheckCircle sx={{ fontSize: 14 }} />}
+                    label="Expected Winner"
+                    color="success"
                     size="small"
                     sx={{ fontWeight: 700, fontSize: '0.7rem', height: 24 }}
                   />
@@ -490,14 +503,23 @@ const ABCTestingGrid = ({
               </Button>
               
               {!isOriginal && (
-                <Tooltip title="Refine this variation further">
+                <Tooltip title="Further refine this variation (2 credits)">
                   <Button
-                    variant="contained"
+                    variant="outlined"
                     size="small"
                     fullWidth
-                    startIcon={<ImproveIcon />}
+                    startIcon={<ImproveIcon sx={{ fontSize: 16 }} />}
                     onClick={() => handleFurtherImprove(variation)}
-                    sx={{ textTransform: 'none' }}
+                    sx={{ 
+                      textTransform: 'none',
+                      borderColor: alpha(theme.palette.primary.main, 0.3),
+                      color: theme.palette.text.secondary,
+                      '&:hover': {
+                        borderColor: theme.palette.primary.main,
+                        color: theme.palette.primary.main,
+                        bgcolor: alpha(theme.palette.primary.main, 0.04)
+                      }
+                    }}
                   >
                     Improve
                   </Button>
@@ -605,7 +627,65 @@ const ABCTestingGrid = ({
   
   return (
     <Box>
-      {/* Header Actions */}
+      {/* Test Overview Section */}
+      <Card 
+        elevation={0}
+        sx={{ 
+          mb: 4, 
+          p: 3,
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.success.main, 0.05)} 100%)`,
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+        }}
+      >
+        <Typography variant="h6" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <BeakerIcon sx={{ color: theme.palette.primary.main }} />
+          Test Overview
+        </Typography>
+        <Grid container spacing={3} sx={{ mt: 1 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                Original Score
+              </Typography>
+              <Typography variant="h4" fontWeight={700} color="warning.main">
+                {Math.round(originalCopy?.score || 60)}
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                Best Score
+              </Typography>
+              <Typography variant="h4" fontWeight={700} color="success.main">
+                {Math.round(winningVariation?.score || 75)}
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                Improvement
+              </Typography>
+              <Typography variant="h4" fontWeight={700} color="primary.main">
+                +{Math.round((winningVariation?.score || 75) - (originalCopy?.score || 60))}
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                Variations
+              </Typography>
+              <Typography variant="h4" fontWeight={700}>
+                {processedVariations.length}
+              </Typography>
+            </Box>
+          </Grid>
+        </Grid>
+      </Card>
+      
+      {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h5" fontWeight={700}>
           <BeakerIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
@@ -640,7 +720,7 @@ const ABCTestingGrid = ({
       </Box>
 
       {/* 2x2 Grid Layout - Top row: Original + Improved, Bottom row: A/B/C variants */}
-      <Grid container spacing={3}>
+      <Grid container spacing={4}>
         {/* Top Row - Original and Improved */}
         <Grid item xs={12} md={6}>
           <VariationCard
