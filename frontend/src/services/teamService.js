@@ -320,15 +320,14 @@ class TeamService {
 
       const result = await response.json();
       
-      if (result.success) {
-        if (result.email_sent) {
-          toast.success(`✉️ Invitation email sent to ${email}`);
-        } else {
-          toast.success(`✅ Invitation created for ${email} (email sending failed, but invitation is active)`);
-        }
+      if (result.success && result.invitation_code) {
+        // Show success with code for manual sharing
+        toast.success(`✅ Invitation code generated: ${result.invitation_code}`, {
+          duration: 8000, // Show longer so user can copy
+        });
         return result;
       } else {
-        throw new Error(result.message || 'Failed to send invitation');
+        throw new Error(result.message || 'Failed to generate invitation code');
       }
     } catch (error) {
       console.error('Error in sendInvitation:', error);
