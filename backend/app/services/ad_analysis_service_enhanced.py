@@ -211,7 +211,8 @@ class EnhancedAdAnalysisService:
                             'scores': getattr(tool_output, 'scores', {}),
                             'insights': getattr(tool_output, 'insights', {}),
                             'recommendations': getattr(tool_output, 'recommendations', []),
-                            'metadata': getattr(tool_output, 'metadata', {})
+                            'execution_time': getattr(tool_output, 'execution_time', 0.0),
+                            'confidence_score': getattr(tool_output, 'confidence_score', None)
                         }
         except Exception as e:
             logger.warning(f"Could not extract tool_results: {e}. Continuing without detailed tool results.")
