@@ -202,15 +202,20 @@ class EnhancedAdAnalysisService:
         
         # Extract tool-specific results for frontend display
         tool_results_dict = {}
-        for tool_name, tool_output in orchestration_result.tool_results.items():
-            if tool_output.success:
-                tool_results_dict[tool_name] = {
-                    'success': True,
-                    'scores': tool_output.scores,
-                    'insights': tool_output.insights,
-                    'recommendations': tool_output.recommendations,
-                    'metadata': tool_output.metadata
-                }
+        try:
+            if hasattr(orchestration_result, 'tool_results') and orchestration_result.tool_results:
+                for tool_name, tool_output in orchestration_result.tool_results.items():
+                    if tool_output and hasattr(tool_output, 'success') and tool_output.success:
+                        tool_results_dict[tool_name] = {
+                            'success': True,
+                            'scores': getattr(tool_output, 'scores', {}),
+                            'insights': getattr(tool_output, 'insights', {}),
+                            'recommendations': getattr(tool_output, 'recommendations', []),
+                            'metadata': getattr(tool_output, 'metadata', {})
+                        }
+        except Exception as e:
+            logger.warning(f"Could not extract tool_results: {e}. Continuing without detailed tool results.")
+            tool_results_dict = {}
         
         return AdAnalysisResponse(
             analysis_id=orchestration_result.request_id,

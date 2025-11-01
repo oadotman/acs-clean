@@ -302,11 +302,20 @@ const NewAnalysis = () => {
 
   // Comprehensive analysis
   const runAnalysis = async () => {
+    console.log('👉 ANALYZE BUTTON CLICKED!');
+    console.log('💳 Checking credits for FULL_ANALYSIS...');
+    console.log('💳 hasEnoughCredits:', hasEnoughCredits('FULL_ANALYSIS'));
+    console.log('💳 Credit system state:', { hasEnoughCredits, executeWithCredits, getCreditRequirement });
+    
     // Check if user has enough credits for a full analysis
     if (!hasEnoughCredits('FULL_ANALYSIS')) {
+      console.error('❌ Not enough credits! Analysis blocked.');
+      toast.error('Not enough credits for analysis. Please check your credit balance.');
       // Toast will be shown automatically by the credit system
       return;
     }
+    
+    console.log('✅ Credits OK, starting analysis...');
     
     // Execute analysis with credit consumption
     const result = await executeWithCredits(
