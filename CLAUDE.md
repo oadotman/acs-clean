@@ -136,15 +136,23 @@ backend/app/
 
 **Key Architecture Patterns:**
 
-1. **Tools SDK:** Unified orchestration system for ad analysis tools (readability, emotion, CTA analysis, etc.). Located in `backend/packages/tools_sdk/`. Services use `ToolOrchestrator` for consistent tool execution.
+1. **Tools SDK (⚡ Critical):** Unified orchestration system for ad analysis tools. Located in `backend/packages/tools_sdk/`.
+   - **ToolOrchestrator** runs 9 analysis tools in **parallel** (not sequential)
+   - Performance: 60-120 seconds total vs 5-10 minutes if sequential
+   - Tools: Readability, Emotion, CTA, Persuasion, Compliance, etc.
+   - Standardized interfaces via `ToolInput`/`ToolOutput`
+   - Easy to add new tools without modifying existing code
 
 2. **Multi-Agent System:** AI optimization uses multiple specialized agents (persuasion expert, emotion expert, CTA specialist) coordinated by `MultiAgentOptimizer` in `agent_system.py`.
+   - Agents run in parallel for consensus-based recommendations
+   - Fallback strategy: OpenAI GPT-4 → Google Gemini → Retry with backoff
 
 3. **Service Layer:** All business logic lives in `services/`. API routes are thin controllers that call services.
+   - Routes validate and delegate → Services contain all logic → Models are ORM entities
 
 4. **Dual Entrypoints:**
-   - **Development:** `main.py` - Use `uvicorn main:app --reload`
-   - **Production:** `main_production.py` - Use `uvicorn main_production:app` (systemd uses this)
+   - **Development:** `main.py` - Use `uvicorn main:app --reload` (API docs enabled)
+   - **Production:** `main_production.py` - Use `uvicorn main_production:app` (API docs disabled, systemd uses this)
 
 ### Frontend Structure
 
@@ -153,28 +161,41 @@ React SPA with component-based architecture:
 ```
 frontend/src/
 ├── pages/                 # Route components (one per page)
-│   ├── Dashboard.jsx      # Main dashboard
-│   ├── AdAnalysis.js      # Ad analysis interface
-│   ├── AnalysisResults.js # Results display
-│   ├── ProjectsList.js    # Projects management
+│   ├── NewAnalysis.jsx    # Main ad analysis interface (primary workflow)
+│   ├── Dashboard.jsx      # User dashboard
+│   ├── BillingCredits.jsx # Credit management
+│   ├── InviteAccept.jsx   # Team invitation acceptance
 │   └── agency/            # Agency-specific pages
+│       ├── TeamManagement.jsx
+│       ├── WhiteLabelSettings.jsx
+│       └── ReportsBranding.jsx
 ├── components/            # Reusable UI components
+│   ├── ComprehensiveAnalysisLoader.jsx  # Analysis progress visualization
+│   ├── ComprehensiveResults.jsx         # Results display
+│   └── SupportWidget.jsx                # Help/support system
 ├── services/              # API client modules
-│   ├── apiClient.js       # Axios-based API client
+│   ├── apiClient.js       # Axios instance with auth (all API calls go here)
+│   ├── apiService.js      # Main API methods
 │   ├── authContext.js     # Supabase auth context
-│   ├── projectService.js  # Project CRUD operations
-│   └── paddleService.js   # Paddle payment integration
-├── contexts/              # React contexts for state
+│   ├── teamService.js     # Team operations
+│   ├── paddleService.js   # Paddle payment integration
+│   └── whitelabelService.js
+├── contexts/              # React contexts for global state
+│   ├── ThemeContext.jsx   # Light/dark mode
+│   ├── WhiteLabelContext.jsx  # White-label branding
+│   └── SettingsContext.jsx
 ├── hooks/                 # Custom React hooks
+│   └── useCredits.js      # Credit management hook
 └── utils/                 # Helper functions
 ```
 
 **Key Patterns:**
 
-- **API Client:** All backend calls go through `apiClient.js` which handles auth tokens and error handling.
+- **API Client:** All backend calls go through `apiClient.js` which handles auth tokens, error handling, and 120s timeout for analysis.
 - **Supabase Auth:** Authentication managed by `authContext.js` using Supabase client.
-- **React Query:** Used for server state management and caching.
-- **Material-UI:** Component library for consistent UI.
+- **React Query:** Used for server state management and caching (stale-while-revalidate).
+- **Material-UI v5:** Component library for consistent UI.
+- **State Management:** React Query (server state) + Context API (app state) + Local hooks (component state)
 
 ## Important Configuration
 
@@ -225,16 +246,31 @@ REACT_APP_SUPABASE_ANON_KEY=your-anon-key
 
 ## Key Workflows
 
-### Ad Analysis Flow
+### Ad Analysis Flow (60-120 seconds total)
 
-1. User submits ad copy via `POST /api/ads/analyze` (handled by `api/ads.py`)
-2. Request validated using Pydantic schema (`schemas/ads.py`)
-3. `EnhancedAdAnalysisService` orchestrates analysis:
-   - Uses Tools SDK to run multiple analysis tools in parallel
-   - Tools: Readability, Emotion, CTA strength, Persuasion, Compliance
-4. Results scored and saved to database (`models/ad_analysis.py`)
-5. If AI generation requested, `ProductionAIService` generates alternatives
-6. Response includes scores, suggestions, and alternatives
+**Complete Workflow:**
+1. User enters ad copy in `NewAnalysis.jsx`
+2. Frontend checks credits via `useCredits.js` hook
+3. Deducts 1 credit (⚠️ Note: No refund on failure - known issue)
+4. `POST /api/ads/analyze` → `api/ads.py` validates request
+5. `EnhancedAdAnalysisService` orchestrates analysis:
+   - Uses Tools SDK `ToolOrchestrator` to run 9 tools **in parallel**
+   - Tools: Readability, Emotion, CTA strength, Persuasion, Compliance, Brand Voice, etc.
+   - Parallel execution: 60-120s total (vs 5-10 min if sequential)
+6. Results scored and saved to `ad_analyses` table
+7. If AI generation requested, `ProductionAIService` generates 4 alternatives:
+   - Persuasive variant
+   - Emotional variant
+   - Stats-heavy variant
+   - Balanced variant
+8. Response returned to `ComprehensiveResults.jsx` for display
+
+**Critical Files:**
+- Frontend: `frontend/src/pages/NewAnalysis.jsx`
+- Backend API: `backend/app/api/ads.py`
+- Service: `backend/app/services/ad_analysis_service_enhanced.py`
+- Tools SDK: `backend/packages/tools_sdk/tool_orchestrator.py`
+- AI Generation: `backend/app/services/production_ai_generator.py`
 
 ### AI Content Generation
 
@@ -261,29 +297,46 @@ The system uses a multi-tiered AI approach:
 
 ### Team Invitations
 
-- Team owners can invite members via `POST /api/team/invite`
-- Automatically sends professional email invitations via **Resend**
-- Secure 32-byte URL-safe tokens (`secrets.token_urlsafe(32)`)
-- 7-day expiration for invitation links
-- Personalized emails with agency branding
+**Code-Based System** (refactored from email-based):
+- Team owners generate 6-character invitation codes via `POST /api/team/invite`
+- Codes stored in `team_invitations` table with 7-day expiration
+- Owner shares code manually (Slack, email, etc.)
+- Invitee enters code to accept invitation
 - Role-based access control (admin, editor, viewer, client)
-- Graceful fallback if email sending fails (invitation still created)
+- More reliable than email delivery, works in all environments
 
-**Resend Integration:**
-- Production email delivery via Resend API (`https://api.resend.com/emails`)
-- Professional HTML/text email templates in `app/templates/emails/`
-- Mock mode for development (logs emails without sending)
-- Requires `RESEND_API_KEY` and verified domain
-- See `RESEND_SETUP.md` for complete setup guide
+**Why Code-Based:**
+- No dependency on email service availability
+- Works in development without SMTP configuration
+- User-controlled sharing method (Slack, WhatsApp, etc.)
+- Simpler implementation and debugging
+
+### White-Label System
+
+**Features:**
+- Custom branding per agency (logo, colors, company name)
+- Subdomain support
+- Custom email templates
+- Report branding
+- Stored in `whitelabel_settings` table
+
+**Configuration:**
+- Agency owners configure via `WhiteLabelSettings.jsx`
+- Frontend context: `WhiteLabelContext.jsx`
+- Backend service: `whitelabel_service.py`
 
 ## Database Schema
 
 **Key Tables:**
-- `users` - User accounts (linked to Supabase auth)
+- `users` - User accounts (linked to Supabase auth via `supabase_user_id`)
 - `ad_analyses` - Analysis results and scores
-- `projects` - User projects (optional grouping)
+- `ad_generations` - AI-generated alternative variants
+- `agencies` - Agency/team organizations
+- `team_invitations` - Pending team invites (6-character codes)
+- `user_credits` - Credit balances per user
+- `credit_transactions` - Audit trail for all credit operations
 - `subscriptions` - Paddle subscription data
-- `team_invitations` - Pending team invites
+- `whitelabel_settings` - Custom branding per agency
 - `support_tickets` - Customer support system
 
 Migrations managed by Alembic in `backend/alembic/versions/`.
@@ -406,3 +459,26 @@ Main endpoint groups:
 - `/api/team/*` - Team management and invitations
 - `/api/analytics/*` - Usage analytics
 - `/api/blog/*` - Blog content system (markdown-based)
+
+## Known Issues & Important Notes
+
+### Credit System
+- **No refund on failure**: Credits are deducted BEFORE analysis completes. If analysis fails, credits are not refunded automatically.
+- Location: `frontend/src/hooks/useCredits.js` (deduction happens before API call)
+- Consider implementing `refundCredits()` function for error cases
+
+### Anonymous User Fallback
+- If authentication fails during analysis, system falls back to 'anonymous' user
+- Analysis completes but is not linked to user account
+- Ensure proper authentication before allowing analysis
+
+### Performance
+- Tools SDK parallel execution is critical: 60-120s vs 5-10 min sequential
+- Do not modify `execution_mode="parallel"` in `ad_analysis_service_enhanced.py`
+- Analysis timeout set to 120s in `apiClient.js`
+
+### Development Notes
+- Use `main.py` for development (API docs enabled)
+- Use `main_production.py` for production testing (API docs disabled)
+- Migrations: Always review autogenerated migrations before applying
+- Testing: SQLite used for tests, PostgreSQL for development/production
