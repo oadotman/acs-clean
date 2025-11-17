@@ -190,14 +190,56 @@ const AgencyTeamManagement = () => {
       
       setAgency(agencyData);
       
-      // Load team members and analytics
-      const [members, analytics, agencyProjects, agencyClients] = await Promise.all([
-        teamService.getTeamMembers(agencyData.id),
-        teamService.getTeamAnalytics(agencyData.id),
-        teamService.getAgencyProjects(agencyData.id),
-        teamService.getAgencyClients(agencyData.id)
-      ]);
-      
+      // Load team members and analytics with error handling for each
+      let members = [];
+      let analytics = null;
+      let agencyProjects = [];
+      let agencyClients = [];
+
+      // Try to load team members
+      try {
+        members = await teamService.getTeamMembers(agencyData.id);
+        console.log('✅ Loaded team members:', members.length);
+      } catch (err) {
+        console.error('⚠️ Could not load team members:', err);
+        toast.error('Could not load team members. Please refresh the page.');
+        members = []; // Use empty array as fallback
+      }
+
+      // Try to load analytics
+      try {
+        analytics = await teamService.getTeamAnalytics(agencyData.id);
+        console.log('✅ Loaded analytics:', analytics);
+      } catch (err) {
+        console.error('⚠️ Could not load analytics:', err);
+        analytics = {
+          totalMembers: members.length,
+          activeMembers: members.filter(m => m.status === 'active').length,
+          pendingMembers: 0,
+          totalAnalyses: 0,
+          totalCredits: 0,
+          roleDistribution: {}
+        };
+      }
+
+      // Try to load projects
+      try {
+        agencyProjects = await teamService.getAgencyProjects(agencyData.id);
+        console.log('✅ Loaded projects:', agencyProjects.length);
+      } catch (err) {
+        console.error('⚠️ Could not load projects:', err);
+        agencyProjects = [];
+      }
+
+      // Try to load clients
+      try {
+        agencyClients = await teamService.getAgencyClients(agencyData.id);
+        console.log('✅ Loaded clients:', agencyClients.length);
+      } catch (err) {
+        console.error('⚠️ Could not load clients:', err);
+        agencyClients = [];
+      }
+
       setTeamMembers(members);
       setTeamAnalytics(analytics);
       setProjects(agencyProjects);

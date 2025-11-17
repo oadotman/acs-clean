@@ -324,21 +324,14 @@ class TeamServiceFixed {
   }
 
   /**
-   * Get team members (existing functionality)
+   * Get team members (fixed to avoid relationship ambiguity)
    */
   async getTeamMembers(agencyId) {
     try {
+      // First get team members
       const { data: members, error } = await supabase
         .from('agency_team_members')
-        .select(`
-          *,
-          user_profiles (
-            id,
-            email,
-            full_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('agency_id', agencyId)
         .order('created_at', { ascending: false });
 
@@ -346,23 +339,51 @@ class TeamServiceFixed {
         throw new Error('Failed to fetch team members: ' + error.message);
       }
 
+      if (!members || members.length === 0) {
+        return [];
+      }
+
+      // Get unique user IDs
+      const userIds = [...new Set(members.map(m => m.user_id).filter(Boolean))];
+
+      // Fetch user profiles separately to avoid relationship ambiguity
+      const { data: profiles, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id, email, full_name, avatar_url')
+        .in('id', userIds);
+
+      if (profileError) {
+        console.warn('Could not fetch user profiles:', profileError);
+      }
+
+      // Create a map for easy lookup
+      const profileMap = {};
+      if (profiles) {
+        profiles.forEach(profile => {
+          profileMap[profile.id] = profile;
+        });
+      }
+
       // Transform for frontend
-      return (members || []).map(member => ({
-        id: member.id,
-        userId: member.user_id,
-        name: member.user_profiles?.full_name || member.user_profiles?.email || 'Unknown',
-        email: member.user_profiles?.email || '',
-        avatar: member.user_profiles?.avatar_url || '',
-        role: member.role,
-        status: member.status,
-        createdAt: member.created_at,
-        lastActive: 'N/A',
-        analysesThisMonth: 0,
-        creditsUsed: 0,
-        isClient: member.role === 'client',
-        projectsAccess: member.project_access || [],
-        clientAccess: member.client_access || []
-      }));
+      return members.map(member => {
+        const profile = profileMap[member.user_id] || {};
+        return {
+          id: member.id,
+          userId: member.user_id,
+          name: profile.full_name || profile.email || 'Unknown',
+          email: profile.email || '',
+          avatar: profile.avatar_url || '',
+          role: member.role,
+          status: member.status,
+          createdAt: member.created_at,
+          lastActive: 'N/A',
+          analysesThisMonth: 0,
+          creditsUsed: 0,
+          isClient: member.role === 'client',
+          projectsAccess: member.project_access || [],
+          clientAccess: member.client_access || []
+        };
+      });
 
     } catch (error) {
       console.error('Error fetching team members:', error);
@@ -375,6 +396,13 @@ class TeamServiceFixed {
    */
   async getTeamAnalytics(agencyId) {
     try {
+      // Get pending invitations separately to avoid confusion
+      const { data: invitations } = await supabase
+        .from('agency_invitations')
+        .select('id')
+        .eq('agency_id', agencyId)
+        .eq('status', 'pending');
+
       const { data: members } = await supabase
         .from('agency_team_members')
         .select('id, role, status')
@@ -382,12 +410,12 @@ class TeamServiceFixed {
 
       const totalMembers = members?.length || 0;
       const activeMembers = members?.filter(m => m.status === 'active').length || 0;
-      const pendingMembers = members?.filter(m => m.status === 'pending').length || 0;
+      const pendingInvitations = invitations?.length || 0;
 
       return {
         totalMembers,
         activeMembers,
-        pendingMembers,
+        pendingMembers: pendingInvitations,
         totalAnalyses: 0,
         totalCredits: 0,
         roleDistribution: {}
