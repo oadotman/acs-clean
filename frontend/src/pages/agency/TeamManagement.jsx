@@ -46,10 +46,12 @@ import {
 } from '@mui/icons-material';
 
 // Import services
-import teamService from '../../services/teamService';
+// Using the fixed version that works directly with Supabase (no backend API)
+import teamService from '../../services/teamServiceFixed';
 import { useAuth } from '../../services/authContext';
 import { canInviteTeamMembers, getTeamMemberLimits } from '../../utils/creditSystem';
 import { SUBSCRIPTION_TIERS } from '../../constants/plans';
+import toast from 'react-hot-toast';
 
 // Roles configuration with proper capitalization
 const ROLE_CONFIG = {
@@ -241,30 +243,32 @@ const AgencyTeamManagement = () => {
 
   const handleInviteMember = async () => {
     if (!newMemberEmail || !agency) return;
-    
+
     try {
       setActionLoading(true);
-      
+
       const invitationData = {
         email: newMemberEmail,
         role: newMemberRole,
         projectAccess: selectedProjects,
         clientAccess: selectedClients
       };
-      
-      const response = await teamService.sendInvitation(agency.id, user.id, invitationData);
-      
-      // Refresh team members to show the pending invitation
-      const updatedMembers = await teamService.getTeamMembers(agency.id);
-      setTeamMembers(updatedMembers);
-      
+
+      // Use the new createInvitation method that works directly with Supabase
+      const response = await teamService.createInvitation(agency.id, user.id, invitationData);
+
       // Show invitation code dialog if code is returned
       if (response?.invitation_code) {
         setInvitationCode(response.invitation_code);
         setCodeDialogOpen(true);
         setCodeCopied(false);
+
+        // Show success toast
+        toast.success(`Invitation code generated: ${response.invitation_code}`, {
+          duration: 8000, // Show longer so user can copy
+        });
       }
-      
+
       // Reset form
       setInviteDialogOpen(false);
       setNewMemberEmail('');
@@ -272,9 +276,17 @@ const AgencyTeamManagement = () => {
       setSelectedProjects([]);
       setSelectedClients([]);
       setIsClientUser(false);
+
+      // Optionally refresh team members list
+      try {
+        const updatedMembers = await teamService.getTeamMembers(agency.id);
+        setTeamMembers(updatedMembers);
+      } catch (err) {
+        console.log('Could not refresh team members');
+      }
     } catch (err) {
-      console.error('Error inviting member:', err);
-      // Error already handled by service with toast
+      console.error('Error generating invitation:', err);
+      toast.error(err.message || 'Failed to generate invitation code');
     } finally {
       setActionLoading(false);
     }
@@ -629,7 +641,7 @@ const AgencyTeamManagement = () => {
               onClick={() => setInviteDialogOpen(true)}
               disabled={!canInvite}
             >
-              {!teamLimits?.canInviteTeamMembers ? 'Upgrade to Invite' : !canInvite ? 'Limit Reached' : 'Invite Member'}
+              {!teamLimits?.canInviteTeamMembers ? 'Upgrade to Invite' : !canInvite ? 'Limit Reached' : 'Generate Invitation'}
             </Button>
           </Box>
 
@@ -774,7 +786,7 @@ const AgencyTeamManagement = () => {
 
       {/* Invite Member Dialog */}
       <Dialog open={inviteDialogOpen} onClose={() => setInviteDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Invite Team Member</DialogTitle>
+        <DialogTitle>Generate Team Invitation</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <TextField
@@ -884,7 +896,7 @@ const AgencyTeamManagement = () => {
             disabled={!newMemberEmail || actionLoading}
             startIcon={actionLoading ? <CircularProgress size={16} /> : null}
           >
-            {actionLoading ? 'Sending...' : 'Send Invite'}
+            {actionLoading ? 'Generating...' : 'Generate Code'}
           </Button>
         </DialogActions>
       </Dialog>

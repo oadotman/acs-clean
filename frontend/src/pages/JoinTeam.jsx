@@ -22,7 +22,7 @@ import {
   ContentPaste as PasteIcon
 } from '@mui/icons-material';
 import { useAuth } from '../services/authContext';
-import teamService from '../services/teamService';
+import teamServiceFixed from '../services/teamServiceFixed';
 import toast from 'react-hot-toast';
 
 const JoinTeam = () => {
@@ -72,8 +72,8 @@ const JoinTeam = () => {
       setLoading(true);
       setError(null);
 
-      // Call backend API to accept invitation by code
-      const response = await teamService.acceptInvitationByCode(inviteCode, user.id);
+      // Accept invitation directly through Supabase (no backend API)
+      const response = await teamServiceFixed.acceptInvitationByCode(inviteCode, user.id);
 
       if (response.success) {
         setSuccess(true);
