@@ -11,6 +11,7 @@ from app.api.v1.auth_status import router as auth_status_router
 from api.integrations import router as integrations_router
 from app.routers.team import router as team_router
 from app.routers.support import router as support_router
+from app.routers.whitelabel import router as whitelabel_router
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
 
@@ -107,6 +108,7 @@ app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["sub
 app.include_router(integrations_router, prefix="/api", tags=["integrations"])
 app.include_router(team_router, prefix="/api", tags=["team"])  # Team invitation and management
 app.include_router(support_router, prefix="/api", tags=["support"])  # Support tickets
+app.include_router(whitelabel_router, prefix="/api/whitelabel", tags=["whitelabel"])  # White-label configuration
 
 # Include blog router if enabled and available
 if blog_router is not None:

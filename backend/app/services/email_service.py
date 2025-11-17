@@ -19,14 +19,14 @@ class EmailService:
     """Production email service using Resend API with template support and white-label branding."""
     
     def __init__(self):
-        """Initialize email service with FreeResend API and template engine."""
+        """Initialize email service with Resend API and template engine."""
         if not settings.RESEND_API_KEY:
             logger.warning("RESEND_API_KEY not configured - emails will be logged only")
             self._mock_mode = True
         else:
             self.api_key = settings.RESEND_API_KEY
-            # Use FreeResend instance (Resend-compatible)
-            self.api_url = getattr(settings, 'FREERESEND_API_URL', 'http://localhost:3000/api/emails')
+            # Use official Resend API
+            self.api_url = 'https://api.resend.com/emails'
             self._mock_mode = False
         
         # Set up Jinja2 template environment
@@ -381,7 +381,7 @@ class EmailService:
             }
         
         try:
-            # Use FreeResend API (Resend-compatible)
+            # Use official Resend API
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     self.api_url,
@@ -398,17 +398,17 @@ class EmailService:
                     },
                     timeout=30.0
                 )
-                
+
                 if response.status_code == 200:
                     result = response.json()
-                    logger.info(f"Email sent successfully to {to} via FreeResend (ID: {result.get('id')})")
+                    logger.info(f"Email sent successfully to {to} via Resend (ID: {result.get('id')})")
                     return {
                         'success': True,
                         'message_id': result.get('id'),
                         'resend_result': result
                     }
                 else:
-                    error_msg = f"FreeResend API error: {response.status_code} - {response.text}"
+                    error_msg = f"Resend API error: {response.status_code} - {response.text}"
                     logger.error(error_msg)
                     return {
                         'success': False,
@@ -416,7 +416,7 @@ class EmailService:
                     }
             
         except Exception as e:
-            logger.error(f"Failed to send email via FreeResend to {to}: {e}")
+            logger.error(f"Failed to send email via Resend to {to}: {e}")
             return {
                 'success': False,
                 'error': str(e)
