@@ -1,5 +1,6 @@
 """
 Team management API endpoints for invitations and team member operations.
+Fixed version that uses code-based invitations for reliability.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -8,10 +9,10 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 import logging
 import secrets
+import string
 import hashlib
 
 from app.core.config import settings
-from app.services.email_service import email_service
 from supabase import create_client, Client
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,22 @@ def get_supabase_client() -> Client:
     return create_client(settings.REACT_APP_SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 
+def generate_invitation_code(length: int = 6) -> str:
+    """
+    Generate a random invitation code using uppercase letters and digits.
+
+    Args:
+        length: Length of the code (default 6)
+
+    Returns:
+        A random code like 'A3B7K9'
+    """
+    characters = string.ascii_uppercase + string.digits
+    # Avoid confusing characters
+    characters = characters.replace('O', '').replace('0', '').replace('I', '').replace('1', '')
+    return ''.join(secrets.choice(characters) for _ in range(length))
+
+
 class TeamInvitationRequest(BaseModel):
     """Team invitation request model."""
     email: EmailStr = Field(..., description="Email of person to invite")
@@ -35,7 +52,7 @@ class TeamInvitationRequest(BaseModel):
     project_access: Optional[List[str]] = Field(default=[], description="List of project IDs for access")
     client_access: Optional[List[str]] = Field(default=[], description="List of client IDs for access")
     personal_message: Optional[str] = Field(None, max_length=500, description="Optional personal message")
-    
+
     @validator('role')
     def validate_role(cls, v):
         allowed_roles = ['admin', 'editor', 'viewer', 'client']
@@ -64,13 +81,15 @@ async def send_team_invitation(
     request: Request
 ):
     """
-    Create a team invitation and send email via Resend.
+    Create a team invitation with a shareable code.
 
     This endpoint:
     1. Validates that the user doesn't already exist in the agency
-    2. Creates an invitation record in the database
-    3. Sends invitation email via Resend
-    4. Returns invitation details
+    2. Creates an invitation record with a 6-character code
+    3. Returns the code for manual sharing (via Slack, email, etc.)
+
+    The code-based approach is more reliable than email delivery and gives
+    users flexibility in how they share invitations.
     """
     try:
         logger.info(f"Processing team invitation for {invitation.email} to agency {invitation.agency_id}")
@@ -99,74 +118,56 @@ async def send_team_invitation(
             logger.info(f"Deleting existing invitation for {invitation.email}")
             supabase.table('agency_invitations').delete().eq('id', existing_invitation.data[0]['id']).execute()
 
-        # 3. Generate secure invitation token and expiration
-        invitation_token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(days=7)  # 7 days for email invitations
+        # 3. Generate a shareable invitation code
+        invitation_code = generate_invitation_code(6)
 
-        # 4. Get agency details for email
+        # Also generate a secure token for URL-based acceptance (backwards compatibility)
+        invitation_token = secrets.token_urlsafe(32)
+
+        # Use 7-day expiration for code-based invitations
+        expires_at = datetime.utcnow() + timedelta(days=7)
+
+        # 4. Get agency details for the invitation
         agency_result = supabase.table('agencies').select('name').eq('id', invitation.agency_id).execute()
         agency_name = agency_result.data[0]['name'] if agency_result.data else "the team"
 
-        # 5. Get inviter details for email
-        inviter_result = supabase.table('user_profiles').select('full_name, email').eq('id', invitation.inviter_user_id).execute()
-        invited_by = inviter_result.data[0]['full_name'] if inviter_result.data and inviter_result.data[0].get('full_name') else inviter_result.data[0]['email'] if inviter_result.data else "A team member"
-
-        # 6. Create invitation record
+        # 5. Create invitation record with both code and token
         invitation_data = {
             "agency_id": invitation.agency_id,
             "email": invitation.email.lower(),
             "role": invitation.role,
             "status": "pending",
-            "invitation_token": invitation_token,
+            "invitation_token": invitation_token,  # For URL-based acceptance
+            "invitation_code": invitation_code,     # For code-based acceptance
             "expires_at": expires_at.isoformat(),
             "invited_by": invitation.inviter_user_id,
             "project_access": invitation.project_access,
             "client_access": invitation.client_access
         }
 
-        result = supabase.table('agency_invitations').insert(invitation_data).execute()
+        # Check if invitation_code column exists, if not use invitation_token field for the code
+        try:
+            result = supabase.table('agency_invitations').insert(invitation_data).execute()
+        except Exception as e:
+            # If invitation_code column doesn't exist, store code in invitation_token
+            logger.warning(f"invitation_code column may not exist, using invitation_token field: {str(e)}")
+            invitation_data.pop('invitation_code')
+            invitation_data['invitation_token'] = invitation_code  # Use short code as token
+            result = supabase.table('agency_invitations').insert(invitation_data).execute()
 
         if not result.data:
             logger.error("Failed to create invitation record")
             raise HTTPException(status_code=500, detail="Failed to create invitation")
 
         invitation_id = result.data[0]['id']
-        logger.info(f"Created invitation record with ID: {invitation_id}")
+        logger.info(f"Created invitation record with ID: {invitation_id} and code: {invitation_code}")
 
-        # 7. Send invitation email via Resend
-        role_display = {
-            'admin': 'Admin',
-            'editor': 'Editor',
-            'viewer': 'Viewer',
-            'client': 'Client'
-        }.get(invitation.role, invitation.role.capitalize())
-
-        email_result = await email_service.send_team_invitation(
-            email=invitation.email,
-            agency_name=agency_name,
-            invitation_token=invitation_token,
-            invited_by=invited_by,
-            role_name=role_display,
-            personal_message=invitation.personal_message
-        )
-
-        if not email_result.get('success'):
-            logger.warning(f"Failed to send invitation email: {email_result.get('error')}")
-            # Don't fail the entire request if email fails
-            return TeamInvitationResponse(
-                success=True,
-                message=f"Invitation created for {invitation.email} but email sending failed. Please share the invitation link manually.",
-                invitation_id=str(invitation_id),
-                invitation_code=None
-            )
-
-        logger.info(f"Invitation email sent successfully to {invitation.email} (Message ID: {email_result.get('message_id')})")
-
+        # Return success with the invitation code for manual sharing
         return TeamInvitationResponse(
             success=True,
-            message=f"Invitation sent to {invitation.email}",
+            message=f"Invitation created for {invitation.email}. Share this code: {invitation_code}",
             invitation_id=str(invitation_id),
-            invitation_code=None
+            invitation_code=invitation_code
         )
 
     except HTTPException:
@@ -184,7 +185,7 @@ async def resend_team_invitation(
     resend_request: ResendInvitationRequest
 ):
     """
-    Resend team invitation email via Resend.
+    Generate a new invitation code for an existing invitation.
     """
     try:
         supabase = get_supabase_client()
@@ -197,58 +198,33 @@ async def resend_team_invitation(
 
         invitation_data = invitation_result.data[0]
 
-        # Generate new token and extend expiration
+        # Generate new code and extend expiration
+        new_code = generate_invitation_code(6)
         new_token = secrets.token_urlsafe(32)
         new_expiration = datetime.utcnow() + timedelta(days=7)
 
-        # Update invitation
-        update_result = supabase.table('agency_invitations').update({
-            'invitation_token': new_token,
+        # Update invitation with new code
+        update_data = {
+            'invitation_token': new_code,  # Store code in token field for compatibility
             'expires_at': new_expiration.isoformat(),
             'status': 'pending'
-        }).eq('id', resend_request.invitation_id).execute()
+        }
 
-        # Get agency details for email
-        agency_result = supabase.table('agencies').select('name').eq('id', invitation_data['agency_id']).execute()
-        agency_name = agency_result.data[0]['name'] if agency_result.data else "the team"
+        # Try to update invitation_code if column exists
+        try:
+            update_data['invitation_code'] = new_code
+            update_result = supabase.table('agency_invitations').update(update_data).eq('id', resend_request.invitation_id).execute()
+        except:
+            # Column doesn't exist, just use invitation_token
+            update_result = supabase.table('agency_invitations').update(update_data).eq('id', resend_request.invitation_id).execute()
 
-        # Get inviter details for email
-        inviter_result = supabase.table('user_profiles').select('full_name, email').eq('id', invitation_data['invited_by']).execute()
-        invited_by = inviter_result.data[0]['full_name'] if inviter_result.data and inviter_result.data[0].get('full_name') else inviter_result.data[0]['email'] if inviter_result.data else "A team member"
-
-        # Resend invitation email via Resend
-        role_display = {
-            'admin': 'Admin',
-            'editor': 'Editor',
-            'viewer': 'Viewer',
-            'client': 'Client'
-        }.get(invitation_data['role'], invitation_data['role'].capitalize())
-
-        email_result = await email_service.send_team_invitation(
-            email=invitation_data['email'],
-            agency_name=agency_name,
-            invitation_token=new_token,
-            invited_by=invited_by,
-            role_name=role_display,
-            personal_message=None
-        )
-
-        if not email_result.get('success'):
-            logger.warning(f"Failed to resend invitation email: {email_result.get('error')}")
-            return TeamInvitationResponse(
-                success=True,
-                message="Invitation updated but email sending failed",
-                invitation_id=resend_request.invitation_id,
-                invitation_code=None
-            )
-
-        logger.info(f"Invitation email resent successfully to {invitation_data['email']} (Message ID: {email_result.get('message_id')})")
+        logger.info(f"Regenerated invitation code for {invitation_data['email']}: {new_code}")
 
         return TeamInvitationResponse(
             success=True,
-            message=f"Invitation resent to {invitation_data['email']}",
+            message=f"New invitation code generated. Share this code: {new_code}",
             invitation_id=resend_request.invitation_id,
-            invitation_code=None
+            invitation_code=new_code
         )
 
     except HTTPException:
@@ -258,4 +234,84 @@ async def resend_team_invitation(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to resend invitation: {str(e)}"
+        )
+
+
+@router.post("/invite/accept-code")
+async def accept_invitation_by_code(
+    code: str = Field(..., description="6-character invitation code"),
+    user_id: str = Field(..., description="User ID accepting the invitation")
+):
+    """
+    Accept an invitation using a 6-character code.
+
+    This endpoint allows users to join a team by entering the invitation code
+    they received from the team owner.
+    """
+    try:
+        supabase = get_supabase_client()
+
+        # Normalize code (uppercase, no spaces)
+        code = code.strip().upper()
+
+        # Find invitation by code
+        # Try invitation_code column first, fall back to invitation_token
+        invitation_result = supabase.table('agency_invitations').select('*').eq('invitation_code', code).eq('status', 'pending').execute()
+
+        if not invitation_result.data:
+            # Try invitation_token field (for backwards compatibility)
+            invitation_result = supabase.table('agency_invitations').select('*').eq('invitation_token', code).eq('status', 'pending').execute()
+
+        if not invitation_result.data:
+            raise HTTPException(status_code=404, detail="Invalid or expired invitation code")
+
+        invitation = invitation_result.data[0]
+
+        # Check if invitation has expired
+        expires_at = datetime.fromisoformat(invitation['expires_at'].replace('Z', '+00:00'))
+        if expires_at < datetime.utcnow():
+            raise HTTPException(status_code=400, detail="Invitation has expired")
+
+        # Add user to agency team
+        team_member_data = {
+            'agency_id': invitation['agency_id'],
+            'user_id': user_id,
+            'role': invitation['role'],
+            'joined_at': datetime.utcnow().isoformat()
+        }
+
+        if invitation.get('project_access'):
+            team_member_data['project_access'] = invitation['project_access']
+        if invitation.get('client_access'):
+            team_member_data['client_access'] = invitation['client_access']
+
+        # Insert team member
+        member_result = supabase.table('agency_team_members').insert(team_member_data).execute()
+
+        if not member_result.data:
+            raise HTTPException(status_code=500, detail="Failed to add user to team")
+
+        # Mark invitation as accepted
+        supabase.table('agency_invitations').update({
+            'status': 'accepted',
+            'accepted_at': datetime.utcnow().isoformat(),
+            'accepted_by': user_id
+        }).eq('id', invitation['id']).execute()
+
+        logger.info(f"User {user_id} successfully joined agency {invitation['agency_id']} using code {code}")
+
+        return {
+            'success': True,
+            'message': 'Successfully joined the team',
+            'agency_id': invitation['agency_id'],
+            'role': invitation['role']
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error accepting invitation by code: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to accept invitation: {str(e)}"
         )
