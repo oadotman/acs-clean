@@ -568,7 +568,7 @@ class TeamService {
   async acceptInvitation(token, userId) {
     try {
       console.log('✅ Accepting invitation');
-      
+
       // Call Supabase function to accept invitation
       const { data, error } = await supabase.rpc('accept_team_invitation_link', {
         p_invitation_token: token,
@@ -581,19 +581,63 @@ class TeamService {
       }
 
       const result = Array.isArray(data) ? data[0] : data;
-      
+
       if (!result || !result.success) {
         throw new Error(result?.message || 'Failed to accept invitation');
       }
 
       console.log('🎉 Invitation accepted successfully');
       toast.success(result.message || 'Successfully joined the team!');
-      
+
       return result;
     } catch (error) {
       console.error('Error in acceptInvitation:', error);
       toast.error(error.message || 'Failed to accept invitation');
       throw error;
+    }
+  }
+
+  /**
+   * Accept a team invitation using a 6-character code
+   * @param {string} code - 6-character invitation code
+   * @param {string} userId - User ID accepting the invitation
+   * @returns {Promise<Object>} Acceptance result with agency and team member info
+   */
+  async acceptInvitationByCode(code, userId) {
+    try {
+      console.log('🎯 Accepting invitation by code:', code);
+
+      // Use backend API endpoint for code acceptance
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+      const response = await fetch(`${API_URL}/team/invite/accept-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: code.toUpperCase(),
+          user_id: userId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Invalid or expired invitation code' }));
+        throw new Error(errorData.detail || 'Failed to accept invitation');
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('🎉 Successfully joined team with code:', code);
+        toast.success(result.message || 'Successfully joined the team!');
+        return result;
+      } else {
+        throw new Error(result.message || 'Failed to join team');
+      }
+    } catch (error) {
+      console.error('Error in acceptInvitationByCode:', error);
+      throw error; // Don't double-toast, let the component handle it
     }
   }
 

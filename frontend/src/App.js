@@ -100,6 +100,7 @@ import AgencyWhiteLabelSettings from './pages/agency/WhiteLabelSettings';
 
 // Team Invitation
 import InviteAccept from './pages/InviteAccept';
+import JoinTeam from './pages/JoinTeam';
 
 // Theme
 import { ThemeModeProvider } from './contexts/ThemeContext';
@@ -509,8 +510,9 @@ function App() {
                 <Route path="/blog/category/:category" element={<LegacyAppLayout><BlogCategory /></LegacyAppLayout>} />
                 <Route path="/blog/tag/:tag" element={<LegacyAppLayout><BlogCategory /></LegacyAppLayout>} />
                 
-                {/* Team Invitation Acceptance - Public Route */}
+                {/* Team Invitation Acceptance - Public Routes */}
                 <Route path="/invite/accept/:token" element={<LegacyAppLayout><InviteAccept /></LegacyAppLayout>} />
+                <Route path="/join-team" element={<LegacyAppLayout><JoinTeam /></LegacyAppLayout>} />
                 
                 {/* Legal and Company Pages */}
                 <Route path="/privacy" element={<LegacyAppLayout><Privacy /></LegacyAppLayout>} />
