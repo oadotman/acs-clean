@@ -335,20 +335,40 @@ const AgencyTeamManagement = () => {
   };
   
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(invitationCode);
+    const joinLink = `${window.location.origin}/join-team?code=${invitationCode}`;
+    const agencyName = agency?.name || 'our team';
+    const message = `${agencyName} has invited you to join their team on AdCopySurge!\n\n` +
+      `Click here to join: ${joinLink}\n\n` +
+      `Or enter this code manually: ${invitationCode}`;
+    navigator.clipboard.writeText(message);
     setCodeCopied(true);
+    toast.success('Invitation message copied to clipboard!');
     setTimeout(() => setCodeCopied(false), 2000);
   };
   
   const handleShareWhatsApp = () => {
-    const message = encodeURIComponent(`Join our team on AdCopySurge! Use this invitation code: ${invitationCode}`);
+    const joinLink = `${window.location.origin}/join-team?code=${invitationCode}`;
+    const agencyName = agency?.name || 'our team';
+    const message = encodeURIComponent(
+      `${agencyName} has invited you to join their team on AdCopySurge!\n\n` +
+      `Click here to join: ${joinLink}\n\n` +
+      `Or enter this code manually: ${invitationCode}`
+    );
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
-  
+
   const handleShareEmail = () => {
-    const subject = encodeURIComponent('Team Invitation - AdCopySurge');
-    const body = encodeURIComponent(`You've been invited to join our team on AdCopySurge!\n\nInvitation Code: ${invitationCode}\n\nPlease use this code to accept the invitation.`);
-    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    const joinLink = `${window.location.origin}/join-team?code=${invitationCode}`;
+    const agencyName = agency?.name || 'our team';
+    const subject = encodeURIComponent(`${agencyName} invited you to join AdCopySurge`);
+    const body = encodeURIComponent(
+      `You've been invited to join ${agencyName} on AdCopySurge!\n\n` +
+      `Click here to accept the invitation:\n${joinLink}\n\n` +
+      `Or enter this code manually on the join page:\n${invitationCode}\n\n` +
+      `This invitation expires in 7 days.\n\n` +
+      `---\nAdCopySurge - AI-Powered Ad Copy Analysis`
+    );
+    window.open(`mailto:${newMemberEmail}?subject=${subject}&body=${body}`, '_blank');
   };
   
   const handleUpdateMember = async (memberId, updates) => {
@@ -965,27 +985,54 @@ const AgencyTeamManagement = () => {
           </Box>
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
-          <Box sx={{ 
-            bgcolor: 'rgba(255, 255, 255, 0.95)', 
-            p: 3, 
+          <Box sx={{
+            bgcolor: 'rgba(255, 255, 255, 0.95)',
+            p: 3,
             borderRadius: 2,
             textAlign: 'center'
           }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Share this code with your team member:
+              Share this link or code with <strong>{newMemberEmail}</strong>:
             </Typography>
-            
-            <Box sx={{ 
-              bgcolor: '#f5f5f5', 
-              p: 2, 
-              borderRadius: 1, 
+
+            {/* Shareable Link */}
+            <Box sx={{
+              bgcolor: '#f5f5f5',
+              p: 2,
+              borderRadius: 1,
+              mb: 2,
+              border: '1px solid #e0e0e0'
+            }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                JOIN LINK
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontFamily: 'monospace',
+                  color: '#667eea',
+                  wordBreak: 'break-all'
+                }}
+              >
+                {`${window.location.origin}/join-team?code=${invitationCode}`}
+              </Typography>
+            </Box>
+
+            {/* Invitation Code */}
+            <Box sx={{
+              bgcolor: '#f5f5f5',
+              p: 2,
+              borderRadius: 1,
               mb: 3,
               border: '2px dashed #667eea'
             }}>
-              <Typography 
-                variant="h4" 
-                sx={{ 
-                  fontWeight: 700, 
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                OR USE CODE
+              </Typography>
+              <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 700,
                   letterSpacing: 4,
                   fontFamily: 'monospace',
                   color: '#667eea'
@@ -1001,12 +1048,12 @@ const AgencyTeamManagement = () => {
                 fullWidth
                 startIcon={codeCopied ? <CheckCircleIcon /> : <CopyIcon />}
                 onClick={handleCopyCode}
-                sx={{ 
+                sx={{
                   bgcolor: codeCopied ? '#4caf50' : '#667eea',
                   '&:hover': { bgcolor: codeCopied ? '#45a049' : '#5568d3' }
                 }}
               >
-                {codeCopied ? 'Copied!' : 'Copy Code'}
+                {codeCopied ? 'Copied!' : 'Copy Invitation Message'}
               </Button>
               
               <Box sx={{ display: 'flex', gap: 2 }}>

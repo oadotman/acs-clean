@@ -226,6 +226,25 @@ RESEND_FROM_EMAIL=noreply@yourdomain.com
 RESEND_FROM_NAME=AdCopySurge
 ```
 
+**Paddle Billing:**
+```env
+PADDLE_VENDOR_ID=your-vendor-id
+PADDLE_API_KEY=your-api-key
+PADDLE_CLIENT_TOKEN=your-client-token
+PADDLE_WEBHOOK_SECRET=your-webhook-secret
+PADDLE_ENVIRONMENT=sandbox  # or production
+
+# Price IDs for each tier/billing period
+PADDLE_GROWTH_MONTHLY_PRICE_ID=pri_...
+PADDLE_GROWTH_YEARLY_PRICE_ID=pri_...
+PADDLE_AGENCY_STANDARD_MONTHLY_PRICE_ID=pri_...
+PADDLE_AGENCY_STANDARD_YEARLY_PRICE_ID=pri_...
+PADDLE_AGENCY_PREMIUM_MONTHLY_PRICE_ID=pri_...
+PADDLE_AGENCY_PREMIUM_YEARLY_PRICE_ID=pri_...
+PADDLE_AGENCY_UNLIMITED_MONTHLY_PRICE_ID=pri_...
+PADDLE_AGENCY_UNLIMITED_YEARLY_PRICE_ID=pri_...
+```
+
 **Production:**
 ```env
 ENVIRONMENT=production
@@ -290,10 +309,22 @@ The system uses a multi-tiered AI approach:
 
 ### Subscription & Payments
 
-- Paddle Billing integration via `paddle_service.py`
-- Webhook handling for subscription events at `/api/subscriptions/webhook`
-- Usage tracking: Free (5/month), Basic ($49, 100/month), Pro ($99, 500/month)
-- Credits system tracked in database
+**Paddle Billing Integration:**
+- Service: `paddle_service.py` (uses new Paddle Billing API, not Classic)
+- Webhook handling at `/api/subscriptions/webhook` with HMAC verification
+- Frontend checkout via `paddleService.js` with Paddle.js SDK
+
+**Subscription Tiers:**
+- `FREE` - 5 analyses/month
+- `GROWTH` - 100 analyses/month
+- `AGENCY_STANDARD` - 500 analyses/month
+- `AGENCY_PREMIUM` - 1000 analyses/month
+- `AGENCY_UNLIMITED` - Unlimited analyses
+
+**Credits System:**
+- Tracked in `user_credits` table with real-time Supabase subscriptions
+- All transactions logged in `credit_transactions` for audit trail
+- Credits allocated based on subscription tier via webhook events
 
 ### Team Invitations
 
@@ -331,13 +362,20 @@ The system uses a multi-tiered AI approach:
 - `users` - User accounts (linked to Supabase auth via `supabase_user_id`)
 - `ad_analyses` - Analysis results and scores
 - `ad_generations` - AI-generated alternative variants
-- `agencies` - Agency/team organizations
-- `team_invitations` - Pending team invites (6-character codes)
-- `user_credits` - Credit balances per user
+- `agencies` - Agency/team organizations (with JSONB settings column)
+- `team_invitations` - Pending team invites (6-character codes, 7-day expiration)
+- `user_credits` - Credit balances per user (with real-time Supabase subscriptions)
 - `credit_transactions` - Audit trail for all credit operations
 - `subscriptions` - Paddle subscription data
-- `whitelabel_settings` - Custom branding per agency
+- `whitelabel_settings` - Custom branding stored in agencies.settings JSONB
 - `support_tickets` - Customer support system
+
+**Database Connection:**
+- PostgreSQL via Supabase (managed service)
+- Retry logic with tenacity for VPS cold starts
+- Connection pooling: size=5, max_overflow=10
+- Pool pre-ping enabled to handle connection drops
+- Both sync (psycopg2) and async (asyncpg) engines available
 
 Migrations managed by Alembic in `backend/alembic/versions/`.
 
@@ -345,21 +383,33 @@ Migrations managed by Alembic in `backend/alembic/versions/`.
 
 The application implements multiple security layers:
 
-1. **Middleware** (in `backend/app/middleware/`):
-   - Rate limiting (configurable per endpoint)
-   - CSRF protection for state-changing requests
-   - Security headers (CSP, HSTS, X-Frame-Options)
-   - Content validation
+1. **Middleware Stack** (in `backend/app/middleware/` - order matters):
+   - Content Security - Validates request content
+   - Security Headers - CSP, HSTS, X-Frame-Options, etc.
+   - Security Reporting - Handles CSP violation reports
+   - CSRF Protection - For state-changing requests
+   - Rate Limiting - IP-based (anonymous) and user-based (authenticated)
 
-2. **Authentication:**
+2. **Rate Limiting Details:**
+   - Anonymous users: 20 requests/min (IP-based)
+   - Authenticated users: 60 requests/min
+   - Analysis endpoint (`/api/ads/analyze`):
+     - Free tier: 5/min
+     - Growth tier: 10/min
+     - Agency tiers: 20/min
+   - Implemented via Redis (graceful degradation if Redis unavailable)
+
+3. **Authentication:**
    - JWT tokens from Supabase Auth
    - Token verification using `SUPABASE_JWT_SECRET`
-   - Row-level security in Supabase database
+   - Row-Level Security (RLS) in Supabase database for multi-tenancy
+   - Middleware: `app/middleware/supabase_auth.py`
 
-3. **API Security:**
+4. **API Security:**
    - API docs disabled in production (`docs_url=None` when `ENVIRONMENT=production`)
    - CORS restricted to specific origins
    - Input validation via Pydantic schemas
+   - HTTPS redirect enforced in production
 
 ## Deployment
 
@@ -458,7 +508,7 @@ Main endpoint groups:
 - `/api/subscriptions/*` - Paddle billing integration
 - `/api/team/*` - Team management and invitations
 - `/api/analytics/*` - Usage analytics
-- `/api/blog/*` - Blog content system (markdown-based)
+- `/api/blog/*` - Blog content system (markdown-based, optional feature via `ENABLE_BLOG=True`)
 
 ## Known Issues & Important Notes
 
@@ -480,5 +530,19 @@ Main endpoint groups:
 ### Development Notes
 - Use `main.py` for development (API docs enabled)
 - Use `main_production.py` for production testing (API docs disabled)
+- Never use `main_launch_ready.py` in production (has guard to exit)
 - Migrations: Always review autogenerated migrations before applying
 - Testing: SQLite used for tests, PostgreSQL for development/production
+
+### White-Label Asset Storage
+- Logos and favicons uploaded to Supabase Storage bucket (`whitelabel-assets`)
+- Public CDN URLs returned for assets
+- Service: `whitelabel_service.py`
+- Frontend context provides branding throughout app via `WhiteLabelContext.jsx`
+
+### Blog System (Optional)
+- Enabled via `ENABLE_BLOG=True` in backend config
+- Content stored in `backend/content/blog/` as markdown files
+- Uses `python-frontmatter` for metadata extraction
+- Graceful degradation if blog content missing
+- Router mounted at `/api/blog` when enabled

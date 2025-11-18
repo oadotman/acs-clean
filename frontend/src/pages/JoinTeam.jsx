@@ -27,6 +27,7 @@ import toast from 'react-hot-toast';
 
 const JoinTeam = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated } = useAuth();
 
   const [inviteCode, setInviteCode] = useState('');
@@ -93,6 +94,25 @@ const JoinTeam = () => {
     }
   };
 
+  // Check for code in URL parameter on mount
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const codeFromUrl = params.get('code');
+
+    if (codeFromUrl) {
+      const cleanedCode = codeFromUrl.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+      setInviteCode(cleanedCode);
+      toast.success(`Invitation code loaded: ${cleanedCode}`);
+
+      // If user is authenticated, auto-submit after a short delay
+      if (isAuthenticated && cleanedCode.length === 6) {
+        setTimeout(() => {
+          handleJoinTeam();
+        }, 1000);
+      }
+    }
+  }, [location.search]);
+
   // Check for pending invite code on mount (after login redirect)
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -154,7 +174,9 @@ const JoinTeam = () => {
               Join a Team
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Enter your invitation code to join a team
+              {inviteCode
+                ? "You've been invited! Click 'Join Team' below to accept."
+                : "Enter your invitation code to join a team"}
             </Typography>
           </Box>
 
