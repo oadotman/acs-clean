@@ -488,17 +488,144 @@ class TeamServiceFixed {
   }
 
   /**
-   * Get agency projects (stub)
+   * Get agency projects - fetch projects from all agency members
    */
   async getAgencyProjects(agencyId) {
-    return [];
+    try {
+      console.log('📁 Fetching projects for agency:', agencyId);
+
+      // First, get all team member user IDs
+      const { data: members, error: membersError } = await supabase
+        .from('agency_team_members')
+        .select('user_id')
+        .eq('agency_id', agencyId)
+        .eq('status', 'active');
+
+      if (membersError) {
+        console.error('Error fetching team members:', membersError);
+        return [];
+      }
+
+      if (!members || members.length === 0) {
+        return [];
+      }
+
+      const userIds = members.map(m => m.user_id).filter(Boolean);
+
+      if (userIds.length === 0) {
+        return [];
+      }
+
+      // Fetch all projects from team members
+      const { data: projects, error: projectsError } = await supabase
+        .from('projects')
+        .select('id, name, description, client_name, created_at, updated_at, user_id')
+        .in('user_id', userIds)
+        .order('updated_at', { ascending: false });
+
+      if (projectsError) {
+        console.error('Error fetching projects:', projectsError);
+        return [];
+      }
+
+      console.log(`✅ Fetched ${projects?.length || 0} projects for agency`);
+      return projects || [];
+
+    } catch (error) {
+      console.error('Error in getAgencyProjects:', error);
+      return [];
+    }
   }
 
   /**
-   * Get agency clients (stub)
+   * Get agency clients - fetch unique client names from projects and client-role team members
    */
   async getAgencyClients(agencyId) {
-    return [];
+    try {
+      console.log('👥 Fetching clients for agency:', agencyId);
+
+      // Get client-role team members
+      const { data: clientMembers, error: clientError } = await supabase
+        .from('agency_team_members')
+        .select(`
+          id,
+          user_id,
+          role
+        `)
+        .eq('agency_id', agencyId)
+        .eq('role', 'client')
+        .eq('status', 'active');
+
+      if (clientError) {
+        console.error('Error fetching client members:', clientError);
+        return [];
+      }
+
+      // Get user profiles for clients
+      const clients = [];
+
+      if (clientMembers && clientMembers.length > 0) {
+        const userIds = clientMembers.map(c => c.user_id).filter(Boolean);
+
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('user_profiles')
+            .select('id, email, full_name')
+            .in('id', userIds);
+
+          if (profiles) {
+            profiles.forEach(profile => {
+              clients.push({
+                id: profile.id,
+                name: profile.full_name || profile.email,
+                email: profile.email,
+                type: 'team_member'
+              });
+            });
+          }
+        }
+      }
+
+      // Also get unique client names from projects
+      const { data: members } = await supabase
+        .from('agency_team_members')
+        .select('user_id')
+        .eq('agency_id', agencyId)
+        .eq('status', 'active');
+
+      if (members && members.length > 0) {
+        const userIds = members.map(m => m.user_id).filter(Boolean);
+
+        if (userIds.length > 0) {
+          const { data: projects } = await supabase
+            .from('projects')
+            .select('client_name')
+            .in('user_id', userIds)
+            .not('client_name', 'is', null);
+
+          if (projects) {
+            const uniqueClientNames = [...new Set(projects.map(p => p.client_name).filter(Boolean))];
+            uniqueClientNames.forEach(clientName => {
+              // Don't add duplicates
+              if (!clients.find(c => c.name === clientName)) {
+                clients.push({
+                  id: `client_${clientName.toLowerCase().replace(/\s+/g, '_')}`,
+                  name: clientName,
+                  type: 'project_client'
+                });
+              }
+            });
+          }
+        }
+      }
+
+      console.log(`✅ Fetched ${clients.length} clients for agency`);
+      return clients;
+
+    } catch (error) {
+      console.error('Error in getAgencyClients:', error);
+      return [];
+    }
   }
 }
 
