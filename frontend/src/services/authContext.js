@@ -290,43 +290,77 @@ export const AuthProvider = ({ children }) => {
   const fetchUserProfile = async (userId) => {
     try {
       console.log('📋 Fetching user profile for:', userId);
-      
-      // Increased timeout and better error handling to prevent re-login during analysis
+
+      // Get auth token for backend API call
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        console.warn('⚠️ No auth token available for profile fetch');
+        return;
+      }
+
+      // Call backend API to get effective subscription tier (considers team membership)
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Profile fetch timeout')), 90000); // 90 seconds for long operations
       });
-      
-      const fetchPromise = supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();  // Use maybeSingle() to avoid 406 errors
-      
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
-      
-      if (error && error.code !== 'PGRST116') {
-        console.warn('⚠️ Profile fetch failed (non-critical):', error.message);
-        // Don't return - continue with cached subscription data
-      }
-      
-      if (data) {
-        console.log('✅ User profile fetched:', {
-          email: data?.email,
-          tier: data?.subscription_tier,
-          agency_id: data?.agency_id
+
+      const fetchPromise = fetch(`${process.env.REACT_APP_API_URL}/api/user/profile`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }).then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+      });
+
+      const profileData = await Promise.race([fetchPromise, timeoutPromise]);
+
+      if (profileData) {
+        console.log('✅ User profile fetched with effective tier:', {
+          subscription_tier: profileData.subscription_tier,
+          is_team_member: profileData.is_team_member,
+          agency_name: profileData.agency_name,
+          role: profileData.role
         });
-        
-        // Set the subscription with the subscription_tier field properly mapped
+
+        // Set the subscription with the effective tier (agency tier if team member)
         setSubscription({
-          ...data,
-          tier: data?.subscription_tier, // Ensure 'tier' field exists
-          subscription_tier: data?.subscription_tier // Ensure both fields exist
+          subscription_tier: profileData.subscription_tier,
+          tier: profileData.subscription_tier,
+          is_team_member: profileData.is_team_member,
+          agency_id: profileData.agency_id,
+          agency_name: profileData.agency_name,
+          role: profileData.role,
+          personal_tier: profileData.personal_tier
         });
       }
     } catch (error) {
       // Profile fetch timeout is not critical - don't force re-login
       console.warn('⚠️ Error fetching user profile (non-critical):', error.message);
-      // Keep the user logged in even if profile fetch fails
+      // Fallback to querying Supabase directly if backend API fails
+      try {
+        const { data, error: supabaseError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (data && !supabaseError) {
+          console.log('✅ Fallback: User profile fetched from Supabase');
+          setSubscription({
+            ...data,
+            tier: data?.subscription_tier,
+            subscription_tier: data?.subscription_tier
+          });
+        }
+      } catch (fallbackError) {
+        console.warn('⚠️ Fallback profile fetch also failed:', fallbackError.message);
+      }
     }
   };
 

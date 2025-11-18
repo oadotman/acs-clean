@@ -14,7 +14,8 @@ from fastapi.responses import JSONResponse, Response
 import uvicorn
 
 # Import application modules
-from app.api import auth, ads, analytics, subscriptions
+from app.api import auth, ads, analytics, subscriptions, user_profile
+from app.routers import team
 from app.blog import router as blog_router
 from app.core.config import settings
 from app.core.database import engine, Base
@@ -252,6 +253,8 @@ app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(ads.router, prefix="/api/ads", tags=["ad-analysis"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
+app.include_router(user_profile.router, prefix="/api", tags=["user"])
+app.include_router(team.router, prefix="/api", tags=["team"])
 
 # Include blog router if enabled
 if settings.ENABLE_BLOG:

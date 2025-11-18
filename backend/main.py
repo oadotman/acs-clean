@@ -4,7 +4,7 @@ from fastapi.security import HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import uvicorn
-from app.api import auth, ads, analytics, subscriptions
+from app.api import auth, ads, analytics, subscriptions, user_profile
 from app.api.creative import router as creative_router
 from app.api.health_fixed import router as health_router
 from app.api.v1.auth_status import router as auth_status_router
@@ -105,6 +105,7 @@ app.include_router(ads.router, prefix="/api/ads", tags=["ad-analysis"])
 app.include_router(creative_router, prefix="/api/creative", tags=["creative-controls"])  # Phase 4-7 Creative Controls
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
+app.include_router(user_profile.router, prefix="/api", tags=["user"])  # User profile with effective tier
 app.include_router(integrations_router, prefix="/api", tags=["integrations"])
 app.include_router(team_router, prefix="/api", tags=["team"])  # Team invitation and management
 app.include_router(support_router, prefix="/api", tags=["support"])  # Support tickets
