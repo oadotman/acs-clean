@@ -30,7 +30,9 @@ import {
   useMediaQuery,
   useTheme,
   CircularProgress,
-  Alert
+  Alert,
+  Checkbox,
+  ListItemText
 } from '@mui/material';
 import {
   Groups as TeamIcon,
@@ -891,19 +893,40 @@ const AgencyTeamManagement = () => {
                   value={selectedProjects}
                   label="Project Access"
                   onChange={(e) => setSelectedProjects(e.target.value)}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={projects.find(p => p.id === value)?.name} size="small" />
-                      ))}
-                    </Box>
-                  )}
+                  renderValue={(selected) => {
+                    if (selected.length === 0) {
+                      return <em>Select projects...</em>;
+                    }
+                    return (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip
+                            key={value}
+                            label={projects.find(p => p.id === value)?.name || value}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    );
+                  }}
                 >
-                  {projects.map((project) => (
-                    <MenuItem key={project.id} value={project.id}>
-                      {project.name}
+                  {projects.length === 0 ? (
+                    <MenuItem disabled>
+                      <em>No projects available</em>
                     </MenuItem>
-                  ))}
+                  ) : (
+                    projects.map((project) => (
+                      <MenuItem key={project.id} value={project.id}>
+                        <Checkbox
+                          checked={selectedProjects.indexOf(project.id) > -1}
+                          sx={{ mr: 1 }}
+                        />
+                        <ListItemText primary={project.name} />
+                      </MenuItem>
+                    ))
+                  )}
                 </Select>
               </FormControl>
             )}
@@ -917,11 +940,20 @@ const AgencyTeamManagement = () => {
                   label="Client Association"
                   onChange={(e) => setSelectedClients([e.target.value])}
                 >
-                  {clients.map((client) => (
-                    <MenuItem key={client.id} value={client.id}>
-                      {client.name}
+                  {clients.length === 0 ? (
+                    <MenuItem disabled>
+                      <em>No clients available</em>
                     </MenuItem>
-                  ))}
+                  ) : (
+                    clients.map((client) => (
+                      <MenuItem key={client.id} value={client.id}>
+                        <ListItemText
+                          primary={client.name}
+                          secondary={client.email || client.type}
+                        />
+                      </MenuItem>
+                    ))
+                  )}
                 </Select>
               </FormControl>
             )}
