@@ -152,6 +152,8 @@ const NewAnalysis = () => {
   const isSPAMode = location.pathname === '/analysis/spa';
   const [step, setStep] = useState('input'); // 'input', 'comprehensive-analyzing', 'comprehensive-results'
   const [adCopy, setAdCopy] = useState('');
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [detectedLanguage, setDetectedLanguage] = useState(null);
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [comprehensiveResults, setComprehensiveResults] = useState(null);
   const [analysisProgress, setAnalysisProgress] = useState(0);
@@ -284,9 +286,63 @@ const NewAnalysis = () => {
   }, [location.state, location.search]);
 
   // Handle ad copy paste/input
+  // Validation function
+  const validateAdCopy = (text) => {
+    const errors = [];
+    const MIN_LENGTH = 10;
+    const MAX_LENGTH = 5000;
+
+    // Length validation
+    if (text.trim().length < MIN_LENGTH) {
+      errors.push(`Ad copy must be at least ${MIN_LENGTH} characters`);
+    }
+    if (text.length > MAX_LENGTH) {
+      errors.push(`Ad copy must not exceed ${MAX_LENGTH} characters`);
+    }
+
+    // Placeholder text detection
+    const placeholderPatterns = ['lorem ipsum', 'your headline here', 'enter text', 'sample text'];
+    if (placeholderPatterns.some(pattern => text.toLowerCase().includes(pattern))) {
+      errors.push('Please use real ad copy, not placeholder text');
+    }
+
+    // Language detection (simple pattern-based)
+    if (text.trim().length >= 20) {
+      const englishWords = ['the', 'and', 'you', 'your', 'get', 'now', 'with', 'for'];
+      const spanishWords = ['el', 'la', 'los', 'las', 'de', 'que', 'tu', 'para'];
+      const germanWords = ['der', 'die', 'das', 'und', 'sie', 'für'];
+      const frenchWords = ['le', 'la', 'les', 'de', 'et', 'vous'];
+      const portugueseWords = ['o', 'a', 'os', 'as', 'de', 'que'];
+
+      const textLower = text.toLowerCase();
+      const words = textLower.split(/\s+/);
+
+      const scores = {
+        'English': englishWords.filter(w => words.includes(w)).length,
+        'Spanish': spanishWords.filter(w => words.includes(w)).length,
+        'German': germanWords.filter(w => words.includes(w)).length,
+        'French': frenchWords.filter(w => words.includes(w)).length,
+        'Portuguese': portugueseWords.filter(w => words.includes(w)).length
+      };
+
+      const detected = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
+      if (scores[detected] > 0) {
+        setDetectedLanguage(detected);
+      }
+    } else {
+      setDetectedLanguage(null);
+    }
+
+    return errors;
+  };
+
   const handleAdCopyChange = (event) => {
     const text = event.target.value;
     setAdCopy(text);
+
+    // Validate on change (but only show errors if text is long enough)
+    const errors = validateAdCopy(text);
+    setValidationErrors(text.trim().length > 0 ? errors : []);
   };
 
   // Handle platform selection
@@ -1714,6 +1770,30 @@ Get 50% off all products today! Limited time offer - shop now and save big on th
               }
             }}
           />
+
+          {/* Validation Errors */}
+          {validationErrors.length > 0 && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {validationErrors.map((error, idx) => (
+                <Typography key={idx} variant="body2">• {error}</Typography>
+              ))}
+            </Alert>
+          )}
+
+          {/* Language Support Indicator */}
+          {detectedLanguage && (
+            <Box sx={{ mb: 2, p: 2, bgcolor: 'rgba(76, 175, 80, 0.05)', borderRadius: 2, border: '1px solid rgba(76, 175, 80, 0.2)' }}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <CheckCircle sx={{ color: 'success.main', fontSize: '1.1rem' }} />
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                  Language Detected: {detectedLanguage}
+                </Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                ✅ Supported Languages: English, Spanish, German, French, Portuguese
+              </Typography>
+            </Box>
+          )}
 
           {/* Status indicators */}
           <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 1 }}>
