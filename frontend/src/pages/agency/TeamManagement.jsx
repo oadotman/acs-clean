@@ -102,6 +102,9 @@ const AgencyTeamManagement = () => {
   const [teamLimits, setTeamLimits] = useState(null);
   const [canInvite, setCanInvite] = useState(false);
 
+  // Use ref to store timeout ID so it can be cleared from anywhere
+  const loadingTimeoutRef = React.useRef(null);
+
   const handleMenuClick = (event, member) => {
     setAnchorEl(event.currentTarget);
     setSelectedMember(member);
@@ -118,41 +121,53 @@ const AgencyTeamManagement = () => {
       console.log('⏳ Waiting for auth to complete', { user: !!user, isAuthenticated, authLoading });
       return;
     }
-    
+
     // Prevent duplicate calls
     let cancelled = false;
-    let timeoutId = null;
-    
+
     const loadData = async () => {
       if (cancelled) return;
-      
+
       console.log('🚀 Starting agency data load for user:', user?.id);
-      
+
       try {
         await loadAgencyData();
+        // Clear timeout on successful load
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
       } catch (err) {
         console.error('❌ Error loading agency data:', err);
         if (!cancelled) {
           setError(err.message || 'Failed to load agency data');
           setLoading(false);
         }
+        // Clear timeout on error too
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
       }
     };
-    
+
     loadData();
-    
+
     // Add timeout fallback to prevent infinite loading
-    timeoutId = setTimeout(() => {
-      if (loading && !cancelled) {
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (!cancelled) {
         console.warn('⚠️ Loading timeout - forcing completion');
         setError('Loading timeout. Please refresh the page.');
         setLoading(false);
       }
-    }, 15000); // Increased to 15 seconds
-    
+    }, 15000); // 15 seconds timeout
+
     return () => {
       cancelled = true;
-      if (timeoutId) clearTimeout(timeoutId);
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
     };
   }, [user?.id, isAuthenticated, authLoading]); // Added authLoading dependency
 
