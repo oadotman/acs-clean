@@ -4,7 +4,11 @@
       "Bash(python:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(ssh:*)",
+      "Bash(sudo systemctl status:*)",
+      "Bash(sudo journalctl:*)",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []

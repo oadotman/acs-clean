@@ -13,7 +13,7 @@ worker_connections = 1000
 max_requests = 1000
 max_requests_jitter = 50
 preload_app = True
-timeout = 60  # Increased for AI processing
+timeout = 180  # 3 minutes - AI analysis takes 60-120 seconds, need buffer
 keepalive = 2
 
 # Logging

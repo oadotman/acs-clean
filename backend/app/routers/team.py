@@ -19,6 +19,15 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/team", tags=["team"])
 
+# Credit limits per tier
+PLAN_CREDITS = {
+    'free': {'monthly': 5, 'bonus': 0},
+    'growth': {'monthly': 100, 'bonus': 20},
+    'agency_standard': {'monthly': 500, 'bonus': 100},
+    'agency_premium': {'monthly': 1000, 'bonus': 200},
+    'agency_unlimited': {'monthly': -1, 'bonus': 0}  # -1 means unlimited
+}
+
 # Initialize Supabase client
 def get_supabase_client() -> Client:
     """Get Supabase client instance."""
@@ -41,6 +50,69 @@ def generate_invitation_code(length: int = 6) -> str:
     # Avoid confusing characters
     characters = characters.replace('O', '').replace('0', '').replace('I', '').replace('1', '')
     return ''.join(secrets.choice(characters) for _ in range(length))
+
+
+def sync_user_credits_with_team(supabase: Client, user_id: str, team_subscription_tier: str) -> dict:
+    """
+    Sync user's credits with their team's subscription tier.
+
+    When a user joins a team, their credits should match the team's tier.
+    This ensures team members have access to the team's credit allowance.
+
+    Args:
+        supabase: Supabase client instance
+        user_id: User ID to sync credits for
+        team_subscription_tier: The team's subscription tier
+
+    Returns:
+        Dict with sync status
+    """
+    try:
+        # Get credit limits for the tier
+        plan_credits = PLAN_CREDITS.get(team_subscription_tier, PLAN_CREDITS['free'])
+        monthly_allowance = 999999 if plan_credits['monthly'] == -1 else plan_credits['monthly']
+        current_credits = monthly_allowance + plan_credits['bonus']
+
+        logger.info(f"Syncing user {user_id} credits to tier {team_subscription_tier}: {current_credits} credits")
+
+        # Check if user already has a credit record
+        existing_result = supabase.table('user_credits').select('id').eq('user_id', user_id).execute()
+
+        if existing_result.data and len(existing_result.data) > 0:
+            # Update existing record
+            update_result = supabase.table('user_credits').update({
+                'subscription_tier': team_subscription_tier,
+                'monthly_allowance': monthly_allowance,
+                'current_credits': current_credits,
+                'bonus_credits': plan_credits['bonus'],
+                'last_reset': datetime.utcnow().isoformat(),
+                'updated_at': datetime.utcnow().isoformat()
+            }).eq('user_id', user_id).execute()
+
+            if update_result.data:
+                logger.info(f"✅ Updated user credits for {user_id} to {team_subscription_tier}")
+                return {'success': True, 'action': 'updated', 'credits': current_credits}
+        else:
+            # Create new record
+            insert_result = supabase.table('user_credits').insert({
+                'user_id': user_id,
+                'subscription_tier': team_subscription_tier,
+                'monthly_allowance': monthly_allowance,
+                'current_credits': current_credits,
+                'bonus_credits': plan_credits['bonus'],
+                'total_used': 0,
+                'last_reset': datetime.utcnow().isoformat()
+            }).execute()
+
+            if insert_result.data:
+                logger.info(f"✅ Created user credits for {user_id} with {team_subscription_tier}")
+                return {'success': True, 'action': 'created', 'credits': current_credits}
+
+        return {'success': False, 'error': 'Failed to sync credits'}
+
+    except Exception as e:
+        logger.error(f"Error syncing user credits: {str(e)}", exc_info=True)
+        return {'success': False, 'error': str(e)}
 
 
 class TeamInvitationRequest(BaseModel):
@@ -272,6 +344,15 @@ async def accept_invitation_by_code(
         if expires_at < datetime.utcnow():
             raise HTTPException(status_code=400, detail="Invitation has expired")
 
+        # Get agency details to fetch subscription tier
+        agency_result = supabase.table('agencies').select('id, name, subscription_tier').eq('id', invitation['agency_id']).execute()
+
+        if not agency_result.data:
+            raise HTTPException(status_code=404, detail="Agency not found")
+
+        agency = agency_result.data[0]
+        agency_tier = agency.get('subscription_tier', 'free')
+
         # Add user to agency team
         team_member_data = {
             'agency_id': invitation['agency_id'],
@@ -291,6 +372,14 @@ async def accept_invitation_by_code(
         if not member_result.data:
             raise HTTPException(status_code=500, detail="Failed to add user to team")
 
+        # Sync user credits with team's subscription tier
+        try:
+            sync_user_credits_with_team(supabase, user_id, agency_tier)
+            logger.info(f"Synced user {user_id} credits to team tier: {agency_tier}")
+        except Exception as credit_error:
+            # Don't fail the whole operation if credit sync fails
+            logger.error(f"Failed to sync credits for user {user_id}: {str(credit_error)}")
+
         # Mark invitation as accepted
         supabase.table('agency_invitations').update({
             'status': 'accepted',
@@ -304,6 +393,7 @@ async def accept_invitation_by_code(
             'success': True,
             'message': 'Successfully joined the team',
             'agency_id': invitation['agency_id'],
+            'agency_name': agency.get('name'),
             'role': invitation['role']
         }
 

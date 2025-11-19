@@ -185,6 +185,19 @@ class TeamServiceFixed {
         throw new Error('You are already a member of this team');
       }
 
+      // Get agency details including subscription tier
+      const { data: agency, error: agencyError } = await supabase
+        .from('agencies')
+        .select('id, name, subscription_tier')
+        .eq('id', invitation.agency_id)
+        .single();
+
+      if (agencyError || !agency) {
+        throw new Error('Failed to fetch agency details: ' + (agencyError?.message || 'Agency not found'));
+      }
+
+      console.log(`📊 Agency subscription tier: ${agency.subscription_tier}`);
+
       // Add user to team
       const { data: newMember, error: memberError } = await supabase
         .from('agency_team_members')
@@ -204,6 +217,9 @@ class TeamServiceFixed {
         throw new Error('Failed to add you to the team: ' + memberError.message);
       }
 
+      // Sync user credits with team's subscription tier
+      await this.syncUserCreditsWithTeam(userId, agency.subscription_tier);
+
       // Mark invitation as accepted
       await supabase
         .from('agency_invitations')
@@ -219,12 +235,160 @@ class TeamServiceFixed {
       return {
         success: true,
         agency_id: invitation.agency_id,
+        agency_name: agency.name,
         role: invitation.role,
         message: 'Successfully joined the team!'
       };
 
     } catch (error) {
       console.error('Error accepting invitation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync user credits with team subscription tier
+   * Called when a user joins a team to inherit the team's subscription benefits
+   */
+  async syncUserCreditsWithTeam(userId, teamSubscriptionTier) {
+    try {
+      console.log(`💳 Syncing user ${userId} credits with team tier: ${teamSubscriptionTier}`);
+
+      // Import credit system to get tier limits
+      const { PLAN_CREDITS, SUBSCRIPTION_TIERS } = await import('../constants/plans');
+
+      // Get credit limits for the team's subscription tier
+      const planCredits = PLAN_CREDITS[teamSubscriptionTier] || PLAN_CREDITS[SUBSCRIPTION_TIERS.FREE];
+      const monthlyAllowance = planCredits.monthly === -1 ? 999999 : planCredits.monthly;
+      const currentCredits = monthlyAllowance + (planCredits.bonusCredits || 0);
+
+      // Check if user already has a credit record
+      const { data: existingCredits } = await supabase
+        .from('user_credits')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (existingCredits) {
+        // Update existing credit record
+        const { error: updateError } = await supabase
+          .from('user_credits')
+          .update({
+            subscription_tier: teamSubscriptionTier,
+            monthly_allowance: monthlyAllowance,
+            current_credits: currentCredits,
+            bonus_credits: planCredits.bonusCredits || 0,
+            last_reset: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId);
+
+        if (updateError) {
+          console.error('Failed to update user credits:', updateError);
+          throw new Error('Failed to sync credits: ' + updateError.message);
+        }
+
+        console.log(`✅ Updated user credits to ${teamSubscriptionTier} tier with ${currentCredits} credits`);
+      } else {
+        // Create new credit record
+        const { error: insertError } = await supabase
+          .from('user_credits')
+          .insert({
+            user_id: userId,
+            subscription_tier: teamSubscriptionTier,
+            monthly_allowance: monthlyAllowance,
+            current_credits: currentCredits,
+            bonus_credits: planCredits.bonusCredits || 0,
+            total_used: 0,
+            last_reset: new Date().toISOString()
+          });
+
+        if (insertError) {
+          console.error('Failed to create user credits:', insertError);
+          throw new Error('Failed to initialize credits: ' + insertError.message);
+        }
+
+        console.log(`✅ Created user credits for ${teamSubscriptionTier} tier with ${currentCredits} credits`);
+      }
+
+      return {
+        success: true,
+        subscription_tier: teamSubscriptionTier,
+        credits: currentCredits
+      };
+
+    } catch (error) {
+      console.error('Error syncing user credits:', error);
+      // Don't throw - allow team join to succeed even if credit sync fails
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Sync all existing team members' credits with agency subscription tier
+   * This is useful for fixing credits after the team tier changes or for existing members
+   */
+  async syncAllTeamMembersCredits(agencyId) {
+    try {
+      console.log(`🔄 Syncing credits for all members of agency: ${agencyId}`);
+
+      // Get agency details
+      const { data: agency, error: agencyError } = await supabase
+        .from('agencies')
+        .select('id, name, subscription_tier')
+        .eq('id', agencyId)
+        .single();
+
+      if (agencyError || !agency) {
+        throw new Error('Failed to fetch agency: ' + (agencyError?.message || 'Not found'));
+      }
+
+      // Get all active team members
+      const { data: members, error: membersError } = await supabase
+        .from('agency_team_members')
+        .select('user_id')
+        .eq('agency_id', agencyId)
+        .eq('status', 'active');
+
+      if (membersError) {
+        throw new Error('Failed to fetch team members: ' + membersError.message);
+      }
+
+      if (!members || members.length === 0) {
+        console.log('No team members to sync');
+        return { success: true, synced: 0 };
+      }
+
+      console.log(`Found ${members.length} team members to sync`);
+
+      // Sync each member's credits
+      let syncedCount = 0;
+      const errors = [];
+
+      for (const member of members) {
+        try {
+          await this.syncUserCreditsWithTeam(member.user_id, agency.subscription_tier);
+          syncedCount++;
+        } catch (error) {
+          console.error(`Failed to sync credits for user ${member.user_id}:`, error);
+          errors.push({ userId: member.user_id, error: error.message });
+        }
+      }
+
+      console.log(`✅ Synced credits for ${syncedCount}/${members.length} team members`);
+
+      return {
+        success: true,
+        total: members.length,
+        synced: syncedCount,
+        errors: errors.length > 0 ? errors : undefined
+      };
+
+    } catch (error) {
+      console.error('Error syncing team credits:', error);
       throw error;
     }
   }
@@ -634,4 +798,21 @@ TeamServiceFixed.prototype.supportsInvitationCodeField = true;
 
 // Create and export singleton
 const teamServiceFixed = new TeamServiceFixed();
+
+// Expose utility functions globally for debugging/admin operations
+if (typeof window !== 'undefined') {
+  window.syncTeamCredits = (agencyId) => {
+    return teamServiceFixed.syncAllTeamMembersCredits(agencyId);
+  };
+
+  console.log(`
+🔧 Team Credit Management Utility Available:
+
+// Sync all team members' credits with agency tier:
+syncTeamCredits('agency-id-here')
+
+This is useful if team members joined before credit sync was implemented.
+  `);
+}
+
 export default teamServiceFixed;

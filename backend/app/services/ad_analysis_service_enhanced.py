@@ -23,6 +23,7 @@ from app.core.logging import get_logger
 # Import AI service for real improvement generation
 from app.services.production_ai_generator import ProductionAIService
 from app.services.agent_system import MultiAgentOptimizer
+from app.services.recommendation_orchestrator import RecommendationOrchestrator
 from app.core.exceptions import AIProviderUnavailable
 
 logger = get_logger(__name__)
@@ -39,6 +40,7 @@ class EnhancedAdAnalysisService:
     def __init__(self, db: Session, registry: ToolRegistry = None):
         self.db = db
         self.orchestrator = ToolOrchestrator(registry or default_registry)
+        self.rec_orchestrator = RecommendationOrchestrator()  # NEW: Recommendation prioritization
         
         # Initialize AI service for improvement generation
         openai_key = os.getenv('OPENAI_API_KEY')
@@ -194,8 +196,8 @@ class EnhancedAdAnalysisService:
                 orchestration_result
             )
         
-        # Generate quick wins from tool insights
-        quick_wins = self._extract_quick_wins(orchestration_result)
+        # Generate quick wins using Recommendation Orchestrator (prioritized from 45-72 recommendations down to top 5)
+        quick_wins = self._orchestrate_recommendations(orchestration_result)
         
         # Convert feedback list to string to match Pydantic schema expectations
         feedback_text = "\n".join(str(f) for f in feedback if f) if feedback else "Analysis completed successfully"
@@ -459,10 +461,46 @@ class EnhancedAdAnalysisService:
             ]
         }
     
-    def _extract_quick_wins(self, orchestration_result) -> List[str]:
-        """Extract quick wins from tool insights"""
+    def _orchestrate_recommendations(self, orchestration_result) -> List[str]:
+        """
+        Use Recommendation Orchestrator to prioritize recommendations
+
+        Reduces 45-72 recommendations from all tools down to top 5 most impactful
+        """
+        # Orchestrate recommendations from all tool results
+        prioritized_recommendations = self.rec_orchestrator.orchestrate(
+            tool_results=orchestration_result.tool_results,
+            max_recommendations=5
+        )
+
+        # Convert to string format for quick_wins
         quick_wins = []
-        
+        for rec in prioritized_recommendations:
+            # Format: "🎯 [Priority] Title - Description"
+            priority_emoji = {
+                'CRITICAL': '❌',
+                'HIGH': '⚠️',
+                'MEDIUM': '💡',
+                'LOW': '✓'
+            }
+            emoji = priority_emoji.get(rec.priority.name, '•')
+            quick_win = f"{emoji} {rec.title}"
+            quick_wins.append(quick_win)
+
+        logger.info(f"Orchestrated {len(quick_wins)} prioritized recommendations")
+
+        return quick_wins
+
+    def _extract_quick_wins(self, orchestration_result) -> List[str]:
+        """
+        DEPRECATED: Old quick wins extraction logic
+        Kept for backward compatibility but now delegates to _orchestrate_recommendations
+        """
+        return self._orchestrate_recommendations(orchestration_result)
+
+        # OLD LOGIC (commented out, using orchestrator now):
+        quick_wins = []
+
         for tool_name, tool_output in orchestration_result.tool_results.items():
             if tool_output.success and tool_output.insights:
                 

@@ -17,6 +17,7 @@ from app.schemas.ads import (
 )
 from app.utils.text_parser import TextParser
 from app.utils.file_extract import FileExtractor
+from app.utils.input_validator import AdInputValidator, ValidationError
 from app.core.config import settings
 import json
 import uuid
@@ -42,27 +43,46 @@ async def comprehensive_analyze_ad(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_subscription_limit)
 ):
-    """Comprehensive analysis with all 9 tools - new endpoint"""
+    """Comprehensive analysis with all 9 tools - new endpoint with input validation"""
     try:
         # Extract data from request
         ad_copy = request.get('ad_copy', '')
         platform = request.get('platform', 'facebook')
         user_id = request.get('user_id')
-        
+
         if not ad_copy:
             raise HTTPException(status_code=400, detail="ad_copy is required")
-        
+
         # Convert ad_copy string to AdInput format if needed
         if isinstance(ad_copy, str):
-            # Parse the ad copy into components
-            ad_input = AdInput(
-                headline=ad_copy[:100] if len(ad_copy) > 100 else ad_copy,  # First 100 chars as headline
-                body_text=ad_copy,
-                cta="Learn More",  # Default CTA
+            # Parse the ad copy into components (simple split)
+            headline = ad_copy[:100] if len(ad_copy) > 100 else ad_copy  # First 100 chars as headline
+            body_text = ad_copy
+            cta = "Learn More"  # Default CTA
+        else:
+            headline = ad_copy.get('headline', '')
+            body_text = ad_copy.get('body_text', '')
+            cta = ad_copy.get('cta', 'Learn More')
+
+        # Validate input (prevents crashes on edge cases)
+        try:
+            validated = AdInputValidator.validate_ad_input(
+                headline=headline,
+                body_text=body_text,
+                cta=cta,
                 platform=platform
             )
-        else:
-            ad_input = AdInput(**ad_copy)
+
+            # Use validated and sanitized values
+            ad_input = AdInput(
+                headline=validated['headline'],
+                body_text=validated['body_text'],
+                cta=validated['cta'],
+                platform=validated['platform']
+            )
+
+        except ValidationError as ve:
+            raise HTTPException(status_code=400, detail=str(ve))
         
         # Create analysis request
         analysis_request = AdAnalysisRequest(
