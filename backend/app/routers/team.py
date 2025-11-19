@@ -147,6 +147,12 @@ class ResendInvitationRequest(BaseModel):
     inviter_user_id: str = Field(..., description="User ID of person resending")
 
 
+class AcceptInvitationCodeRequest(BaseModel):
+    """Accept invitation by code request model."""
+    code: str = Field(..., description="6-character invitation code")
+    user_id: str = Field(..., description="User ID accepting the invitation")
+
+
 @router.post("/invite", response_model=TeamInvitationResponse)
 async def send_team_invitation(
     invitation: TeamInvitationRequest,
@@ -311,8 +317,7 @@ async def resend_team_invitation(
 
 @router.post("/invite/accept-code")
 async def accept_invitation_by_code(
-    code: str = Field(..., description="6-character invitation code"),
-    user_id: str = Field(..., description="User ID accepting the invitation")
+    request: AcceptInvitationCodeRequest
 ):
     """
     Accept an invitation using a 6-character code.
@@ -324,7 +329,8 @@ async def accept_invitation_by_code(
         supabase = get_supabase_client()
 
         # Normalize code (uppercase, no spaces)
-        code = code.strip().upper()
+        code = request.code.strip().upper()
+        user_id = request.user_id
 
         # Find invitation by code
         # Try invitation_code column first, fall back to invitation_token
