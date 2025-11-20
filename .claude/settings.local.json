@@ -8,7 +8,8 @@
       "Bash(ssh:*)",
       "Bash(sudo systemctl status:*)",
       "Bash(sudo journalctl:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
