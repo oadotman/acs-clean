@@ -122,8 +122,8 @@ if not settings.DEBUG:
     
     # Trusted hosts
     app.add_middleware(
-        TrustedHostMiddleware, 
-        allowed_hosts=["api.adcopysurge.com", "*.adcopysurge.com"]
+        TrustedHostMiddleware,
+        allowed_hosts=["api.adcopysurge.com", "*.adcopysurge.com", "adcopysurge.com"]
     )
 
 # CORS middleware
