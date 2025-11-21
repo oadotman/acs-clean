@@ -3,7 +3,7 @@ import multiprocessing
 import os
 
 # Server socket
-bind = "unix:/run/adcopysurge/gunicorn.sock"
+bind = "127.0.0.1:8000"
 backlog = 2048
 
 # Worker processes - optimized for VPS
@@ -13,7 +13,7 @@ worker_connections = 1000
 max_requests = 1000
 max_requests_jitter = 50
 preload_app = True
-timeout = 180  # 3 minutes - AI analysis takes 60-120 seconds, need buffer
+timeout = 300  # 5 minutes - AI analysis takes 60-120 seconds, increased for safety
 keepalive = 2
 
 # Logging
@@ -28,7 +28,7 @@ proc_name = "adcopysurge-backend"
 # Server mechanics
 daemon = False
 pidfile = "/run/adcopysurge/gunicorn.pid"
-user = "www-data"
+user = "www-data"  # SECURITY: Never run as root
 group = "www-data"
 tmp_upload_dir = None
 

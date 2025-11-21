@@ -9,7 +9,15 @@
       "Bash(sudo systemctl status:*)",
       "Bash(sudo journalctl:*)",
       "Bash(test:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(alembic revision:*)",
+      "Bash(alembic current:*)",
+      "Bash(if [ -d \"venv\" ])",
+      "Bash(then echo \"venv exists\")",
+      "Bash(elif [ -d \".venv\" ])",
+      "Bash(then echo \".venv exists\")",
+      "Bash(else echo \"no venv found\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []

@@ -237,13 +237,20 @@ async def paddle_webhook(
         
         paddle_service = PaddleService(db)
         
-        # Verify webhook signature (CRITICAL FOR SECURITY)
-        if signature and paddle_service.webhook_secret:
-            if not paddle_service.verify_webhook_signature(body, signature):
-                logger.warning("Webhook signature verification failed")
-                raise HTTPException(status_code=401, detail="Invalid webhook signature")
-        else:
-            logger.warning("Webhook signature not verified (no signature or secret)")
+        # ✅ FIXED: Always verify webhook signature (CRITICAL FOR SECURITY)
+        if not signature:
+            logger.error("Webhook received without Paddle-Signature header")
+            raise HTTPException(status_code=401, detail="Missing webhook signature")
+
+        if not paddle_service.webhook_secret:
+            logger.error("PADDLE_WEBHOOK_SECRET not configured - cannot verify webhooks")
+            raise HTTPException(status_code=500, detail="Webhook secret not configured")
+
+        if not paddle_service.verify_webhook_signature(body, signature):
+            logger.warning("Webhook signature verification failed")
+            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
+        logger.info("✅ Webhook signature verified successfully")
         
         # Parse JSON body (New Paddle API sends JSON)
         import json

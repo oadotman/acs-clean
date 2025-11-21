@@ -123,7 +123,7 @@ if not settings.DEBUG:
     # Trusted hosts
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["api.adcopysurge.com", "*.adcopysurge.com", "adcopysurge.com"]
+        allowed_hosts=["api.adcopysurge.com", "*.adcopysurge.com", "adcopysurge.com", "localhost", "127.0.0.1"]
     )
 
 # CORS middleware
@@ -255,6 +255,10 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"]
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
 app.include_router(user_profile.router, prefix="/api", tags=["user"])
 app.include_router(team.router, prefix="/api", tags=["team"])
+
+# ✅ NEW: Credit management API (backend credit service)
+from app.api import credits
+app.include_router(credits.router, prefix="/api/credits", tags=["credits"])
 
 # Include blog router if enabled
 if settings.ENABLE_BLOG:

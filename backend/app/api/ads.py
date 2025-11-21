@@ -5,8 +5,11 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.services.ad_analysis_service_enhanced import EnhancedAdAnalysisService
 from app.services.production_ai_generator import ProductionAIService
-from app.auth import get_current_user, require_subscription_limit
+from app.auth import get_current_user, require_subscription_limit, require_active_user
 from app.models.user import User
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 from app.schemas.ads import (
     AdInput, 
     CompetitorAd, 
@@ -112,21 +115,47 @@ async def comprehensive_analyze_ad(
 async def analyze_ad(
     request: AdAnalysisRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
-    # Auth handled by frontend Supabase session - no backend DB user needed
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_active_user)  # ✅ FIXED: Enforce authentication
 ):
-    """Analyze an ad using EnhancedAdAnalysisService with AI-powered improvements"""
+    """
+    Analyze an ad using EnhancedAdAnalysisService with AI-powered improvements.
+
+    SECURITY: This endpoint now requires authentication and atomically deducts credits
+    before analysis with automatic refund on failure.
+    """
+    from app.services.credit_service import CreditService
+
     analysis_id = str(uuid.uuid4())
-    
-    # Use user_id from request if provided, otherwise use a default
-    # Frontend sends user_id from Supabase session
-    from types import SimpleNamespace
-    user_id = getattr(request.ad, 'user_id', None) or request.dict().get('user_id', 'anonymous')
-    current_user = SimpleNamespace(id=user_id, email='user@app.com')
-    
+    credit_service = CreditService(db)
+    credits_consumed = False
+
     try:
-        print(f"🔍 Starting analysis for ad: {request.ad.headline[:50]}...")
-        
+        print(f"🔍 Starting analysis for user {current_user.id}: {request.ad.headline[:50]}...")
+
+        # ✅ FIXED: Atomic credit consumption with race condition protection
+        success, credit_result = credit_service.consume_credits_atomic(
+            user_id=str(current_user.id),
+            operation='FULL_ANALYSIS',
+            quantity=1,
+            description=f"Analysis for ad: {request.ad.headline[:50]}"
+        )
+
+        if not success:
+            print(f"❌ Insufficient credits for user {current_user.id}")
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    'error': 'Insufficient credits',
+                    'required': credit_result.get('required', 2),
+                    'available': credit_result.get('available', 0),
+                    'message': 'You do not have enough credits for this analysis. Please upgrade your plan.'
+                }
+            )
+
+        credits_consumed = True
+        print(f"✅ Credits deducted: {credit_result.get('consumed')} credits, remaining: {credit_result.get('remaining')}")
+
         # ALWAYS use EnhancedAdAnalysisService - it has all our AI improvements
         ad_service = EnhancedAdAnalysisService(db)
         analysis = await ad_service.analyze_ad(
@@ -176,10 +205,33 @@ async def analyze_ad(
             "tool_results": tool_results
         }
         
+    except HTTPException:
+        # Re-raise HTTP exceptions without refund (e.g., insufficient credits)
+        raise
     except Exception as e:
         print(f"❌ Analysis failed: {str(e)}")
         import traceback
         traceback.print_exc()
+
+        # ✅ FIXED: Refund credits if analysis failed after consumption
+        if credits_consumed:
+            print(f"🔄 Refunding credits to user {current_user.id} due to analysis failure")
+            refund_success, refund_result = credit_service.refund_credits(
+                user_id=str(current_user.id),
+                operation='FULL_ANALYSIS',
+                quantity=1,
+                reason=f"Analysis failed: {str(e)[:100]}"
+            )
+            if refund_success:
+                print(f"✅ Credits refunded: {refund_result.get('refunded')} credits")
+            else:
+                print(f"❌ Refund failed: {refund_result.get('error')}")
+                # Log for manual resolution
+                logger.error(
+                    f"MANUAL REFUND NEEDED: user_id={current_user.id}, "
+                    f"operation=FULL_ANALYSIS, reason={str(e)}"
+                )
+
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 @router.get("/history", response_model=List[dict])

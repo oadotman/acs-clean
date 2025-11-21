@@ -65,30 +65,71 @@ class SupabaseAuth:
             return None
     
     async def verify_supabase_token(self, token: str) -> Optional[dict]:
-        """Verify and decode Supabase JWT token"""
+        """
+        Verify and decode Supabase JWT token with proper signature validation.
+
+        ✅ FIXED: Now properly verifies JWT signatures using Supabase JWT secret.
+        In production, signature verification is REQUIRED.
+        """
         try:
-            # For development, we can use the anon key as secret
-            # In production, this should use proper JWKS verification
-            if hasattr(settings, 'REACT_APP_SUPABASE_ANON_KEY'):
-                # Decode without verification first to get header info
-                unverified_header = jwt.get_unverified_header(token)
-                unverified_payload = jwt.decode(token, options={"verify_signature": False})
-                
-                # Basic validation
-                if unverified_payload.get('iss') != self.supabase_url + '/auth/v1':
-                    logger.warning("Invalid token issuer")
+            # Get JWT secret from settings
+            jwt_secret = getattr(settings, 'SUPABASE_JWT_SECRET', None)
+
+            if not jwt_secret:
+                # ✅ FIXED: Require JWT secret in production
+                if getattr(settings, 'ENVIRONMENT', 'development') == 'production':
+                    logger.error("SUPABASE_JWT_SECRET not configured in production - cannot verify tokens")
                     return None
-                
-                # Check if token is expired
-                exp = unverified_payload.get('exp')
-                if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(timezone.utc):
-                    logger.warning("Token expired")
-                    return None
-                
-                # For now, return the unverified payload for development
-                # TODO: Implement proper JWKS verification for production
-                return unverified_payload
-            
+                else:
+                    logger.warning("SUPABASE_JWT_SECRET not configured - falling back to unverified tokens (DEV ONLY)")
+                    # Development fallback
+                    unverified_payload = jwt.decode(token, options={"verify_signature": False})
+
+                    # Basic validation
+                    if unverified_payload.get('iss') != self.supabase_url + '/auth/v1':
+                        logger.warning("Invalid token issuer")
+                        return None
+
+                    # Check if token is expired
+                    exp = unverified_payload.get('exp')
+                    if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(timezone.utc):
+                        logger.warning("Token expired")
+                        return None
+
+                    return unverified_payload
+
+            # ✅ FIXED: Verify signature using JWT secret
+            try:
+                payload = jwt.decode(
+                    token,
+                    jwt_secret,
+                    algorithms=['HS256'],
+                    audience='authenticated',
+                    issuer=self.supabase_url + '/auth/v1' if self.supabase_url else None,
+                    options={
+                        'verify_signature': True,
+                        'verify_exp': True,
+                        'verify_aud': True,
+                        'verify_iss': True if self.supabase_url else False
+                    }
+                )
+
+                logger.debug(f"✅ Token verified successfully for user {payload.get('sub')}")
+                return payload
+
+            except jwt.ExpiredSignatureError:
+                logger.warning("Token expired")
+                return None
+            except jwt.InvalidAudienceError:
+                logger.warning("Invalid token audience")
+                return None
+            except jwt.InvalidIssuerError:
+                logger.warning("Invalid token issuer")
+                return None
+            except jwt.InvalidSignatureError:
+                logger.warning("Invalid token signature")
+                return None
+
             return None
             
         except jwt.ExpiredSignatureError:
