@@ -17,7 +17,9 @@
       "Bash(elif [ -d \".venv\" ])",
       "Bash(then echo \".venv exists\")",
       "Bash(else echo \"no venv found\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(sudo fuser:*)",
+      "Bash(fuser:*)"
     ],
     "deny": [],
     "ask": []
