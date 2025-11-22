@@ -19,7 +19,16 @@
       "Bash(else echo \"no venv found\")",
       "Bash(fi)",
       "Bash(sudo fuser:*)",
-      "Bash(fuser:*)"
+      "Bash(fuser:*)",
+      "Bash(alembic heads:*)",
+      "Bash(then . venv/Scripts/activate)",
+      "Bash(. venv/bin/activate)",
+      "Bash(then . .venv/Scripts/activate)",
+      "Bash(. .venv/bin/activate)",
+      "Bash(npx react-scripts build --help)",
+      "Bash(node test-export-report.js:*)",
+      "Bash(node test-abc-export.js:*)",
+      "Bash(security_audit_clean.py)"
     ],
     "deny": [],
     "ask": []

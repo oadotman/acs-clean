@@ -219,25 +219,25 @@ const ABCTestingGrid = ({
 
   const handleExportAll = (format = 'json') => {
     if (format === 'csv') {
-      // Export as CSV
+      // Export as CSV - Only include scores for Original and Improved
       const csvContent = [
         ['Type', 'Strategy', 'Headline', 'Body Text', 'CTA', 'Score', 'Target Audience', 'Best For'],
         // Original
-        ['Original', 'Baseline', 
-         originalCopy?.headline || '', 
-         originalCopy?.body_text || '', 
+        ['Original', 'Baseline',
+         originalCopy?.headline || '',
+         originalCopy?.body_text || '',
          originalCopy?.cta || '',
          originalCopy?.score || 60,
          'General',
          'Baseline comparison'],
-        // Processed variations
+        // Processed variations - only show score for Improved
         ...processedVariations.map(v => [
           v.title,
           v.approach || v.badge,
           v.headline || '',
           v.body_text || '',
           v.cta || '',
-          v.score || 0,
+          v.type === 'improved' ? (v.score || 0) : '-',
           v.targetAudience || '',
           (v.patterns || []).join('; ')
         ])
@@ -266,7 +266,7 @@ const ABCTestingGrid = ({
             headline: v.headline,
             body_text: v.body_text,
             cta: v.cta,
-            score: v.score,
+            // Don't include score for A/B/C variants
             reasoning: v.reasoning,
             targetAudience: v.targetAudience
           }))
@@ -394,8 +394,8 @@ const ABCTestingGrid = ({
                 )}
               </Box>
               
-              {/* Score Gauge */}
-              {!isOriginal && (
+              {/* Score Gauge - Only show for Improved version */}
+              {variation.type === 'improved' && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Chip
                     label={`${Math.round(variation.score)}/100`}
@@ -407,8 +407,8 @@ const ABCTestingGrid = ({
               )}
             </Box>
 
-            {/* Score Progress Bar */}
-            {!isOriginal && (
+            {/* Score Progress Bar - Only show for Improved version */}
+            {variation.type === 'improved' && (
               <Box sx={{ mb: 2 }}>
                 <LinearProgress
                   variant="determinate"
@@ -419,7 +419,7 @@ const ABCTestingGrid = ({
                     backgroundColor: alpha(theme.palette.grey[300], 0.3),
                     '& .MuiLinearProgress-bar': {
                       borderRadius: 3,
-                      backgroundColor: 
+                      backgroundColor:
                         variation.score >= 85 ? theme.palette.success.main :
                         variation.score >= 70 ? theme.palette.warning.main :
                         theme.palette.error.main
@@ -746,30 +746,43 @@ const ABCTestingGrid = ({
         </Box>
         
         <Grid container spacing={3}>
-          {[{ title: 'Original', score: originalCopy?.score || 60 }, ...processedVariations].map((variation, idx) => (
-            <Grid item xs={6} sm={4} md={2.4} key={idx}>
-              <Box sx={{ 
-                p: 2, 
-                borderRadius: 1, 
-                backgroundColor: alpha(theme.palette.background.paper, 0.8),
-                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-                textAlign: 'center'
-              }}>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                  {variation.title}
-                </Typography>
-                <Typography variant="h5" fontWeight={700} color="primary" gutterBottom>
-                  {Math.round(variation.score || 75)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  Est. CTR: {(((variation.score || 75) / 100 * 3.5)).toFixed(2)}%
-                </Typography>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  Conv: {(((variation.score || 75) / 100 * 2.1)).toFixed(2)}%
-                </Typography>
-              </Box>
-            </Grid>
-          ))}
+          {[{ title: 'Original', type: 'original', score: originalCopy?.score || 60 }, ...processedVariations].map((variation, idx) => {
+            // Only show scores for Original and Improved
+            const showScore = variation.type === 'original' || variation.type === 'improved';
+
+            return (
+              <Grid item xs={6} sm={4} md={2.4} key={idx}>
+                <Box sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  backgroundColor: alpha(theme.palette.background.paper, 0.8),
+                  border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
+                  textAlign: 'center'
+                }}>
+                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                    {variation.title}
+                  </Typography>
+                  {showScore ? (
+                    <>
+                      <Typography variant="h5" fontWeight={700} color="primary" gutterBottom>
+                        {Math.round(variation.score || 75)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Est. CTR: {(((variation.score || 75) / 100 * 3.5)).toFixed(2)}%
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Conv: {(((variation.score || 75) / 100 * 2.1)).toFixed(2)}%
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ minHeight: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {variation.approach || 'Variation Strategy'}
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+            );
+          })}
         </Grid>
         
         <Typography variant="caption" color="text.secondary" display="block" mt={2}>

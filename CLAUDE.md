@@ -558,10 +558,15 @@ Main endpoint groups:
 
 ## Known Issues & Important Notes
 
-### Credit System
-- **No refund on failure**: Credits are deducted BEFORE analysis completes. If analysis fails, credits are not refunded automatically.
-- Location: `frontend/src/hooks/useCredits.js` (deduction happens before API call)
-- Consider implementing `refundCredits()` function for error cases
+### Credit System (UPDATED 2025-11-21)
+- **Automatic refund on failure**: Credits are deducted atomically at the backend level when analysis starts. If analysis fails, credits ARE automatically refunded.
+- **Atomic operations**: The backend uses database-level constraints (`WHERE current_credits >= :credit_cost`) to prevent race conditions
+- **Implementation details**:
+  - Backend handles all credit operations atomically in `backend/app/services/credit_service.py`
+  - Automatic refunds implemented in `backend/app/api/ads.py` lines 217-228
+  - Transaction logging to `credit_transactions` table for full audit trail
+  - Frontend polls every 30 seconds for balance updates (`frontend/src/hooks/useCredits.js`)
+- **Test coverage**: Race conditions and refunds are tested in `backend/tests/test_credit_service_security.py`
 
 ### Anonymous User Fallback
 - If authentication fails during analysis, system falls back to 'anonymous' user
