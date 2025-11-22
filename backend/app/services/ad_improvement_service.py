@@ -68,8 +68,7 @@ class AdImprovementService:
             "emotional": {
                 "focus": "Emotional Connection & Storytelling",
                 "prompt_template": """
-You are an expert copywriter specializing in emotional marketing.
-Rewrite this ad to create a strong emotional connection and drive action through storytelling:
+🎯 VARIANT: EMOTIONAL CONNECTION & STORYTELLING
 
 Original Ad:
 - Headline: {headline}
@@ -78,29 +77,28 @@ Original Ad:
 - Platform: {platform}
 - Target Audience: {target_audience}
 
-Create an EMOTIONAL version that:
-1. Identifies the primary emotion (fear, desire, aspiration, frustration) and triggers it
-2. Uses vivid storytelling or scenarios that people relate to
-3. Creates mental images of success or failure
-4. Appeals to identity and self-image ("successful marketer", "caring parent")
-5. Uses sensory language that people can feel
-6. Builds emotional tension that resolves with action
+✅ CREATE emotional version (50-100 words) that:
+1. Opens with emotional hook relating to audience's desire or pain
+2. Connects product features to emotional benefits authentically
+3. Uses vivid, sensory language describing real experience
+4. Builds to emotionally resonant CTA
+5. NO fake testimonials or made-up stories
+6. ONE emoji max if platform-appropriate
 
-Format your response as:
-HEADLINE: [emotionally charged headline]
-BODY: [emotional body text with story/scenario]
-CTA: [emotion-driven CTA]
-EMOTION: [primary emotion targeted]
-STORY: [brief story/scenario used]
-WHY: [why this emotional approach will increase conversions]
-                """,
+❌ NEVER USE: "game-changer", "revolutionary", "transform your life"
+
+Format:
+HEADLINE: [emotionally engaging headline]
+BODY: [emotional body with authentic connection]
+CTA: [emotion-driven action]
+WHY: [specific emotional improvements made]
+                """
                 "keywords": ["story", "imagine", "feel", "experience", "transform", "journey", "struggle", "success", "dream", "fear"]
             },
             "logical": {
                 "focus": "Data-Driven Credibility & Logic",
                 "prompt_template": """
-You are a performance marketing expert who relies on data, statistics, and logical proof.
-Rewrite this ad to emphasize credibility through numbers, stats, and logical benefits:
+🎯 VARIANT: DATA-DRIVEN CREDIBILITY & LOGIC
 
 Original Ad:
 - Headline: {headline}
@@ -109,53 +107,27 @@ Original Ad:
 - Platform: {platform}
 - Industry: {industry}
 
-Create a DATA-DRIVEN version that:
-1. Includes specific numbers, percentages, or statistics (real or realistic)
-2. Mentions customer counts, time savings, ROI improvements, growth metrics
-3. References studies, awards, certifications, or recognition
-4. Uses quantified benefits rather than vague promises
-5. Includes credibility indicators and social proof numbers
-6. Appeals to logical decision-making with clear value propositions
+✅ CREATE data-driven version (50-100 words) that:
+1. Includes specific numbers/percentages from original (don't fabricate)
+2. Quantifies benefits (time saved, growth %, customer count)
+3. Uses concrete proof over vague claims
+4. Appeals to logical decision-making
+5. Professional tone, credibility-focused
+6. ONE emoji max if platform-appropriate
 
-Format your response as:
-HEADLINE: [number/stat-focused headline]
-BODY: [data-rich body with specific metrics and proof points]
-CTA: [results-oriented CTA]
-KEY_STATS: [the main numbers/proof points featured]
-CREDIBILITY: [credibility markers included]
-WHY: [why data-driven approach converts better for this audience]
-                """,
+❌ NEVER USE: "world-class", "industry-leading", "best-in-class"
+❌ DON'T invent statistics not in original
+
+Format:
+HEADLINE: [number-focused headline]
+BODY: [data-rich body with metrics]
+CTA: [results-oriented action]
+WHY: [specific data elements and credibility added]
+                """
                 "keywords": ["proven", "data", "results", "study", "research", "statistics", "increase", "reduce", "save", "ROI"]
             },
             "urgency": {
                 "focus": "Scarcity & Immediate Action",
-                "prompt_template": """
-You are an expert in urgency-driven marketing and conversion optimization.
-Rewrite this ad to create compelling urgency and drive immediate action:
-
-Original Ad:
-- Headline: {headline}
-- Body: {body_text}  
-- CTA: {cta}
-- Platform: {platform}
-- Industry: {industry}
-
-Create an URGENCY-FOCUSED version that:
-1. Creates legitimate scarcity (limited time, spots, quantity, bonus)
-2. Uses time-pressure language that motivates immediate action
-3. Emphasizes what they lose by waiting vs. what they gain by acting now
-4. Includes countdown elements or deadline language
-5. Shows consequences of delay (problems getting worse, prices rising)
-6. Makes the urgency feel authentic and believable
-
-Format your response as:
-HEADLINE: [urgency-driven headline with time pressure]
-BODY: [urgent body text emphasizing scarcity and consequences of delay]
-CTA: [action-immediate CTA]
-URGENCY_TYPE: [type of scarcity/urgency used]
-CONSEQUENCES: [what happens if they wait]
-WHY: [why urgency approach will increase immediate conversions]
-                """,
                 "keywords": ["now", "today", "limited", "deadline", "expires", "last chance", "before", "while", "hurry", "act fast"]
             }
         }
@@ -232,12 +204,17 @@ WHY: [why urgency approach will increase immediate conversions]
         )
         
         try:
+            # Import premium copywriting standards
+            from app.constants.premium_copywriting_standards import build_premium_system_prompt
+            
+            premium_system_prompt = build_premium_system_prompt()
+            
             response = await self.openai_client.chat.completions.create(
                 model="gpt-4-turbo-preview",  # Use best available model
                 messages=[
                     {
                         "role": "system", 
-                        "content": "You are a world-class copywriter with 15+ years of experience creating high-converting ads that have generated millions in revenue. You understand consumer psychology and what drives people to take action."
+                        "content": premium_system_prompt
                     },
                     {
                         "role": "user", 
@@ -292,22 +269,22 @@ WHY: [why urgency approach will increase immediate conversions]
         
         templates = {
             "emotional": {
-                "headline": f"Transform Your Success: {original_headline}",
-                "body_text": f"Imagine the feeling of finally achieving what you've been working toward. {original_body} Join thousands who have already experienced this transformation.",
-                "cta": "Start Your Journey Today",
-                "reason": "Enhanced emotional appeal with transformation story and social proof"
+                "headline": f"Finally—{original_headline.replace('Get', 'Achieve').replace('Buy', 'Own')}",
+                "body_text": f"Picture this: {original_body} That's the experience thousands already enjoy. Ready to feel that same sense of accomplishment?",
+                "cta": "Begin Your Journey",
+                "reason": "Aspirational framing with sensory appeal and social validation (no clichés)"
             },
             "logical": {
-                "headline": f"Proven Results: {original_headline}",
-                "body_text": f"Based on analysis of 10,000+ successful cases, {original_body.lower()} Our clients see an average 40% improvement in just 30 days.",
-                "cta": "Get Your Results Now",
-                "reason": "Added credibility with specific statistics and proven track record"
+                "headline": f"Measurable Results: {original_headline}",
+                "body_text": f"Based on real customer data: {original_body} Our approach delivers consistent, quantified improvements you can track from day one.",
+                "cta": "See the Data",
+                "reason": "Evidence-based credibility without fabricating statistics"
             },
             "urgency": {
-                "headline": f"Limited Time: {original_headline}",
-                "body_text": f"Don't wait - {original_body.lower()} This exclusive opportunity expires in 72 hours, and spots are filling fast.",
-                "cta": "Secure Your Spot Now",
-                "reason": "Created legitimate urgency with time scarcity and limited availability"
+                "headline": f"Limited Availability: {original_headline}",
+                "body_text": f"Time-sensitive: {original_body} This offer ends [specific date/time]. Spots are limited to ensure quality service.",
+                "cta": "Reserve Your Spot",
+                "reason": "Authentic scarcity without desperate language (no 'don't miss out')"
             }
         }
         

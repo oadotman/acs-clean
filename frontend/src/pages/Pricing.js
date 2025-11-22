@@ -98,11 +98,24 @@ const Pricing = () => {
         return;
       }
 
+      // Validate user email
+      if (!user?.email) {
+        toast.error('Please log in to upgrade your plan');
+        setLoading(prev => ({ ...prev, [planKey]: false }));
+        return;
+      }
+      
+      console.log('📝 Opening checkout for:', {
+        plan: plan.name,
+        priceId: selectedProduct.priceId,
+        email: user.email
+      });
+      
       // Open Paddle checkout overlay
       await paddleService.openCheckout({
-        productId: selectedProduct.productId,
-        email: user?.email || '',
-        userId: user?.id || '',
+        priceId: selectedProduct.priceId,  // Use priceId, not productId
+        email: user.email,
+        userId: user.id,
         planName: `${plan.name} (${billingPeriod})`,
         successCallback: (data) => {
           toast.success(`Successfully upgraded to ${plan.name} plan!`);

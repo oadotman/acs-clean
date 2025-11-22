@@ -94,40 +94,10 @@ const CreditsWidget = ({ collapsed = false }) => {
     }
   }, [user, subscription?.tier]);
 
-  const handleUpgrade = async () => {
-    if (!user) {
-      toast.error('Please log in to upgrade your plan');
-      return;
-    }
-
-    try {
-      setUpgrading(true);
-      
-      const productMapping = paddleService.getPaddleProductMapping();
-      const targetPlan = credits?.tier === 'basic' ? 'pro' : 'pro';
-      
-      await paddleService.openCheckout({
-        productId: productMapping[targetPlan].productId,
-        email: user.email,
-        userId: user.id,
-        planName: targetPlan,
-        successCallback: () => {
-          toast.success('Upgrade successful! Your account will be updated shortly.');
-          // Refresh credits after successful upgrade
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        },
-        closeCallback: () => {
-          console.log('Upgrade cancelled');
-        }
-      });
-    } catch (error) {
-      console.error('Upgrade failed:', error);
-      toast.error('Failed to start upgrade process. Please try again.');
-    } finally {
-      setUpgrading(false);
-    }
+  const handleUpgrade = () => {
+    // Navigate to pricing page instead of directly opening checkout
+    // This allows users to see all plans and choose what they want
+    window.location.href = '/pricing';
   };
 
   const getCreditsColor = () => {

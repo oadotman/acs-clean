@@ -15,6 +15,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
+import ABCTestingGrid from './shared/ABCTestingGrid';
 import {
   ContentCopy,
   CheckCircle,
@@ -46,7 +47,7 @@ import {
 const analysisTools = [
   { id: 'overview', label: 'Overview', icon: Analytics, color: '#7C3AED' },
   { id: 'compliance', label: 'Compliance', icon: Policy, color: '#DC2626' },
-  { id: 'ab-tests', label: 'A/B Tests', icon: Science, color: '#059669' },
+  { id: 'ab-tests', label: 'A/B/C Tests', icon: Science, color: '#059669' },
   { id: 'psychology', label: 'Psychology', icon: Psychology, color: '#7C2D12' },
   { id: 'roi', label: 'ROI', icon: AttachMoney, color: '#B45309' },
   { id: 'industry', label: 'Industry', icon: TrendingUp, color: '#0369A1' },
@@ -73,9 +74,28 @@ const ComprehensiveResults = ({ results, adCopy, platform, onBack, onFurtherImpr
     evidenceLevel: results?.evidence_level || (isAIPowered ? 'high' : 'low')
   });
 
-  // Debug: Log results to console
+  // Map alternatives to abTests.variations if not already mapped
   React.useEffect(() => {
-    console.log('ComprehensiveResults received:', { results, adCopy, platform });
+    console.log('📦 ComprehensiveResults received:', { results, adCopy, platform });
+    console.log('📦 results.alternatives:', results?.alternatives);
+    console.log('📦 results.abTests?.variations:', results?.abTests?.variations);
+    
+    // If alternatives exist but abTests doesn't, map them
+    if (results?.alternatives && !results?.abTests?.variations) {
+      console.log('⚠️ Mapping alternatives to abTests.variations...');
+      results.abTests = {
+        variations: results.alternatives.map((alt, index) => ({
+          angle: alt.variant_type || `Variation ${index + 1}`,
+          copy: `${alt.headline}\n\n${alt.body_text}${alt.cta ? '\n\n' + alt.cta : ''}`,
+          generated_body_text: alt.body_text,
+          strategy: alt.improvement_reason,
+          improvement_reason: alt.improvement_reason,
+          predictedCTR: alt.predicted_score || 75
+        }))
+      };
+      console.log('✅ Mapped', results.abTests.variations.length, 'alternatives to abTests.variations');
+    }
+    
     console.log('Improved copy:', results?.improved?.copy);
     console.log('Evidence level:', evidenceLevel);
   }, [results, adCopy, platform, evidenceLevel]);
@@ -92,28 +112,118 @@ const ComprehensiveResults = ({ results, adCopy, platform, onBack, onFurtherImpr
   const handleExportReport = async () => {
     setIsExporting(true);
     try {
-      // Create a simple text-based report
+      // Get the ABC test variations
+      const variations = results?.alternatives || results?.abTests?.variations || [];
+
+      // Format each variation for the report
+      const formatVariation = (variant, index) => {
+        if (!variant) return '';
+
+        // Determine variant type/angle
+        const variantType = variant.variant_type || variant.angle || `variation_${String.fromCharCode(97 + index)}`;
+
+        // Map backend variant types to user-friendly display names
+        const variantDisplayNames = {
+          'benefit_focused': 'VERSION A - BENEFIT-FOCUSED',
+          'problem_focused': 'VERSION B - PROBLEM-FOCUSED',
+          'story_driven': 'VERSION C - STORY-DRIVEN',
+          'persuasive': 'PERSUASIVE VARIANT',
+          'emotional': 'EMOTIONAL VARIANT',
+          'data_driven': 'DATA-DRIVEN VARIANT',
+          'platform_optimized': 'PLATFORM-OPTIMIZED VARIANT'
+        };
+
+        const displayName = variantDisplayNames[variantType] || variantType.toUpperCase().replace(/_/g, ' ');
+
+        // Extract components
+        const headline = variant.headline || '';
+        const bodyText = variant.body_text || variant.generated_body_text || '';
+        const cta = variant.cta || '';
+        const score = variant.predicted_score || variant.predictedCTR || 'N/A';
+        const reasoning = variant.improvement_reason || variant.strategy || '';
+
+        // Build the formatted text - Only show score for improved variant
+        let variantText = `${displayName}`;
+        // Only show score for non-ABC variants (like improved, persuasive, emotional, etc.)
+        const isABCVariant = ['benefit_focused', 'problem_focused', 'story_driven'].includes(variantType);
+        if (!isABCVariant && score !== 'N/A') {
+          variantText += ` (Score: ${score}/100)`;
+        }
+        variantText += `\n`;
+
+        if (headline) {
+          variantText += `Headline: ${headline}\n`;
+        }
+        if (bodyText) {
+          variantText += `Body: ${bodyText}\n`;
+        }
+        if (cta) {
+          variantText += `CTA: ${cta}\n`;
+        }
+        if (reasoning) {
+          variantText += `Strategy: ${reasoning}\n`;
+        }
+
+        // Add best-for information based on variant type
+        const bestForInfo = {
+          'benefit_focused': 'Best for: Solution-seekers, warm leads, known problems',
+          'problem_focused': 'Best for: Pain-aware audiences, high urgency, immediate solutions',
+          'story_driven': 'Best for: Building trust, cold traffic, brand awareness'
+        };
+
+        if (bestForInfo[variantType]) {
+          variantText += `${bestForInfo[variantType]}\n`;
+        }
+
+        return variantText;
+      };
+
+      // Build the ABC test variations section
+      let abcVariantsSection = '';
+      if (variations && variations.length > 0) {
+        abcVariantsSection = `
+A/B/C TEST VARIATIONS:
+======================
+
+`;
+        variations.forEach((variant, index) => {
+          const formattedVariant = formatVariation(variant, index);
+          if (formattedVariant) {
+            abcVariantsSection += formattedVariant + '\n';
+          }
+        });
+      }
+
+      // Create a comprehensive text-based report
       const reportContent = `
 AD ANALYSIS REPORT
 ==================
+Generated: ${new Date().toLocaleString()}
+Platform: ${platform || 'Not specified'}
 
+PERFORMANCE SCORES:
+==================
 Original Score: ${results.original?.score || 60}/100
 Improved Score: ${results.improved?.score || 71}/100
-Improvement: +${((results.improved?.score || 71) - (results.original?.score || 60))}
+Improvement: +${((results.improved?.score || 71) - (results.original?.score || 60))} points
 
 ORIGINAL AD:
+============
 ${results.original?.copy || adCopy}
 
-IMPROVED AD:
+IMPROVED AD (PRIMARY):
+=====================
 ${results?.improved?.copy || results?.improved || 'Optimized ad copy'}
 
 KEY IMPROVEMENTS:
-${results?.keyImprovements?.join('\n- ') || 'Optimization recommendations applied'}
-
+================
+${results?.keyImprovements?.map(imp => `• ${imp}`).join('\n') || '• Optimization recommendations applied'}
+${abcVariantsSection}
 ---
 Generated by AdCopySurge
+Export Date: ${new Date().toISOString()}
 `;
-      
+
       // Create a downloadable file
       const blob = new Blob([reportContent], { type: 'text/plain' });
       const url = window.URL.createObjectURL(blob);
@@ -124,7 +234,7 @@ Generated by AdCopySurge
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      
+
       toast.success('Report exported successfully!');
     } catch (error) {
       console.error('Export error:', error);
@@ -323,6 +433,101 @@ Generated by AdCopySurge
         </Grid>
       </Grid>
 
+      {/* A/B/C Variants Preview */}
+      {results.abTests?.variations && results.abTests.variations.length > 0 && (
+        <Card elevation={0} sx={{ mb: 2, border: '2px solid', borderColor: 'primary.main', bgcolor: 'rgba(124, 58, 237, 0.02)' }}>
+          <CardContent sx={{ p: 2 }}>
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
+              <Science sx={{ fontSize: 20, color: 'primary.main' }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                A/B/C Variants Preview
+              </Typography>
+            </Box>
+            <Grid container spacing={1.5}>
+              {[
+                { label: 'Variation A', badge: 'Benefit-Focused', color: 'success', variant: results.abTests.variations.find(v => v.variant_type?.includes('benefit')) },
+                { label: 'Variation B', badge: 'Problem-Focused', color: 'warning', variant: results.abTests.variations.find(v => v.variant_type?.includes('problem')) },
+                { label: 'Variation C', badge: 'Story-Driven', color: 'info', variant: results.abTests.variations.find(v => v.variant_type?.includes('story')) }
+              ].map((item, idx) => {
+                const variant = item.variant || results.abTests.variations[idx];
+                if (!variant) return null;
+                return (
+                  <Grid item xs={12} md={4} key={idx}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 1.5,
+                        border: '1px solid',
+                        borderColor: `${item.color}.light`,
+                        bgcolor: `rgba(0,0,0,0.02)`,
+                        transition: 'all 0.3s ease',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          borderColor: `${item.color}.main`,
+                          boxShadow: `0 4px 12px rgba(124, 58, 237, 0.15)`,
+                          transform: 'translateY(-2px)'
+                        }
+                      }}
+                    >
+                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>
+                          {item.label}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={item.badge}
+                        size="small"
+                        color={item.color}
+                        variant="outlined"
+                        sx={{ mb: 1, fontWeight: 600, fontSize: '0.7rem', height: 22 }}
+                      />
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: 'block',
+                          fontSize: '0.75rem',
+                          color: 'text.secondary',
+                          lineHeight: 1.4,
+                          mb: 1,
+                          minHeight: 40,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical'
+                        }}
+                      >
+                        {variant.body_text || variant.generated_body_text || variant.copy || 'Copy preview'}
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<ContentCopy sx={{ fontSize: 12 }} />}
+                        onClick={() => copyToClipboard(variant.body_text || variant.generated_body_text || variant.copy || '', `${item.label}`)}
+                        sx={{ fontSize: '0.7rem', py: 0.5, textTransform: 'none' }}
+                        fullWidth
+                      >
+                        Copy
+                      </Button>
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
+            <Box display="flex" justifyContent="center" mt={2}>
+              <Button
+                size="small"
+                color="primary"
+                onClick={() => setActiveTab('ab-tests')}
+                sx={{ fontSize: '0.8rem', textTransform: 'none' }}
+              >
+                View Full Variants Details →
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Key Improvements */}
       {results.improved?.improvements && results.improved.improvements.length > 0 && (
         <Card elevation={0} sx={{ mb: 1.5, border: '1px solid', borderColor: 'divider' }}>
@@ -511,105 +716,94 @@ Generated by AdCopySurge
     </Box>
   );
 
-  const renderABTestsTab = () => (
-    <Box>
-      <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-        A/B Test Variations ({results.abTests?.variations?.length || 0} Ready)
-      </Typography>
+  const renderABTestsTab = () => {
+    console.log('🔵 === RENDERING A/B/C TESTS TAB ===');
+    console.log('📊 Full results object:', results);
+    console.log('📝 adCopy prop:', adCopy);
+    console.log('🎯 platform prop:', platform);
+
+    try {
+      // Map alternatives to proper format for ABCTestingGrid
+      const alternatives = results?.alternatives || results?.abTests?.variations || [];
+      console.log('🔄 Raw alternatives:', alternatives);
+      console.log('🔢 Alternatives count:', alternatives.length);
+
+      // CRITICAL FIX: Separate the "improved" variant from test variations
+      const improvedVariant = alternatives.find(alt => alt.variant_type === 'improved');
+      const testVariations = alternatives.filter(alt => alt.variant_type !== 'improved');
+
+      console.log('✅ Found improved variant:', improvedVariant);
+      console.log('✅ Found test variations:', testVariations);
+
+      // Format variations for ABCTestingGrid (only A/B/C, not improved)
+      const formattedVariations = testVariations.map((alt, index) => {
+        const formatted = {
+          variant_type: alt.variant_type || `variation_${index}`,
+          headline: alt.headline || alt.angle || '',
+          body_text: alt.body_text || alt.generated_body_text || alt.copy || '',
+          cta: alt.cta || '',
+          predicted_score: alt.predicted_score || alt.predictedCTR || (70 + index * 5),
+          improvement_reason: alt.improvement_reason || alt.strategy || `Strategy ${index + 1}`,
+          version: ['A', 'B', 'C'][index] || `${index + 1}`
+        };
+        console.log(`✅ Formatted variation ${index}:`, formatted);
+        return formatted;
+      });
+
+      console.log('📦 All formatted variations:', formattedVariations);
+
+      const originalCopyData = {
+        headline: results?.original?.headline || adCopy?.split('\n')[0] || '',
+        body_text: results?.original?.body_text || results?.original?.copy || adCopy || '',
+        cta: results?.original?.cta || '',
+        score: results?.original?.score || 60
+      };
+      console.log('📄 Original copy data:', originalCopyData);
+
+      // CRITICAL FIX: Use the improved variant from alternatives, not from results.improved
+      const improvedCopyData = {
+        headline: improvedVariant?.headline || results?.improved?.headline || '',
+        body_text: improvedVariant?.body_text || results?.improved?.body_text || '',
+        cta: improvedVariant?.cta || results?.improved?.cta || '',
+        score: improvedVariant?.predicted_score || results?.improved?.score || 85,
+        predicted_score: improvedVariant?.predicted_score || results?.improved?.score || 85,
+        reasoning: improvedVariant?.improvement_reason ? [improvedVariant.improvement_reason] : []
+      };
+      console.log('✨ Improved copy data:', improvedCopyData);
       
-      <Grid container spacing={2}>
-        {(results.abTests?.variations || []).map((variation, index) => (
-          <Grid item xs={12} md={6} key={index}>
-            <Card 
-              elevation={0} 
-              sx={{ 
-                border: '1px solid', 
-                borderColor: 'divider',
-                height: '100%', // Make all cards same height
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-            >
-              <CardContent sx={{ 
-                p: 2, 
-                flexGrow: 1,
-                display: 'flex',
-                flexDirection: 'column'
-              }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
-                  <Typography variant="subtitle2" sx={{ 
-                    fontWeight: 700,
-                    color: 'primary.main',
-                    fontSize: '0.9rem'
-                  }}>
-                    Variation {index + 1}: {variation.angle || `Test ${index + 1}`}
-                  </Typography>
-                  <Chip
-                    label={`Est. CTR: ${variation.predictedCTR || Math.round(65 + Math.random() * 25)}%`}
-                    size="small"
-                    color="info"
-                    sx={{ fontWeight: 600 }}
-                  />
-                </Box>
-                
-                {/* Enhanced copy display with better contrast */}
-                <Paper sx={{ 
-                  p: 2, 
-                  bgcolor: 'rgba(124, 58, 237, 0.04)',
-                  border: '1px solid',
-                  borderColor: 'rgba(124, 58, 237, 0.15)',
-                  borderRadius: 2,
-                  mb: 1.5,
-                  flexGrow: 1,
-                  minHeight: '120px', // Match improved ad container height
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  <Typography variant="body2" sx={{ 
-                    color: 'text.primary',
-                    fontWeight: 500,
-                    lineHeight: 1.5,
-                    fontSize: '0.875rem'
-                  }}>
-                    {variation.copy || variation.generated_body_text || `Enhanced variation ${index + 1} of your ad copy with improved messaging and stronger call-to-action.`}
-                  </Typography>
-                </Paper>
-                
-                <Typography variant="caption" sx={{ 
-                  color: 'text.secondary',
-                  fontWeight: 500,
-                  mb: 1.5,
-                  display: 'block'
-                }}>
-                  Strategy: {variation.strategy || variation.improvement_reason || 'Optimized for engagement'}
-                </Typography>
-                
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="primary"
-                  startIcon={<ContentCopy sx={{ fontSize: 14 }} />}
-                  onClick={() => copyToClipboard(
-                    variation.copy || variation.generated_body_text || `Enhanced variation ${index + 1}`, 
-                    `Variation ${index + 1}`
-                  )}
-                  sx={{
-                    alignSelf: 'flex-start',
-                    px: 2,
-                    py: 0.5,
-                    fontSize: '0.75rem',
-                    fontWeight: 600
-                  }}
-                >
-                  Copy This Version
-                </Button>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
-  );
+      console.log('🚀 About to render ABCTestingGrid component...');
+
+      return (
+        <Box>
+          <ABCTestingGrid
+            originalCopy={originalCopyData}
+            improvedCopy={improvedCopyData}
+            variations={formattedVariations}
+            platform={platform || 'facebook'}
+            onImprove={(variation) => {
+              console.log('Further improve variation:', variation);
+              toast('Further improvement coming soon!', { icon: '🚀' });
+            }}
+            onExport={(data) => {
+              console.log('Export variations:', data);
+              handleExportReport();
+            }}
+            isLoading={false}
+          />
+        </Box>
+      );
+    } catch (error) {
+      console.error('❌ ERROR in renderABTestsTab:', error);
+      console.error('❌ Error stack:', error.stack);
+      return (
+        <Box sx={{ p: 3 }}>
+          <Typography color="error" variant="h6">Error rendering A/B/C Tests</Typography>
+          <Typography color="error" variant="body2">{error.message}</Typography>
+          <pre style={{ fontSize: '10px', overflow: 'auto' }}>{error.stack}</pre>
+        </Box>
+      );
+    }
+  };
 
   const renderROITab = () => (
     <Box>
@@ -930,36 +1124,73 @@ Generated by AdCopySurge
   };
 
   const renderTabContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return renderOverviewTab();
-      case 'compliance':
-        return renderComplianceTab();
-      case 'psychology':
-        return renderPsychologyTab();
-      case 'ab-tests':
-        return renderABTestsTab();
-      case 'roi':
-        return renderROITab();
-      case 'legal':
-        return renderLegalTab();
-      case 'brand-voice':
-        return renderBrandVoiceTab();
-      case 'performance':
-        return renderPerformanceTab();
-      case 'industry':
-        return renderIndustryTab();
-      default:
-        return (
-          <Box textAlign="center" py={8}>
-            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-              {analysisTools.find(tool => tool.id === activeTab)?.label} Analysis
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Detailed analysis coming soon...
-            </Typography>
-          </Box>
-        );
+    console.log('🔄 renderTabContent called with activeTab:', activeTab);
+    
+    try {
+      let content;
+      switch (activeTab) {
+        case 'overview':
+          console.log('➡️ Rendering overview tab');
+          content = renderOverviewTab();
+          break;
+        case 'compliance':
+          console.log('➡️ Rendering compliance tab');
+          content = renderComplianceTab();
+          break;
+        case 'psychology':
+          console.log('➡️ Rendering psychology tab');
+          content = renderPsychologyTab();
+          break;
+        case 'ab-tests':
+          console.log('➡️ Rendering ab-tests tab');
+          content = renderABTestsTab();
+          break;
+        case 'roi':
+          console.log('➡️ Rendering roi tab');
+          content = renderROITab();
+          break;
+        case 'legal':
+          console.log('➡️ Rendering legal tab');
+          content = renderLegalTab();
+          break;
+        case 'brand-voice':
+          console.log('➡️ Rendering brand-voice tab');
+          content = renderBrandVoiceTab();
+          break;
+        case 'performance':
+          console.log('➡️ Rendering performance tab');
+          content = renderPerformanceTab();
+          break;
+        case 'industry':
+          console.log('➡️ Rendering industry tab');
+          content = renderIndustryTab();
+          break;
+        default:
+          console.log('⚠️ Unknown tab:', activeTab);
+          content = (
+            <Box textAlign="center" py={8}>
+              <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                {analysisTools.find(tool => tool.id === activeTab)?.label} Analysis
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Detailed analysis coming soon...
+              </Typography>
+            </Box>
+          );
+      }
+      console.log('✅ Tab content rendered successfully for:', activeTab);
+      return content;
+    } catch (error) {
+      console.error('❌ ERROR in renderTabContent:', error);
+      console.error('❌ Error stack:', error.stack);
+      console.error('❌ ActiveTab was:', activeTab);
+      return (
+        <Box sx={{ p: 3 }}>
+          <Typography color="error" variant="h6">Error rendering tab: {activeTab}</Typography>
+          <Typography color="error" variant="body2">{error.message}</Typography>
+          <pre style={{ fontSize: '10px', overflow: 'auto' }}>{error.stack}</pre>
+        </Box>
+      );
     }
   };
 
@@ -1000,7 +1231,10 @@ Generated by AdCopySurge
       <Paper elevation={0} sx={{ mb: 2, border: '1px solid', borderColor: 'divider' }}>
         <Tabs
           value={activeTab}
-          onChange={(e, newValue) => setActiveTab(newValue)}
+          onChange={(e, newValue) => {
+            console.log('🔄 TAB CHANGED FROM:', activeTab, 'TO:', newValue);
+            setActiveTab(newValue);
+          }}
           variant="scrollable"
           scrollButtons="auto"
           sx={{

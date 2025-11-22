@@ -1,27 +1,39 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../services/authContext';
-import { supabase } from '../lib/supabaseClientClean';
-import { 
-  getUserCredits, 
-  consumeCredits, 
-  checkCredits,
-  formatCredits,
-  getCreditColor,
-  showInsufficientCreditsToast,
-  CREDIT_COSTS 
-} from '../utils/creditSystem';
+import {
+  getCreditBalance,
+  getCreditCosts,
+  hasEnoughCredits as checkHasEnough,
+  formatCredits as formatCreditAmount
+} from '../services/creditService';
 import toast from 'react-hot-toast';
+import logger from '../utils/logger';
+
+// ✅ MIGRATED: Now uses backend credit service for all operations
+// This prevents race conditions and provides automatic refunds
 
 /**
- * Hook for managing user credits
+ * Hook for managing user credits via backend API
  */
 export const useCredits = () => {
   const { user } = useAuth();
   const [credits, setCredits] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [creditCosts, setCreditCosts] = useState({});
 
-  // Fetch credits
+  // Fetch credit costs on mount
+  useEffect(() => {
+    const loadCosts = async () => {
+      const result = await getCreditCosts();
+      if (result.success) {
+        setCreditCosts(result.costs);
+      }
+    };
+    loadCosts();
+  }, []);
+
+  // Fetch credits from backend
   const fetchCredits = useCallback(async () => {
     if (!user?.id) {
       setLoading(false);
@@ -30,150 +42,134 @@ export const useCredits = () => {
 
     try {
       setLoading(true);
-      const creditData = await getUserCredits(user.id);
-      setCredits(creditData);
-      setError(null);
+      const result = await getCreditBalance();
+
+      if (result.success) {
+        setCredits({
+          credits: result.data.credits,
+          monthlyAllowance: result.data.monthly_allowance,
+          bonusCredits: result.data.bonus_credits,
+          totalUsed: result.data.total_used,
+          subscriptionTier: result.data.subscription_tier,
+          isUnlimited: result.data.is_unlimited,
+          lastReset: result.data.last_reset
+        });
+        setError(null);
+      } else {
+        setError(result.error);
+      }
     } catch (err) {
-      console.error('Error fetching credits:', err);
+      logger.error('Error fetching credits:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   }, [user?.id]);
 
-  // Initial fetch and real-time subscription
+  // Initial fetch - backend handles all updates
   useEffect(() => {
     fetchCredits();
-    
-    // Subscribe to real-time updates on user_credits table
-    if (user?.id) {
-      console.log('🔔 Setting up real-time credit subscription for user:', user.id);
-      
-      const subscription = supabase
-        .channel(`user_credits:${user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-            schema: 'public',
-            table: 'user_credits',
-            filter: `user_id=eq.${user.id}`
-          },
-          (payload) => {
-            console.log('🔔 Credit update received:', payload);
-            
-            if (payload.new) {
-              // Update local state immediately with new data
-              setCredits({
-                credits: payload.new.current_credits || 0,
-                monthlyAllowance: payload.new.monthly_allowance || 0,
-                lastReset: payload.new.last_reset,
-                totalUsed: payload.new.total_used || 0,
-                bonusCredits: payload.new.bonus_credits || 0,
-                subscriptionTier: payload.new.subscription_tier || 'free'
-              });
-              console.log('✅ Credits updated in real-time:', payload.new.current_credits);
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log('🔔 Subscription status:', status);
-        });
-      
-      // Cleanup subscription on unmount
-      return () => {
-        console.log('🔔 Cleaning up credit subscription');
-        subscription.unsubscribe();
-      };
-    }
+
+    // ✅ Poll for updates every 30 seconds
+    // This replaces real-time subscriptions and ensures we get backend-authoritative data
+    const interval = setInterval(() => {
+      if (user?.id) {
+        fetchCredits();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [fetchCredits, user?.id]);
 
-  // Consume credits for an operation
+  // ⚠️ DEPRECATED: Analysis endpoint handles credit deduction automatically
+  // This is kept for backwards compatibility but shouldn't be used
   const useCredits = async (operation, quantity = 1, options = {}) => {
-    if (!user?.id) {
-      return { success: false, error: 'User not authenticated' };
-    }
+    logger.warn('⚠️ useCredits() is deprecated. Credits are now deducted automatically by the analysis endpoint.');
 
-    try {
-      const result = await consumeCredits(user.id, operation, quantity);
-      
-      if (result.success) {
-        // Update local state
-        setCredits(prev => ({
-          ...prev,
-          credits: result.remaining === 'unlimited' ? 'unlimited' : result.remaining
-        }));
+    // Just refresh credits to get latest balance
+    await fetchCredits();
 
-        // Show success toast if requested
-        if (options.showSuccessToast) {
-          const creditCost = CREDIT_COSTS[operation] * quantity;
-          const operationName = operation.toLowerCase().replace(/_/g, ' ');
-          toast.success(
-            `${operationName} completed! ${creditCost} credit${creditCost !== 1 ? 's' : ''} used.`,
-            { duration: 3000 }
-          );
-        }
-      } else if (result.error === 'Insufficient credits') {
-        // Show insufficient credits toast
-        showInsufficientCreditsToast(operation, result.required, result.available);
-      } else {
-        toast.error(result.error || 'Failed to consume credits');
-      }
-
-      return result;
-    } catch (err) {
-      console.error('Error consuming credits:', err);
-      toast.error('System error occurred');
-      return { success: false, error: err.message };
-    }
+    return { success: true, message: 'Credits managed by backend' };
   };
 
   // Check if user has enough credits for an operation
   const hasEnoughCredits = (operation, quantity = 1) => {
     if (!credits || credits.credits === null) return false;
-    return checkCredits(credits.credits, operation, quantity).hasEnough;
+
+    // Check unlimited
+    if (credits.isUnlimited || credits.credits === 'unlimited' || credits.credits >= 999999) {
+      return true;
+    }
+
+    const required = creditCosts[operation] * quantity || 0;
+    return credits.credits >= required;
   };
 
   // Get credit requirement for an operation
   const getCreditRequirement = (operation, quantity = 1) => {
-    return CREDIT_COSTS[operation] * quantity || 0;
+    return creditCosts[operation] * quantity || 0;
   };
 
-  // Execute operation with credit check and consumption
+  // ⚠️ DEPRECATED: Backend handles credit deduction AND refund automatically
+  // Just execute the action - credits are managed server-side
   const executeWithCredits = async (operation, action, options = {}) => {
     const { quantity = 1, showToasts = true } = options;
 
-    // Check if credits are available
+    logger.debug('📊 Checking credits before operation:', {
+      operation,
+      quantity,
+      currentCredits: credits?.credits,
+      required: getCreditRequirement(operation, quantity)
+    });
+
+    // Check if credits are available (pre-flight check)
     if (!hasEnoughCredits(operation, quantity)) {
       const required = getCreditRequirement(operation, quantity);
       const available = credits?.credits || 0;
-      
+
       if (showToasts) {
-        showInsufficientCreditsToast(operation, required, available);
+        toast.error(
+          `Insufficient credits: ${operation} requires ${required} credits, but you only have ${available}`,
+          { duration: 5000 }
+        );
       }
       return { success: false, error: 'Insufficient credits' };
     }
 
     try {
-      // Consume credits first
-      const creditResult = await useCredits(operation, quantity, { 
-        showSuccessToast: showToasts 
-      });
-      
-      if (!creditResult.success) {
-        return creditResult;
+      // ✅ FIXED: Just execute the action
+      // Backend handles credit deduction automatically (see /api/ads/analyze)
+      const result = await action();
+
+      // Refresh credits after operation
+      await fetchCredits();
+
+      if (showToasts) {
+        toast.success(`Operation completed successfully!`, { duration: 3000 });
       }
 
-      // Execute the actual operation
-      const result = await action();
-      
-      return { success: true, result, creditsUsed: getCreditRequirement(operation, quantity) };
+      return { success: true, result };
     } catch (error) {
-      console.error('Error in executeWithCredits:', error);
-      
-      // TODO: In a real implementation, you might want to refund credits here
-      // if the operation failed after consuming credits
-      
+      logger.error('Error in executeWithCredits:', error);
+
+      // ✅ Backend automatically refunds credits on failure
+      // Refresh to get updated balance and notify user
+      const beforeRefund = credits?.credits || 0;
+      await fetchCredits();
+      const afterRefund = credits?.credits || 0;
+
+      // Show refund notification if credits were restored
+      if (showToasts && afterRefund > beforeRefund) {
+        const refundedAmount = afterRefund - beforeRefund;
+        toast.success(
+          `${refundedAmount} credit${refundedAmount > 1 ? 's' : ''} refunded to your account`,
+          {
+            duration: 5000,
+            icon: '💰'
+          }
+        );
+      }
+
       return { success: false, error: error.message };
     }
   };
@@ -182,13 +178,23 @@ export const useCredits = () => {
   const getFormattedCredits = () => {
     if (loading) return 'Loading...';
     if (!credits) return '0';
-    return formatCredits(credits.credits);
+    return formatCreditAmount(credits.credits);
   };
 
   // Get credit status color
   const getCreditStatusColor = () => {
     if (!credits) return 'error';
-    return getCreditColor(credits.credits, credits.monthlyAllowance);
+
+    if (credits.isUnlimited || credits.credits === 'unlimited' || credits.credits >= 999999) {
+      return 'success';
+    }
+
+    if (credits.monthlyAllowance === 0) return 'error';
+
+    const percentage = (credits.credits / credits.monthlyAllowance) * 100;
+    if (percentage > 50) return 'success';
+    if (percentage > 20) return 'warning';
+    return 'error';
   };
 
   // Get credit percentage used
@@ -254,7 +260,7 @@ export const useCredits = () => {
     getDaysUntilReset,
     
     // Constants
-    CREDIT_COSTS
+    CREDIT_COSTS: creditCosts
   };
 };
 

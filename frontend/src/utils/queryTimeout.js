@@ -33,22 +33,24 @@ export class TimeoutError extends Error {
  * );
  */
 export const withTimeout = (promise, timeoutMs = 10000, operationName = 'Operation') => {
+  let timeoutId;
+  
   // Create timeout promise that rejects after specified time
   const timeoutPromise = new Promise((_, reject) => {
-    const timeoutId = setTimeout(() => {
+    timeoutId = setTimeout(() => {
       console.warn(`⏱️ ${operationName} timed out after ${timeoutMs}ms`);
       reject(new TimeoutError(
         `${operationName} timed out after ${timeoutMs}ms`,
         timeoutMs
       ));
     }, timeoutMs);
-
-    // Store timeout ID on the promise so it can be cleared if needed
-    timeoutPromise.timeoutId = timeoutId;
   });
 
   // Race between the actual promise and the timeout
-  return Promise.race([promise, timeoutPromise]);
+  // Clear timeout if the main promise resolves first
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
 };
 
 /**

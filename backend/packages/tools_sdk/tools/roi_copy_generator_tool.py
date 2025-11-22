@@ -1,6 +1,7 @@
 """
 ROI Copy Generator Tool - Premium positioning and profit-focused copy variants
 Creates 3-5 profit-optimized copy variations with ROI messaging and premium positioning
+Now with platform-specific ROI types (financial for LinkedIn, experiential for TikTok, etc.)
 """
 
 import time
@@ -8,6 +9,7 @@ import random
 from typing import Dict, Any, List, Optional, Tuple
 from ..core import ToolRunner, ToolInput, ToolOutput, ToolConfig, ToolType
 from ..exceptions import ToolValidationError
+from ..platform_adapter import platform_adapter
 
 
 class ROICopyGeneratorToolRunner(ToolRunner):
@@ -168,11 +170,152 @@ class ROICopyGeneratorToolRunner(ToolRunner):
             'time_sensitive',   # Urgency with value
             'results_proof'     # Evidence-based ROI
         ]
-    
+
+    def _generate_platform_roi_variations(self, original_copy: Dict, roi_type: str,
+                                         industry: str, platform: str, pricing_info: Dict) -> List[Dict]:
+        """
+        Generate ROI variations appropriate for platform
+
+        Different platforms emphasize different types of ROI:
+        - financial: Traditional financial ROI (LinkedIn, Google)
+        - emotional_and_financial: Mix of financial and emotional (Facebook)
+        - experiential: Experience-based ROI (TikTok)
+        - lifestyle_and_emotional: Lifestyle and aspiration ROI (Instagram)
+        - financial_and_strategic: Business and strategic ROI (LinkedIn)
+        """
+        variations = []
+
+        if roi_type == "financial":
+            # Traditional financial ROI (good for LinkedIn, Google)
+            variations.append(self._create_financial_roi_variation(original_copy, pricing_info))
+
+        elif roi_type == "emotional_and_financial":
+            # Mix of financial and emotional (good for Facebook)
+            variations.append(self._create_time_roi_variation(original_copy))
+            variations.append(self._create_stress_reduction_variation(original_copy))
+            variations.append(self._create_financial_roi_variation(original_copy, pricing_info))
+
+        elif roi_type == "experiential":
+            # Experience-based ROI (good for TikTok)
+            variations.append(self._create_fun_factor_variation(original_copy))
+            variations.append(self._create_lifestyle_upgrade_variation(original_copy))
+
+        elif roi_type == "lifestyle_and_emotional":
+            # Lifestyle and aspiration ROI (good for Instagram)
+            variations.append(self._create_status_roi_variation(original_copy))
+            variations.append(self._create_confidence_roi_variation(original_copy))
+
+        elif roi_type == "financial_and_strategic":
+            # Business and strategic ROI (good for LinkedIn)
+            variations.append(self._create_financial_roi_variation(original_copy, pricing_info))
+            variations.append(self._create_strategic_roi_variation(original_copy))
+
+        return variations
+
+    def _create_time_roi_variation(self, original_copy: Dict) -> Dict:
+        """Create variation emphasizing time saved"""
+        return {
+            "headline": "Save 10+ Hours Per Week",
+            "body_text": "Stop wasting time on manual tasks. Reclaim your schedule and focus on what matters.",
+            "cta": "Get Your Time Back",
+            "roi_type": "time_savings",
+            "explanation": "Emotional ROI: Time is valuable - emphasizes time saved",
+            "analysis": {"key_elements": ["time_savings", "emotional_appeal"], "tone": "practical",
+                        "psychological_triggers": ["loss_aversion", "efficiency"]}
+        }
+
+    def _create_stress_reduction_variation(self, original_copy: Dict) -> Dict:
+        """Create variation emphasizing stress reduction"""
+        return {
+            "headline": "Finally, Peace of Mind",
+            "body_text": "End the stress of complicated processes. Sleep better knowing it's handled.",
+            "cta": "Reduce Your Stress",
+            "roi_type": "stress_reduction",
+            "explanation": "Emotional ROI: Mental health benefits",
+            "analysis": {"key_elements": ["emotional_wellbeing", "stress_reduction"], "tone": "empathetic",
+                        "psychological_triggers": ["fear_relief", "emotional_appeal"]}
+        }
+
+    def _create_fun_factor_variation(self, original_copy: Dict) -> Dict:
+        """Create variation emphasizing fun/entertainment (TikTok)"""
+        return {
+            "headline": "Make It Fun Again",
+            "body_text": "Who says it has to be boring? Join the fun and see why everyone's obsessed.",
+            "cta": "Try It For The Vibes",
+            "roi_type": "entertainment",
+            "explanation": "Experience ROI: Fun and entertainment value for TikTok",
+            "analysis": {"key_elements": ["entertainment", "social_currency"], "tone": "playful",
+                        "psychological_triggers": ["peer_validation", "trend_relevance"]}
+        }
+
+    def _create_status_roi_variation(self, original_copy: Dict) -> Dict:
+        """Create variation emphasizing status/appearance (Instagram)"""
+        return {
+            "headline": "Elevate Your Game",
+            "body_text": "Join the inner circle. The upgrade that shows you're ahead of the curve.",
+            "cta": "Level Up",
+            "roi_type": "status_and_recognition",
+            "explanation": "Lifestyle ROI: Social status and recognition for Instagram",
+            "analysis": {"key_elements": ["aspiration", "status"], "tone": "aspirational",
+                        "psychological_triggers": ["social_proof", "exclusivity"]}
+        }
+
+    def _create_confidence_roi_variation(self, original_copy: Dict) -> Dict:
+        """Create variation emphasizing confidence boost (Instagram)"""
+        return {
+            "headline": "Feel Amazing, Look Amazing",
+            "body_text": "The confidence boost you've been looking for. Transform how you show up every day.",
+            "cta": "Transform Now",
+            "roi_type": "confidence_boost",
+            "explanation": "Emotional ROI: Self-confidence and transformation",
+            "analysis": {"key_elements": ["transformation", "self_improvement"], "tone": "empowering",
+                        "psychological_triggers": ["aspiration", "emotional_appeal"]}
+        }
+
+    def _create_lifestyle_upgrade_variation(self, original_copy: Dict) -> Dict:
+        """Create variation emphasizing lifestyle improvement"""
+        return {
+            "headline": "Upgrade Your Lifestyle",
+            "body_text": "Level up every aspect of your daily routine. The lifestyle change you deserve.",
+            "cta": "Start Living Better",
+            "roi_type": "lifestyle_improvement",
+            "explanation": "Experience ROI: Overall lifestyle enhancement",
+            "analysis": {"key_elements": ["lifestyle", "self_improvement"], "tone": "aspirational",
+                        "psychological_triggers": ["aspiration", "progress_momentum"]}
+        }
+
+    def _create_financial_roi_variation(self, original_copy: Dict, pricing_info: Dict) -> Dict:
+        """Create traditional financial ROI variation"""
+        price = pricing_info.get('price', 99)
+        multiplier = random.choice([3, 5, 7, 10])
+        return_value = price * multiplier
+
+        return {
+            "headline": f"Turn ${price} Into ${return_value} in Value",
+            "body_text": f"{multiplier}x ROI on your investment. Pay for itself and then some.",
+            "cta": "Calculate My ROI",
+            "roi_type": "financial_return",
+            "explanation": "Financial ROI: Direct monetary return on investment",
+            "analysis": {"key_elements": ["ROI", "financial_benefit", "numbers"], "tone": "data_driven",
+                        "psychological_triggers": ["anchoring", "loss_aversion"]}
+        }
+
+    def _create_strategic_roi_variation(self, original_copy: Dict) -> Dict:
+        """Create strategic business ROI variation (LinkedIn)"""
+        return {
+            "headline": "Strategic Advantage for Forward-Thinking Leaders",
+            "body_text": "Gain competitive edge through proven strategies. Investment in your business growth.",
+            "cta": "Explore Strategic Value",
+            "roi_type": "strategic_advantage",
+            "explanation": "Strategic ROI: Long-term business positioning",
+            "analysis": {"key_elements": ["authority", "strategy", "business_value"], "tone": "professional",
+                        "psychological_triggers": ["authority", "credibility"]}
+        }
+
     async def run(self, input_data: ToolInput) -> ToolOutput:
-        """Generate ROI-optimized copy variations"""
+        """Generate ROI-optimized copy variations with platform-specific ROI types"""
         start_time = time.time()
-        
+
         try:
             # Extract key information
             original_copy = {
@@ -180,23 +323,31 @@ class ROICopyGeneratorToolRunner(ToolRunner):
                 'body_text': input_data.body_text,
                 'cta': input_data.cta
             }
-            
+
             industry = input_data.industry.lower() if input_data.industry else 'business'
             platform = input_data.platform.lower()
-            
+
+            # Get platform-specific ROI type
+            roi_type = platform_adapter.get_platform_roi_type(platform)
+
             # Parse pricing information if available
             pricing_info = self._extract_pricing_info(original_copy)
-            
-            # Generate 3-5 variations with different ROI angles
-            variations = []
-            for i, strategy in enumerate(self.variation_strategies):
-                if i >= 5:  # Limit to 5 variations
-                    break
-                    
-                variation = await self._generate_variation(
-                    original_copy, strategy, industry, platform, pricing_info, i + 1
-                )
-                variations.append(variation)
+
+            # Generate platform-appropriate ROI variations
+            variations = self._generate_platform_roi_variations(
+                original_copy, roi_type, industry, platform, pricing_info
+            )
+
+            # If not enough variations, add from standard strategies
+            if len(variations) < 3:
+                for i, strategy in enumerate(self.variation_strategies):
+                    if len(variations) >= 5:  # Limit to 5 variations total
+                        break
+
+                    variation = await self._generate_variation(
+                        original_copy, strategy, industry, platform, pricing_info, len(variations) + 1
+                    )
+                    variations.append(variation)
             
             # Analyze and score variations
             variation_analysis = self._analyze_variations(variations, original_copy)

@@ -1,6 +1,7 @@
 """
 Psychology Scorer Tool - Evaluates copy against established psychological persuasion principles
 Scores 15+ triggers, cognitive biases, and emotional vs rational appeal balance
+Now with platform-specific psychology weighting (e.g., TikTok favors peer validation over authority)
 """
 
 import time
@@ -8,6 +9,7 @@ import re
 from typing import Dict, Any, List, Optional, Tuple
 from ..core import ToolRunner, ToolInput, ToolOutput, ToolConfig, ToolType
 from ..exceptions import ToolValidationError
+from ..platform_adapter import platform_adapter
 
 
 class PsychologyScorerToolRunner(ToolRunner):
@@ -186,19 +188,24 @@ class PsychologyScorerToolRunner(ToolRunner):
         }
     
     async def run(self, input_data: ToolInput) -> ToolOutput:
-        """Evaluate copy using comprehensive psychology framework"""
+        """Evaluate copy using comprehensive psychology framework with platform-specific weighting"""
         start_time = time.time()
-        
+
         try:
             # Combine all text for analysis
             full_text = f"{input_data.headline} {input_data.body_text} {input_data.cta}"
-            
+            platform = input_data.platform or "facebook"
+
+            # Get platform-specific psychology weights
+            platform_weights = platform_adapter.get_platform_psychology_weights(platform)
+            platform_intel = platform_adapter.get_platform_intelligence(platform)
+
             # Extract psychographics and campaign intent
             target_psychographics = self._extract_psychographics(input_data)
             campaign_intent = self._extract_campaign_intent(input_data)
-            
-            # Analyze psychological triggers
-            trigger_analysis = self._analyze_psychological_triggers(full_text)
+
+            # Analyze psychological triggers with platform-specific weights
+            trigger_analysis = self._analyze_psychological_triggers(full_text, platform_weights)
             
             # Analyze cognitive biases
             bias_analysis = self._analyze_cognitive_biases(full_text)
@@ -229,10 +236,11 @@ class PsychologyScorerToolRunner(ToolRunner):
                 'overall_psychology_score': (trigger_effectiveness + bias_utilization + emotional_balance + trust_credibility + sequence_flow) / 5
             }
             
-            # Generate psychology recommendations
+            # Generate psychology recommendations with platform-specific guidance
             recommendations = self._generate_psychology_recommendations(
-                trigger_analysis, bias_analysis, emotion_ratio_analysis, 
-                trust_analysis, sequence_analysis, target_psychographics
+                trigger_analysis, bias_analysis, emotion_ratio_analysis,
+                trust_analysis, sequence_analysis, target_psychographics,
+                platform, platform_intel
             )
             
             # Detailed insights
@@ -312,21 +320,28 @@ class PsychologyScorerToolRunner(ToolRunner):
         else:
             return 'consideration'
     
-    def _analyze_psychological_triggers(self, text: str) -> Dict[str, Any]:
-        """Analyze presence and strength of psychological triggers"""
+    def _analyze_psychological_triggers(self, text: str, platform_weights: Dict[str, float] = None) -> Dict[str, Any]:
+        """Analyze presence and strength of psychological triggers with platform-specific weighting"""
         text_lower = text.lower()
         trigger_analysis = {}
-        
+
         for trigger_name, trigger_data in self.psychological_triggers.items():
             # Count indicator matches
             matches = []
             for indicator in trigger_data['indicators']:
                 if indicator in text_lower:
                     matches.append(indicator)
-            
-            # Calculate trigger score
+
+            # Calculate trigger score with platform-specific weighting
             raw_score = len(matches) * 20  # Base score per match
-            weighted_score = min(raw_score * (trigger_data['weight'] / 10), 100)
+
+            # Apply platform-specific weight if available
+            if platform_weights and trigger_name in platform_weights:
+                platform_weight = platform_weights[trigger_name]
+                weighted_score = min((raw_score * platform_weight) / 10, 100)
+            else:
+                # Fall back to default weight
+                weighted_score = min(raw_score * (trigger_data['weight'] / 10), 100)
             
             trigger_analysis[trigger_name] = {
                 'present': len(matches) > 0,
@@ -817,23 +832,121 @@ class PsychologyScorerToolRunner(ToolRunner):
         else:
             return 'weak'
     
+    def _generate_platform_psychology_recommendations(self, trigger_analysis: Dict,
+                                                     platform: str, platform_intel: Dict) -> List[str]:
+        """Generate platform-specific psychology recommendations"""
+        recommendations = []
+
+        # Get platform-specific psychology weights
+        platform_weights = platform_adapter.get_platform_psychology_weights(platform)
+
+        # Calculate trigger scores
+        trigger_scores = {name: data.get('weighted_score', 0)
+                         for name, data in trigger_analysis.items()}
+
+        # TikTok-specific recommendations
+        if platform.lower() == 'tiktok':
+            if trigger_scores.get('authority', 0) > 70:
+                recommendations.append(
+                    "TikTok: High authority tone may alienate Gen Z audience. "
+                    "Consider peer validation and authentic testimonials instead."
+                )
+            if trigger_scores.get('peer_validation', 0) < 50:
+                recommendations.append(
+                    "TikTok: Add peer validation (e.g., 'Join 100K+ users who...'). "
+                    "Gen Z responds better to community than authority."
+                )
+            if trigger_scores.get('authenticity', 0) < 60:
+                recommendations.append(
+                    "TikTok: Increase authenticity - avoid overly polished or corporate language. "
+                    "Gen Z values realness over perfection."
+                )
+
+        # LinkedIn-specific recommendations
+        elif platform.lower() == 'linkedin':
+            if trigger_scores.get('authority', 0) < 60:
+                recommendations.append(
+                    "LinkedIn: Strengthen authority signals. Add credentials, "
+                    "industry stats, or thought leadership positioning."
+                )
+            if trigger_scores.get('social_proof', 0) > trigger_scores.get('authority', 0):
+                recommendations.append(
+                    "LinkedIn: Authority matters more than social proof for B2B. "
+                    "Lead with expertise and data, not just testimonials."
+                )
+            if trigger_scores.get('data_driven', 0) < 60:
+                recommendations.append(
+                    "LinkedIn: Add data and statistics - B2B buyers trust numbers and evidence."
+                )
+
+        # Facebook-specific recommendations
+        elif platform.lower() == 'facebook':
+            if trigger_scores.get('social_proof', 0) < 60:
+                recommendations.append(
+                    "Facebook: Add social proof (reviews, user count, testimonials). "
+                    "Facebook users trust peer recommendations highly."
+                )
+            if trigger_scores.get('emotional_appeal', 0) < 60:
+                recommendations.append(
+                    "Facebook: Increase emotional connection. Facebook users engage "
+                    "with content that creates emotional resonance."
+                )
+
+        # Instagram-specific recommendations
+        elif platform.lower() == 'instagram':
+            if trigger_scores.get('aspiration', 0) < 60:
+                recommendations.append(
+                    "Instagram: Add aspirational elements - show the lifestyle or status upgrade. "
+                    "Instagram users respond to transformation and elevation."
+                )
+            if trigger_scores.get('lifestyle_fit', 0) < 60:
+                recommendations.append(
+                    "Instagram: Emphasize lifestyle fit - how does this fit into their ideal life?"
+                )
+
+        # Google-specific recommendations
+        elif platform.lower() == 'google':
+            if trigger_scores.get('urgency', 0) < 70:
+                recommendations.append(
+                    "Google: Increase urgency - search users have immediate intent. "
+                    "Use time-sensitive language."
+                )
+            if trigger_scores.get('emotional_appeal', 0) > 60:
+                recommendations.append(
+                    "Google: Too emotional for search ads. Focus on clear value proposition "
+                    "and rational benefits instead."
+                )
+
+        return recommendations
+
     def _generate_psychology_recommendations(self, trigger_analysis: Dict, bias_analysis: Dict,
                                            emotion_analysis: Dict, trust_analysis: Dict,
-                                           sequence_analysis: Dict, psychographics: Dict) -> List[str]:
-        """Generate psychology-specific recommendations"""
+                                           sequence_analysis: Dict, psychographics: Dict,
+                                           platform: str = "facebook", platform_intel: Dict = None) -> List[str]:
+        """Generate psychology-specific recommendations with platform-specific guidance"""
         recommendations = []
-        
+
+        # Platform-specific psychology recommendations (NEW)
+        platform_recommendations = self._generate_platform_psychology_recommendations(
+            trigger_analysis, platform, platform_intel or {}
+        )
+        recommendations.extend(platform_recommendations)
+
         # Trigger recommendations
         dominant_triggers = self._identify_dominant_triggers(trigger_analysis)
         if len(dominant_triggers) < 3:
             recommendations.append("Incorporate more psychological triggers - aim for 3-5 strong triggers for maximum impact")
-        
-        # Specific trigger suggestions
+
+        # Specific trigger suggestions (platform-aware now)
         if not any(t['trigger'] in ['social_proof', 'authority'] for t in dominant_triggers):
-            recommendations.append("Add social proof or authority elements to increase credibility and trust")
-        
+            if platform.lower() == 'linkedin':
+                recommendations.append("Add authority elements - LinkedIn users respond to expertise and credentials")
+            else:
+                recommendations.append("Add social proof or authority elements to increase credibility and trust")
+
         if not any(t['trigger'] in ['urgency', 'scarcity'] for t in dominant_triggers):
-            recommendations.append("Include urgency or scarcity triggers to motivate immediate action")
+            if platform.lower() != 'tiktok':  # TikTok users resist pressure
+                recommendations.append("Include urgency or scarcity triggers to motivate immediate action")
         
         # Emotional balance recommendations
         if emotion_analysis['balance_type'] == 'rational' and emotion_analysis['emotional_score'] == 0:

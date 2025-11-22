@@ -189,7 +189,10 @@ const Dashboard = () => {
           'Check detailed results for insights'
         ],
         analysis_id: result.analysis_id,
-        fullAnalysis: result // Keep the full AI response for AnalysisResults to parse
+        alternatives: result.alternatives, // Pass alternatives directly at root level
+        scores: result.scores, // Pass full scores object
+        feedback: result.feedback,
+        quick_wins: result.quick_wins
       };
       
       setAnalysisResult(transformedResult);

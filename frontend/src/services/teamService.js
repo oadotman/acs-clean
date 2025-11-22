@@ -36,21 +36,32 @@ class TeamService {
     try {
       console.log('🏫 Fetching agency for user:', userId);
       
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+      
       // Step 1: Check if user owns an agency
       console.log('🔍 Step 1: Checking for owned agency...');
       const { data: ownedAgency, error: ownedError } = await supabase
         .from('agencies')
         .select('*')
         .eq('owner_id', userId)
-        .maybeSingle(); // Use maybeSingle() instead of single() to avoid error when not found
+        .maybeSingle();
       
       console.log('🔍 Step 1 complete:', { 
         hasOwnedAgency: !!ownedAgency, 
+        agencyData: ownedAgency,
         error: ownedError?.message,
         errorCode: ownedError?.code 
       });
+      
+      // If there's a real error (not just "no rows"), log it but DON'T throw yet
+      if (ownedError && ownedError.code !== 'PGRST116') {
+        console.error('❌ Database error checking owned agency:', ownedError);
+        // Don't throw - try membership check instead
+      }
 
-      if (!ownedError && ownedAgency) {
+      if (ownedAgency && !ownedError) {
         console.log('✅ Found existing owned agency:', ownedAgency.name);
         return {
           ...ownedAgency,
@@ -71,31 +82,36 @@ class TeamService {
             description,
             subscription_tier,
             created_at,
-            updated_at
+            updated_at,
+            owner_id,
+            status
           )
         `)
         .eq('user_id', userId)
         .eq('status', 'active')
-        .maybeSingle(); // Use maybeSingle() to avoid error when not found
+        .maybeSingle();
       
       console.log('🔍 Step 2 complete:', { 
-        hasMembership: !!existingMember, 
+        hasMembership: !!existingMember,
+        membershipData: existingMember,
         error: memberError?.message,
         errorCode: memberError?.code 
       });
+      
+      // If there's a real database error (not just "no rows"), log it
+      if (memberError && memberError.code !== 'PGRST116') {
+        console.error('❌ Database error checking membership:', memberError);
+        console.error('Full error:', memberError);
+        // Don't throw - we'll try to create an agency instead
+      }
 
-      if (!memberError && existingMember?.agencies) {
+      if (existingMember?.agencies && !memberError) {
         console.log('✅ Found existing agency via membership:', existingMember.agencies.name);
+        console.log('Agency data:', existingMember.agencies);
         return {
           ...existingMember.agencies,
           userRole: existingMember.role
         };
-      }
-      
-      // If PGRST116 error (no rows), that's expected - continue to create agency
-      if (memberError && memberError.code !== 'PGRST116') {
-        console.error('❌ Unexpected error checking membership:', memberError);
-        // Don't throw, continue to agency creation
       }
 
       // No existing agency, check if user can create one
@@ -279,62 +295,40 @@ class TeamService {
       const { email, role, projectAccess = [], clientAccess = [] } = invitationData;
       console.log('📧 Sending invitation to:', email);
 
-      // Check if user already exists and is in the agency
-      const { data: existingUser } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (existingUser) {
-        const { data: existingMember } = await supabase
-          .from('agency_team_members')
-          .select('id')
-          .eq('agency_id', agencyId)
-          .eq('user_id', existingUser.id)
-          .single();
-
-        if (existingMember) {
-          throw new Error('User is already a member of this agency');
-        }
-      }
-
-      // Generate invitation token
-      const invitationToken = this.generateInvitationToken();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
-
-      // Create invitation record
-      const { data: invitation, error: invitationError } = await supabase
-        .from('agency_invitations')
-        .insert({
-          agency_id: agencyId,
+      // Use backend API endpoint for invitation (includes email sending)
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      
+      const response = await fetch(`${API_URL}/team/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           email: email.toLowerCase(),
+          agency_id: agencyId,
+          inviter_user_id: inviterUserId,
           role,
-          status: 'pending',
-          invitation_token: invitationToken,
-          expires_at: expiresAt.toISOString(),
-          invited_by: inviterUserId,
           project_access: projectAccess,
           client_access: clientAccess
         })
-        .select()
-        .single();
-
-      if (invitationError) {
-        console.error('Error creating invitation:', invitationError);
-        throw new Error('Failed to create invitation');
-      }
-
-      // TODO: Send actual email with invitation link
-      console.log('📬 Invitation created (email sending not implemented):', {
-        email,
-        token: invitationToken,
-        expiresAt
       });
 
-      toast.success(`Invitation sent to ${email}`);
-      return invitation;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to send invitation' }));
+        throw new Error(errorData.detail || 'Failed to send invitation');
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.invitation_code) {
+        // Show success with code for manual sharing
+        toast.success(`✅ Invitation code generated: ${result.invitation_code}`, {
+          duration: 8000, // Show longer so user can copy
+        });
+        return result;
+      } else {
+        throw new Error(result.message || 'Failed to generate invitation code');
+      }
     } catch (error) {
       console.error('Error in sendInvitation:', error);
       toast.error(error.message || 'Failed to send invitation');
@@ -426,43 +420,263 @@ class TeamService {
   }
 
   /**
-   * Resend invitation to a pending member
-   * @param {string} invitationId - Invitation ID
-   * @returns {Promise<Object>} Updated invitation
+   * Generate a shareable invitation link (replaces email-based invitations)
+   * @param {string} agencyId - Agency ID
+   * @param {string} inviterUserId - ID of user generating the invitation
+   * @param {Object} invitationData - Invitation details
+   * @returns {Promise<Object>} Generated invitation with shareable link
    */
-  async resendInvitation(invitationId) {
+  async generateInviteLink(agencyId, inviterUserId, invitationData) {
     try {
-      console.log('🔄 Resending invitation:', invitationId);
-      
-      // Generate new token and extend expiration
-      const newToken = this.generateInvitationToken();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7);
+      const { email, role, message = null } = invitationData;
+      console.log('🔗 Generating invitation link for:', email);
 
-      const { data, error } = await supabase
-        .from('agency_invitations')
-        .update({
-          invitation_token: newToken,
-          expires_at: expiresAt.toISOString(),
-          status: 'pending'
-        })
-        .eq('id', invitationId)
-        .select()
-        .single();
+      // Call Supabase function to generate secure invitation link
+      const { data, error } = await supabase.rpc('generate_team_invitation_link', {
+        p_agency_id: agencyId,
+        p_email: email.toLowerCase(),
+        p_role_id: role,
+        p_invited_by: inviterUserId,
+        p_message: message
+      });
 
       if (error) {
-        console.error('Error resending invitation:', error);
-        throw new Error('Failed to resend invitation');
+        console.error('Error generating invitation link:', error);
+        
+        // Handle specific error messages
+        if (error.message.includes('already a member')) {
+          throw new Error('This user is already a member of your team');
+        } else if (error.message.includes('active invitation already exists')) {
+          throw new Error('An active invitation already exists for this email');
+        } else if (error.message.includes('Only agency admins')) {
+          throw new Error('Only agency admins can send invitations');
+        }
+        
+        throw new Error(error.message || 'Failed to generate invitation link');
       }
 
-      // TODO: Send actual email
-      console.log('📬 Invitation resent (email sending not implemented)');
-      toast.success('Invitation resent successfully');
-      return data;
+      // Extract invitation details from response
+      const invitation = Array.isArray(data) ? data[0] : data;
+      
+      if (!invitation || !invitation.invitation_token) {
+        throw new Error('Invalid response from invitation generation');
+      }
+
+      // Build full invitation URL
+      const fullInvitationUrl = `${window.location.origin}${invitation.invitation_url}`;
+      
+      console.log('✅ Invitation link generated successfully:', {
+        email,
+        url: fullInvitationUrl,
+        expiresAt: invitation.expires_at
+      });
+
+      toast.success(`Invitation link generated for ${email}`);
+      
+      return {
+        ...invitation,
+        full_url: fullInvitationUrl
+      };
     } catch (error) {
-      console.error('Error in resendInvitation:', error);
-      toast.error('Failed to resend invitation');
+      console.error('Error in generateInviteLink:', error);
+      toast.error(error.message || 'Failed to generate invitation link');
       throw error;
+    }
+  }
+
+  /**
+   * Revoke/cancel a pending invitation
+   * @param {string} invitationId - Invitation ID
+   * @param {string} revokerUserId - ID of user revoking the invitation
+   * @returns {Promise<boolean>} Success status
+   */
+  async revokeInvitation(invitationId, revokerUserId) {
+    try {
+      console.log('🚫 Revoking invitation:', invitationId);
+      
+      // Call Supabase function to revoke invitation
+      const { data, error } = await supabase.rpc('revoke_team_invitation', {
+        p_invitation_id: invitationId,
+        p_revoker_user_id: revokerUserId
+      });
+
+      if (error) {
+        console.error('Error revoking invitation:', error);
+        throw new Error(error.message || 'Failed to revoke invitation');
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+      
+      if (!result || !result.success) {
+        throw new Error(result?.message || 'Failed to revoke invitation');
+      }
+
+      console.log('✅ Invitation revoked successfully');
+      toast.success('Invitation revoked successfully');
+      return true;
+    } catch (error) {
+      console.error('Error in revokeInvitation:', error);
+      toast.error(error.message || 'Failed to revoke invitation');
+      throw error;
+    }
+  }
+
+  /**
+   * Get invitation details by token (for acceptance page)
+   * @param {string} token - Invitation token
+   * @returns {Promise<Object>} Invitation details
+   */
+  async getInvitationDetails(token) {
+    try {
+      console.log('🔍 Fetching invitation details for token');
+      
+      // Call Supabase function to get invitation details
+      const { data, error } = await supabase.rpc('get_invitation_details', {
+        p_token: token
+      });
+
+      if (error) {
+        console.error('Error fetching invitation details:', error);
+        throw new Error('Failed to fetch invitation details');
+      }
+
+      const invitation = Array.isArray(data) ? data[0] : data;
+      
+      if (!invitation) {
+        throw new Error('Invitation not found');
+      }
+
+      console.log('✅ Invitation details fetched:', {
+        agencyName: invitation.agency_name,
+        role: invitation.role_name,
+        isValid: invitation.is_valid
+      });
+
+      return invitation;
+    } catch (error) {
+      console.error('Error in getInvitationDetails:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Accept a team invitation via shareable link
+   * @param {string} token - Invitation token
+   * @param {string} userId - User ID accepting the invitation
+   * @returns {Promise<Object>} Acceptance result with agency and team member info
+   */
+  async acceptInvitation(token, userId) {
+    try {
+      console.log('✅ Accepting invitation');
+
+      // Call Supabase function to accept invitation
+      const { data, error } = await supabase.rpc('accept_team_invitation_link', {
+        p_invitation_token: token,
+        p_user_id: userId
+      });
+
+      if (error) {
+        console.error('Error accepting invitation:', error);
+        throw new Error(error.message || 'Failed to accept invitation');
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+
+      if (!result || !result.success) {
+        throw new Error(result?.message || 'Failed to accept invitation');
+      }
+
+      console.log('🎉 Invitation accepted successfully');
+      toast.success(result.message || 'Successfully joined the team!');
+
+      return result;
+    } catch (error) {
+      console.error('Error in acceptInvitation:', error);
+      toast.error(error.message || 'Failed to accept invitation');
+      throw error;
+    }
+  }
+
+  /**
+   * Accept a team invitation using a 6-character code
+   * @param {string} code - 6-character invitation code
+   * @param {string} userId - User ID accepting the invitation
+   * @returns {Promise<Object>} Acceptance result with agency and team member info
+   */
+  async acceptInvitationByCode(code, userId) {
+    try {
+      console.log('🎯 Accepting invitation by code:', code);
+
+      // Use backend API endpoint for code acceptance
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+      const response = await fetch(`${API_URL}/team/invite/accept-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: code.toUpperCase(),
+          user_id: userId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Invalid or expired invitation code' }));
+        throw new Error(errorData.detail || 'Failed to accept invitation');
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('🎉 Successfully joined team with code:', code);
+        toast.success(result.message || 'Successfully joined the team!');
+        return result;
+      } else {
+        throw new Error(result.message || 'Failed to join team');
+      }
+    } catch (error) {
+      console.error('Error in acceptInvitationByCode:', error);
+      throw error; // Don't double-toast, let the component handle it
+    }
+  }
+
+  /**
+   * Get all invitations for an agency
+   * @param {string} agencyId - Agency ID
+   * @param {string} userId - User ID (for permission check)
+   * @returns {Promise<Array>} List of invitations
+   */
+  async getAgencyInvitations(agencyId, userId) {
+    try {
+      console.log('📋 Fetching agency invitations');
+      
+      // Call Supabase function to get all invitations
+      const { data, error } = await supabase.rpc('get_agency_invitations', {
+        p_agency_id: agencyId,
+        p_user_id: userId
+      });
+
+      if (error) {
+        console.error('Error fetching agency invitations:', error);
+        throw new Error(error.message || 'Failed to fetch invitations');
+      }
+
+      const invitations = data || [];
+      
+      // Add full URLs to invitations
+      const invitationsWithUrls = invitations.map(inv => ({
+        ...inv,
+        full_url: `${window.location.origin}${inv.invitation_url}`
+      }));
+
+      console.log(`✅ Fetched ${invitationsWithUrls.length} invitations`);
+      
+      return invitationsWithUrls;
+    } catch (error) {
+      console.error('Error in getAgencyInvitations:', error);
+      // Return empty array instead of throwing to prevent UI breaks
+      return [];
     }
   }
 

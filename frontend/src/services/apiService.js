@@ -25,8 +25,8 @@ class ApiService {
     } else {
       // In development, ALWAYS use full localhost URL for proper authentication
       this.baseURL = envApiUrl || 
-                     (envBaseUrl ? envBaseUrl + '/api' : null) || 
-                     'http://localhost:8000/api';
+                     envBaseUrl || 
+                     'http://localhost:8000';
       console.log('🔧 Development mode: Using full URL for authentication compatibility');
       console.log('🔗 Development baseURL:', this.baseURL);
     }
@@ -38,119 +38,10 @@ class ApiService {
     console.log('🚑 Final check - baseURL starts with http:', this.baseURL.startsWith('http'));
     this.client = axios.create({
       baseURL: this.baseURL,
-      timeout: 30000, // Increased timeout for AI processing
+      timeout: 120000, // 2 minutes for AI analysis (comprehensive analysis can take longer)
       headers: {
         'Content-Type': 'application/json',
-  },
-
-  // Integration endpoints
-  async createIntegration(userId, integrationData) {
-    const response = await fetch(`${this.baseURL}/integrations/user/${userId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(integrationData)
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to create integration');
-    }
-
-    return response.json();
-  },
-
-  async getUserIntegrations(userId) {
-    const response = await fetch(`${this.baseURL}/integrations/user/${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
       }
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch integrations');
-    }
-
-    return response.json();
-  },
-
-  async updateIntegration(integrationId, updateData) {
-    const response = await fetch(`${this.baseURL}/integrations/${integrationId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(updateData)
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to update integration');
-    }
-
-    return response.json();
-  },
-
-  async deleteIntegration(integrationId) {
-    const response = await fetch(`${this.baseURL}/integrations/${integrationId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to delete integration');
-    }
-
-    return response.json();
-  },
-
-  async testIntegration(integrationId) {
-    const response = await fetch(`${this.baseURL}/integrations/${integrationId}/test`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to test integration');
-    }
-
-    return response.json();
-  },
-
-  async sendToIntegrations(userId, eventType, data) {
-    const response = await fetch(`${this.baseURL}/integrations/send-to-integrations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        event_type: eventType,
-        data: data
-      })
-    });
-
-    if (!response.ok) {
-      console.warn('Failed to send to integrations:', response.statusText);
-    }
-
-    return response.json();
-  },
-
-  getAuthToken() {
-    // Get token from localStorage or auth service
-    return localStorage.getItem('auth_token') || 'dummy_token_for_dev';
-  }
     });
 
     // Request interceptor to add Supabase auth token
@@ -197,6 +88,115 @@ class ApiService {
 
   setAuthToken(token) {
     this.authToken = token;
+  }
+
+  // Integration endpoints
+  async createIntegration(userId, integrationData) {
+    const response = await fetch(`${this.baseURL}/integrations/user/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      },
+      body: JSON.stringify(integrationData)
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to create integration');
+    }
+
+    return response.json();
+  }
+
+  async getUserIntegrations(userId) {
+    const response = await fetch(`${this.baseURL}/integrations/user/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch integrations');
+    }
+
+    return response.json();
+  }
+
+  async updateIntegration(integrationId, updateData) {
+    const response = await fetch(`${this.baseURL}/integrations/${integrationId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      },
+      body: JSON.stringify(updateData)
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to update integration');
+    }
+
+    return response.json();
+  }
+
+  async deleteIntegration(integrationId) {
+    const response = await fetch(`${this.baseURL}/integrations/${integrationId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to delete integration');
+    }
+
+    return response.json();
+  }
+
+  async testIntegration(integrationId) {
+    const response = await fetch(`${this.baseURL}/integrations/${integrationId}/test`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to test integration');
+    }
+
+    return response.json();
+  }
+
+  async sendToIntegrations(userId, eventType, data) {
+    const response = await fetch(`${this.baseURL}/integrations/send-to-integrations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        event_type: eventType,
+        data: data
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to send to integrations:', response.statusText);
+    }
+
+    return response.json();
+  }
+
+  getAuthToken() {
+    // Get token from localStorage or auth service
+    return localStorage.getItem('auth_token') || 'dummy_token_for_dev';
   }
 
   clearAuthToken() {
@@ -300,9 +300,10 @@ class ApiService {
       };
 
       console.log('🤖 ApiService: Sending request to backend...', aiRequest);
+      console.log('⏱️ ApiService: Using 120 second timeout for AI processing...');
       
       const aiResponse = await this.client.post('/ads/analyze', aiRequest, {
-        timeout: 30000
+        timeout: 120000 // 2 minutes for comprehensive AI analysis
       });
       
       console.log('✅ ApiService: AI analysis completed successfully', aiResponse);
@@ -317,12 +318,39 @@ class ApiService {
       
     } catch (error) {
       console.error('❌ ApiService: Error in analyzeAd:', error);
+      console.error('❌ ApiService: Full error object:', JSON.stringify(error, null, 2));
       console.error('❌ ApiService: Error details:', {
         message: error.message,
+        name: error.name,
+        stack: error.stack,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        headers: error.response?.headers,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          baseURL: error.config?.baseURL,
+          headers: error.config?.headers
+        }
       });
-      throw new Error(`Analysis failed: ${error.response?.data?.detail || error.message}`);
+      
+      // More detailed error message
+      let errorMessage = 'Analysis failed: ';
+      if (error.response?.status === 403) {
+        errorMessage += 'Access forbidden. This may be due to CSRF protection or authentication issues.';
+      } else if (error.response?.status === 401) {
+        errorMessage += 'Authentication required. Please log in again.';
+      } else if (error.response?.status === 500) {
+        errorMessage += 'Server error. Please try again later.';
+      } else if (error.response?.data?.detail) {
+        errorMessage += error.response.data.detail;
+      } else {
+        errorMessage += error.message;
+      }
+      
+      console.error('❌ Final error message:', errorMessage);
+      throw new Error(errorMessage);
     }
   }
 
@@ -750,7 +778,123 @@ class ApiService {
       throw error;
     }
   }
+  
+  // === CREDIT MANAGEMENT ===
+  
+  /**
+   * Check if user has sufficient credits
+   * @param {number} requiredCredits - Number of credits needed
+   * @returns {Promise<boolean>} - True if user has enough credits
+   */
+  async checkCredits(requiredCredits) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        // For unauthenticated users, assume they have credits (dev mode)
+        console.log('⚠️ No auth session - assuming credits available (dev mode)');
+        return true;
+      }
+      
+      // Get user's current credit balance from Supabase
+      const { data, error } = await supabase
+        .from('user_credits')
+        .select('credits')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error checking credits:', error);
+        // Assume user has credits if we can't check
+        return true;
+      }
+      
+      const currentCredits = data?.credits || 0;
+      console.log(`💳 Credit check: ${currentCredits} available, ${requiredCredits} required`);
+      
+      return currentCredits >= requiredCredits;
+    } catch (error) {
+      console.error('Credit check error:', error);
+      // Assume user has credits on error
+      return true;
+    }
+  }
+  
+  /**
+   * Deduct credits from user's account
+   * @param {number} amount - Number of credits to deduct
+   * @param {string} reason - Reason for deduction (for logging)
+   * @returns {Promise<object>} - Updated credit balance
+   */
+  async deductCredits(amount, reason = 'action') {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        console.log('⚠️ No auth session - skipping credit deduction (dev mode)');
+        return { success: true, credits: 999999 };
+      }
+      
+      // Get current credits
+      const { data: currentData, error: fetchError } = await supabase
+        .from('user_credits')
+        .select('credits')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      if (fetchError) {
+        console.error('Error fetching credits:', fetchError);
+        throw new Error('Could not fetch credit balance');
+      }
+      
+      const currentCredits = currentData?.credits || 0;
+      const newCredits = currentCredits - amount;
+      
+      if (newCredits < 0) {
+        throw new Error(`Insufficient credits. Have ${currentCredits}, need ${amount}`);
+      }
+      
+      // Deduct credits
+      const { data, error } = await supabase
+        .from('user_credits')
+        .update({ 
+          credits: newCredits,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', session.user.id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error deducting credits:', error);
+        throw new Error('Could not deduct credits');
+      }
+      
+      // Log the transaction
+      await supabase.from('credit_transactions').insert({
+        user_id: session.user.id,
+        amount: -amount,
+        reason: reason,
+        balance_after: newCredits,
+        created_at: new Date().toISOString()
+      });
+      
+      console.log(`💳 Deducted ${amount} credits for ${reason}. New balance: ${newCredits}`);
+      
+      return {
+        success: true,
+        credits: newCredits,
+        deducted: amount
+      };
+    } catch (error) {
+      console.error('Credit deduction error:', error);
+      throw error;
+    }
+  }
 }
 
 const apiService = new ApiService();
+
+// Export both the instance and the functions for direct import
+export const checkCredits = (amount) => apiService.checkCredits(amount);
+export const deductCredits = (amount, reason) => apiService.deductCredits(amount, reason);
+
 export default apiService;

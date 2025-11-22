@@ -239,6 +239,10 @@ from app.utils.file_extract import extract_text_from_file, is_supported_file
 from app.api.platforms import router as platforms_router
 app.include_router(platforms_router, prefix="/api")
 
+# Import and include the support API
+from app.routers.support import router as support_router
+app.include_router(support_router, prefix="/api")
+
 # Initialize unified SDK
 register_all_tools()
 orchestrator = ToolOrchestrator()

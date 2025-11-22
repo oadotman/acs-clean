@@ -543,15 +543,15 @@ const Navbar = ({ onSidebarToggle, showSidebarToggle = false }) => {
                 <Divider sx={{ my: 1 }} />
                 
                 {/* Help Section */}
-                <MenuItem 
-                  onClick={() => { window.open('/help', '_blank'); handleMenuClose(); }}
+                <MenuItem
+                  onClick={() => { navigate('/support'); handleMenuClose(); }}
                   sx={{ py: 1.5, px: 3 }}
                 >
                   <ListItemIcon>
                     <HelpIcon sx={{ fontSize: '1.2rem' }} />
                   </ListItemIcon>
-                  <ListItemText 
-                    primary="Help & Support" 
+                  <ListItemText
+                    primary="Help & Support"
                     primaryTypographyProps={{ fontSize: '0.875rem' }}
                   />
                 </MenuItem>

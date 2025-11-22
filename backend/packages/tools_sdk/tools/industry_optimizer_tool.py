@@ -1,12 +1,14 @@
 """
 Industry Optimizer Tool - Adapts generic copy using industry-specific language and pain points
 Replaces generic terms with industry jargon and incorporates sector-specific frameworks
+Now with platform-industry matrix (LinkedIn-Healthcare uses clinical jargon, Facebook-Healthcare uses patient-friendly language)
 """
 
 import time
 from typing import Dict, Any, List, Optional, Tuple
 from ..core import ToolRunner, ToolInput, ToolOutput, ToolConfig, ToolType
 from ..exceptions import ToolValidationError
+from ..platform_adapter import platform_adapter
 
 
 class IndustryOptimizerToolRunner(ToolRunner):
@@ -255,9 +257,9 @@ class IndustryOptimizerToolRunner(ToolRunner):
         }
     
     async def run(self, input_data: ToolInput) -> ToolOutput:
-        """Optimize copy for specific industry and role"""
+        """Optimize copy for specific industry and role with platform-aware jargon level"""
         start_time = time.time()
-        
+
         try:
             # Extract base copy and parameters
             base_copy = {
@@ -265,18 +267,24 @@ class IndustryOptimizerToolRunner(ToolRunner):
                 'body_text': input_data.body_text,
                 'cta': input_data.cta
             }
-            
+
             industry = input_data.industry.lower() if input_data.industry else 'technology'
+            platform = input_data.platform.lower() if input_data.platform else 'facebook'
             target_role = self._extract_target_role(input_data)
             market_type = self._determine_market_type(base_copy, industry)
-            
+
+            # Get platform-specific jargon level for this industry
+            jargon_level = platform_adapter.get_jargon_level_for_platform(platform, industry)
+
             # Get industry-specific configuration
             industry_config = self.industry_vocabularies.get(industry, self.industry_vocabularies['technology'])
             role_config = self.role_adjustments.get(target_role, self.role_adjustments['manager'])
             framework_config = self.industry_frameworks.get(industry, self.industry_frameworks['technology'])
-            
-            # Perform industry optimization
-            optimized_copy = self._optimize_for_industry(base_copy, industry_config, role_config, framework_config)
+
+            # Perform industry optimization with platform-aware jargon level
+            optimized_copy = self._optimize_for_industry(
+                base_copy, industry_config, role_config, framework_config, platform, jargon_level
+            )
             
             # Generate variations with different industry approaches
             variations = self._generate_industry_variations(base_copy, industry_config, role_config, framework_config)
@@ -383,21 +391,45 @@ class IndustryOptimizerToolRunner(ToolRunner):
         
         return 'b2b' if b2b_score > b2c_score else 'b2c'
     
+    def _get_allowed_jargon(self, jargon_terms: List[str], jargon_level: str) -> List[str]:
+        """
+        Filter jargon terms based on platform-appropriate level
+
+        Platform-Industry Matrix:
+        - minimal: 0-1 jargon terms (TikTok, Instagram-Lifestyle)
+        - low: 1-2 jargon terms (Facebook-Healthcare, Google-Finance)
+        - medium: 2-4 jargon terms (Facebook general, Instagram general)
+        - high: 3-6 jargon terms (LinkedIn-Healthcare, LinkedIn-Tech)
+        """
+        if jargon_level == 'minimal':
+            return jargon_terms[:1]
+        elif jargon_level == 'low':
+            return jargon_terms[:2]
+        elif jargon_level == 'medium':
+            return jargon_terms[:4]
+        else:  # high
+            return jargon_terms[:6]
+
     def _optimize_for_industry(self, base_copy: Dict[str, str], industry_config: Dict,
-                              role_config: Dict, framework_config: Dict) -> Dict[str, str]:
-        """Apply industry-specific optimizations to copy"""
+                              role_config: Dict, framework_config: Dict,
+                              platform: str = 'facebook', jargon_level: str = 'medium') -> Dict[str, str]:
+        """Apply industry-specific optimizations to copy with platform-aware jargon level"""
         optimized = {}
-        
+
+        # Get allowed jargon terms based on platform-industry matrix
+        jargon_terms = industry_config.get('industry_jargon', [])
+        allowed_jargon = self._get_allowed_jargon(jargon_terms, jargon_level)
+
         # Optimize headline
         optimized['headline'] = self._optimize_headline(
-            base_copy['headline'], industry_config, role_config, framework_config
+            base_copy['headline'], industry_config, role_config, framework_config, allowed_jargon
         )
-        
+
         # Optimize body text
         optimized['body_text'] = self._optimize_body_text(
-            base_copy['body_text'], industry_config, role_config, framework_config
+            base_copy['body_text'], industry_config, role_config, framework_config, allowed_jargon, jargon_level
         )
-        
+
         # Optimize CTA
         optimized['cta'] = self._optimize_cta(
             base_copy['cta'], industry_config, role_config

@@ -53,8 +53,15 @@ class PaddleService:
         # Reverse mapping: Price ID -> Tier
         self.tier_from_price_id = {v: k for k, v in self.price_id_map.items() if v}
         
-        if not self.api_key or not self.vendor_id:
-            logger.warning("Paddle credentials not configured. Payment features will not work.")
+        # ✅ FIXED: Require webhook secret in production
+        if settings.ENVIRONMENT == 'production':
+            if not self.api_key or not self.vendor_id:
+                raise ValueError("PADDLE_API_KEY and PADDLE_VENDOR_ID must be configured in production")
+            if not self.webhook_secret:
+                raise ValueError("PADDLE_WEBHOOK_SECRET must be configured in production for security")
+        else:
+            if not self.api_key or not self.vendor_id:
+                logger.warning("Paddle credentials not configured. Payment features will not work.")
     
     def _make_request(
         self, 
@@ -107,27 +114,63 @@ class PaddleService:
             raise Exception(f"Payment service unavailable: {e}")
     
     def create_transaction(
-        self, 
-        price_id: str, 
+        self,
+        price_id: str,
         user: User,
         billing_period: str = 'monthly',
         success_url: str = None,
-        cancel_url: str = None
+        cancel_url: str = None,
+        idempotency_key: str = None
     ) -> Dict[str, Any]:
         """
-        Create a Paddle transaction (checkout session)
-        
+        Create a Paddle transaction (checkout session) with idempotency protection.
+
+        ✅ FIXED: Now supports idempotency keys to prevent duplicate transactions
+        from multiple button clicks.
+
         Args:
             price_id: Paddle price ID for the subscription
             user: User object
             billing_period: 'monthly' or 'yearly'
             success_url: URL to redirect after successful payment
             cancel_url: URL to redirect if user cancels
-            
+            idempotency_key: Unique key to prevent duplicate requests
+
         Returns:
             Dict with checkout URL and transaction details
         """
-        
+        from datetime import timedelta
+        from sqlalchemy import text
+        import uuid
+
+        # ✅ Generate or use provided idempotency key
+        if not idempotency_key:
+            idempotency_key = str(uuid.uuid4())
+
+        # ✅ Check if this key was already used (within 24 hours)
+        try:
+            existing = self.db.execute(
+                text("""
+                    SELECT transaction_id, response_data
+                    FROM paddle_idempotency_keys
+                    WHERE idempotency_key = :key
+                      AND expires_at > NOW()
+                """),
+                {"key": idempotency_key}
+            ).fetchone()
+
+            if existing:
+                # Return cached response
+                import json
+                logger.info(f"Returning cached transaction for idempotency key: {idempotency_key}")
+                return json.loads(existing.response_data) if existing.response_data else {
+                    "success": True,
+                    "transaction_id": existing.transaction_id,
+                    "idempotent": True
+                }
+        except Exception as e:
+            logger.warning(f"Error checking idempotency: {e}")
+
         # Build transaction payload
         payload = {
             "items": [
@@ -143,31 +186,76 @@ class PaddleService:
             "custom_data": {
                 "user_id": str(user.id),
                 "environment": self.environment,
-                "billing_period": billing_period
+                "billing_period": billing_period,
+                "idempotency_key": idempotency_key
             },
             "checkout": {
                 "url": success_url or "https://adcopysurge.com/analysis/new",
                 "allowed_payment_methods": ["card", "paypal"]
             }
         }
-        
+
         try:
             result = self._make_request('POST', '/transactions', payload)
             
             # Extract checkout URL from response
             checkout_url = result.get('data', {}).get('checkout', {}).get('url')
             transaction_id = result.get('data', {}).get('id')
-            
+
             if not checkout_url:
                 raise Exception("No checkout URL in Paddle response")
-            
-            return {
+
+            response_dict = {
                 "success": True,
                 "checkout_url": checkout_url,
                 "transaction_id": transaction_id,
+                "idempotency_key": idempotency_key,
                 "data": result.get('data', {})
             }
-            
+
+            # ✅ Store idempotency key for 24 hours
+            try:
+                import json
+                from datetime import datetime, timedelta, timezone
+
+                self.db.execute(
+                    text("""
+                        INSERT INTO paddle_idempotency_keys (
+                            idempotency_key,
+                            user_id,
+                            transaction_id,
+                            price_id,
+                            response_data,
+                            created_at,
+                            expires_at
+                        ) VALUES (
+                            :key,
+                            :user_id,
+                            :transaction_id,
+                            :price_id,
+                            :response_data,
+                            :created_at,
+                            :expires_at
+                        )
+                    """),
+                    {
+                        "key": idempotency_key,
+                        "user_id": str(user.id),
+                        "transaction_id": transaction_id,
+                        "price_id": price_id,
+                        "response_data": json.dumps(response_dict),
+                        "created_at": datetime.now(timezone.utc),
+                        "expires_at": datetime.now(timezone.utc) + timedelta(hours=24)
+                    }
+                )
+                self.db.commit()
+                logger.info(f"Stored idempotency key: {idempotency_key}")
+            except Exception as e:
+                logger.error(f"Failed to store idempotency key: {e}")
+                # Don't fail the transaction if idempotency storage fails
+
+            return response_dict
+
         except Exception as e:
             logger.error(f"Failed to create Paddle transaction: {e}")
             return {
@@ -395,25 +483,27 @@ class PaddleService:
     
     def _handle_subscription_created(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle subscription.created webhook"""
+        from app.services.credit_service import CreditService
+
         custom_data = data.get("custom_data", {})
         user_id = custom_data.get("user_id")
-        
+
         if not user_id:
             return {"success": False, "error": "No user_id in custom_data"}
-        
+
         user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
             return {"success": False, "error": "User not found"}
-        
+
         # Get subscription details
         subscription_id = data.get("id")
         price_id = data.get("items", [{}])[0].get("price", {}).get("id")
         customer_id = data.get("customer_id")
-        
+
         # Determine tier from price ID
         plan_key = self.tier_from_price_id.get(price_id, 'growth_monthly')
         tier = self._plan_key_to_tier(plan_key)
-        
+
         # Update user
         user.subscription_tier = tier
         user.subscription_active = True
@@ -421,55 +511,93 @@ class PaddleService:
         user.paddle_plan_id = price_id
         user.paddle_customer_id = customer_id
         user.monthly_analyses = 0  # Reset usage
-        
+
         self.db.commit()
-        
-        logger.info(f"Subscription created for user {user_id}: {tier}")
+
+        # ✅ FIXED: Sync credits with subscription tier
+        credit_service = CreditService(self.db)
+        success, result = credit_service.reset_monthly_credits(
+            user_id=str(user_id),
+            subscription_tier=tier.value
+        )
+
+        if not success:
+            logger.error(f"Failed to initialize credits for user {user_id}: {result.get('error')}")
+
+        logger.info(f"Subscription created for user {user_id}: {tier}, credits initialized")
         return {"success": True}
     
     def _handle_subscription_updated(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle subscription.updated webhook"""
+        from app.services.credit_service import CreditService
+
         subscription_id = data.get("id")
         user = self.db.query(User).filter(User.paddle_subscription_id == subscription_id).first()
-        
+
         if not user:
             return {"success": False, "error": "User not found"}
-        
+
         # Get new plan details
         price_id = data.get("items", [{}])[0].get("price", {}).get("id")
         status = data.get("status")
-        
+        old_tier = user.subscription_tier
+
         if price_id:
             plan_key = self.tier_from_price_id.get(price_id, 'growth_monthly')
             new_tier = self._plan_key_to_tier(plan_key)
             user.subscription_tier = new_tier
             user.paddle_plan_id = price_id
-        
+
+            # ✅ FIXED: Reset credits if tier changed (upgrade/downgrade)
+            if new_tier != old_tier:
+                credit_service = CreditService(self.db)
+                success, result = credit_service.reset_monthly_credits(
+                    user_id=str(user.id),
+                    subscription_tier=new_tier.value
+                )
+                if success:
+                    logger.info(f"Credits reset for user {user.id} due to tier change: {old_tier} -> {new_tier}")
+                else:
+                    logger.error(f"Failed to reset credits for user {user.id}: {result.get('error')}")
+
         # Update subscription status
         user.subscription_active = status in ["active", "trialing"]
-        
+
         self.db.commit()
-        
+
         logger.info(f"Subscription updated for user {user.id}: {status}")
         return {"success": True}
     
     def _handle_subscription_canceled(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle subscription.canceled webhook"""
+        from app.services.credit_service import CreditService
+
         subscription_id = data.get("id")
         user = self.db.query(User).filter(User.paddle_subscription_id == subscription_id).first()
-        
+
         if not user:
             return {"success": False, "error": "User not found"}
-        
+
         # Downgrade to free tier
         user.subscription_tier = SubscriptionTier.FREE
         user.subscription_active = False
         user.paddle_subscription_id = None
         user.paddle_plan_id = None
-        
+
         self.db.commit()
-        
-        logger.info(f"Subscription canceled for user {user.id}")
+
+        # ✅ FIXED: Reset credits to FREE tier limits
+        credit_service = CreditService(self.db)
+        success, result = credit_service.reset_monthly_credits(
+            user_id=str(user.id),
+            subscription_tier=SubscriptionTier.FREE.value
+        )
+
+        if success:
+            logger.info(f"Subscription canceled for user {user.id}, credits reset to FREE tier")
+        else:
+            logger.error(f"Failed to reset credits for canceled user {user.id}: {result.get('error')}")
+
         return {"success": True}
     
     def _handle_subscription_paused(self, data: Dict[str, Any]) -> Dict[str, Any]:

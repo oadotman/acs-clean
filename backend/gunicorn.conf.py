@@ -3,17 +3,20 @@ import multiprocessing
 import os
 
 # Server socket
-bind = "unix:/run/adcopysurge/gunicorn.sock"
+bind = "127.0.0.1:8000"
 backlog = 2048
 
 # Worker processes - optimized for VPS
-workers = min(4, multiprocessing.cpu_count() * 2 + 1)  # Cap at 4 workers for VPS
-worker_class = "uvicorn.workers.UvicornWorker"
+# Reduced workers for stability - adjust based on VPS resources
+workers = min(2, multiprocessing.cpu_count())  # Start with 2 workers for stability
+# Note: Using sync workers for stability. UvicornWorker was causing service exits on VPS.
+# If you need async performance later, test thoroughly before switching back.
+worker_class = "sync"  # Changed from "uvicorn.workers.UvicornWorker"
 worker_connections = 1000
 max_requests = 1000
 max_requests_jitter = 50
-preload_app = True
-timeout = 60  # Increased for AI processing
+preload_app = False  # Changed to False for sync workers
+timeout = 300  # 5 minutes - AI analysis takes 60-120 seconds, increased for safety
 keepalive = 2
 
 # Logging
@@ -28,8 +31,9 @@ proc_name = "adcopysurge-backend"
 # Server mechanics
 daemon = False
 pidfile = "/run/adcopysurge/gunicorn.pid"
-user = "www-data"
-group = "www-data"
+# User/group managed by systemd service file instead
+# user = "www-data"  # Commented out - managed by systemd
+# group = "www-data"  # Commented out - managed by systemd
 tmp_upload_dir = None
 
 # SSL (if needed)

@@ -116,12 +116,20 @@ class WalletBlocker {
    * Set up continuous monitoring and blocking
    */
   setupContinuousBlocking() {
-    // Monitor for object recreation
+    let checkCount = 0;
+    const MAX_CHECKS = 5; // Only check 5 times after initialization
+    
+    // Monitor for object recreation (reduced frequency)
     const monitorInterval = setInterval(() => {
-      if (!this.blockingActive) {
+      if (!this.blockingActive || checkCount >= MAX_CHECKS) {
         clearInterval(monitorInterval);
+        if (checkCount >= MAX_CHECKS) {
+          console.log('🛑 Wallet blocker: Completed monitoring checks');
+        }
         return;
       }
+
+      checkCount++;
 
       if (window.ethereum && window.ethereum !== this.originalEthereum) {
         console.log('🚫 React: Ethereum object recreated, blocking again');
@@ -132,7 +140,7 @@ class WalletBlocker {
         console.log('🚫 React: Web3 object recreated, blocking again');
         this.startBlocking();
       }
-    }, 1000);
+    }, 3000); // Check every 3 seconds instead of 1 second
 
     // Handle window focus (wallets sometimes inject on focus)
     window.addEventListener('focus', () => {
@@ -200,7 +208,10 @@ class WalletBlocker {
       connect: !!(window.connect && typeof window.connect === 'function')
     };
 
-    console.log('🔍 Wallet presence check:', walletObjects);
+    // Only log if wallets detected (reduce console spam)
+    if (Object.values(walletObjects).some(v => v)) {
+      console.log('🔍 Wallet presence check:', walletObjects);
+    }
     return walletObjects;
   }
 }

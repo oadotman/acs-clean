@@ -37,7 +37,7 @@ class AdScore(BaseModel):
 
 
 class AdAlternative(BaseModel):
-    variant_type: str  # persuasive, emotional, stats_heavy, platform_optimized
+    variant_type: str = "improved"  # persuasive, emotional, stats_heavy, platform_optimized
     headline: str
     body_text: str
     cta: str
@@ -52,3 +52,4 @@ class AdAnalysisResponse(BaseModel):
     alternatives: List[AdAlternative]
     competitor_comparison: Optional[dict] = None
     quick_wins: List[str]
+    tool_results: Optional[dict] = None  # Individual tool outputs (compliance, psychology, legal, ROI, etc.)

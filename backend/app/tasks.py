@@ -30,7 +30,7 @@ def analyze_ad_copy_background(self, user_id: int, ad_data: Dict[str, Any], comp
         )
         
         # Import here to avoid circular imports
-        from app.services.ad_analysis_service import AdAnalysisService
+        from app.services.ad_analysis_service_enhanced import EnhancedAdAnalysisService
         from app.schemas.ads import AdInput, CompetitorAd
         from app.core.database import SessionLocal
         
@@ -48,8 +48,8 @@ def analyze_ad_copy_background(self, user_id: int, ad_data: Dict[str, Any], comp
             ad_input = AdInput(**ad_data)
             competitor_list = [CompetitorAd(**comp) for comp in (competitor_ads or [])]
             
-            # Initialize analysis service
-            analysis_service = AdAnalysisService(db)
+            # Initialize analysis service - use Enhanced version with AI improvements
+            analysis_service = EnhancedAdAnalysisService(db)
             
             # Update progress
             self.update_state(

@@ -182,6 +182,41 @@ async def require_admin(
     return current_user
 
 
+async def get_current_user_id(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> str:
+    """
+    Get the current user's ID (Supabase UUID) from the token.
+    Returns just the user ID without requiring database lookup.
+    """
+    if not credentials:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = credentials.credentials
+
+    # Try Supabase authentication first
+    try:
+        from app.middleware.supabase_auth import supabase_auth
+        supabase_payload = await supabase_auth.verify_supabase_token(token)
+        if supabase_payload and 'sub' in supabase_payload:
+            user_id = supabase_payload['sub']
+            logger.debug(f"Extracted Supabase user ID: {user_id}")
+            return user_id
+    except Exception as e:
+        logger.debug(f"Failed to extract Supabase user ID: {e}")
+
+    # If Supabase auth fails, raise error
+    raise HTTPException(
+        status_code=401,
+        detail="Invalid authentication token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
 # Backward compatibility aliases
 get_current_user_dep = get_current_user
 get_optional_current_user_dep = get_optional_current_user

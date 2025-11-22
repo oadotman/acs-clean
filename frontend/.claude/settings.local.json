@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(systemctl status:*)",
+      "Bash(journalctl:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(python:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

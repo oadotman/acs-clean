@@ -1,0 +1,110 @@
+{
+  "score": 60.0,
+  "issues": [
+    {
+      "category": "Credit System",
+      "description": "Credit operations may not be atomic",
+      "severity": "HIGH",
+      "timestamp": "2025-11-21T19:15:30.405501"
+    }
+  ],
+  "warnings": [
+    {
+      "category": "Secrets",
+      "description": "Potential secret in backend/.env",
+      "timestamp": "2025-11-21T19:12:17.004916"
+    },
+    {
+      "category": "Secrets",
+      "description": "Potential secret in frontend/.env",
+      "timestamp": "2025-11-21T19:12:17.126671"
+    },
+    {
+      "category": "Dependencies",
+      "description": "305 Python packages are outdated",
+      "timestamp": "2025-11-21T19:15:27.772324"
+    },
+    {
+      "category": "Dependencies",
+      "description": "Could not run npm audit: [WinError 2] The system cannot find the file specified",
+      "timestamp": "2025-11-21T19:15:27.784847"
+    },
+    {
+      "category": "Rate Limiting",
+      "description": "Rate limiting middleware not found",
+      "timestamp": "2025-11-21T19:15:30.406133"
+    },
+    {
+      "category": "Logging",
+      "description": "Potential sensitive data logging in 2 files",
+      "timestamp": "2025-11-21T19:15:31.767542"
+    }
+  ],
+  "passed": [
+    {
+      "category": "Environment",
+      "description": "backend/.env properly ignored",
+      "timestamp": "2025-11-21T19:12:16.859452"
+    },
+    {
+      "category": "Environment",
+      "description": "frontend/.env properly ignored",
+      "timestamp": "2025-11-21T19:12:17.008013"
+    },
+    {
+      "category": "Security Headers",
+      "description": "X-Content-Type-Options is configured",
+      "timestamp": "2025-11-21T19:15:27.824429"
+    },
+    {
+      "category": "Security Headers",
+      "description": "X-Frame-Options is configured",
+      "timestamp": "2025-11-21T19:15:27.824429"
+    },
+    {
+      "category": "Security Headers",
+      "description": "X-XSS-Protection is configured",
+      "timestamp": "2025-11-21T19:15:27.824429"
+    },
+    {
+      "category": "Security Headers",
+      "description": "Strict-Transport-Security is configured",
+      "timestamp": "2025-11-21T19:15:27.824429"
+    },
+    {
+      "category": "Security Headers",
+      "description": "Content-Security-Policy is configured",
+      "timestamp": "2025-11-21T19:15:27.824429"
+    },
+    {
+      "category": "Authentication",
+      "description": "Supabase JWT verification configured",
+      "timestamp": "2025-11-21T19:15:27.859195"
+    },
+    {
+      "category": "SQL Injection",
+      "description": "No obvious SQL injection vulnerabilities found",
+      "timestamp": "2025-11-21T19:15:30.404803"
+    },
+    {
+      "category": "Credit System",
+      "description": "Credit refund mechanism exists",
+      "timestamp": "2025-11-21T19:15:30.405501"
+    },
+    {
+      "category": "Credit System",
+      "description": "Credit transaction logging implemented",
+      "timestamp": "2025-11-21T19:15:30.405501"
+    },
+    {
+      "category": "CSRF",
+      "description": "/api/ads/analyze endpoint protected by CSRF",
+      "timestamp": "2025-11-21T19:15:30.407359"
+    },
+    {
+      "category": "Webhooks",
+      "description": "Webhook signature validation with constant-time comparison",
+      "timestamp": "2025-11-21T19:15:30.408151"
+    }
+  ]
+}

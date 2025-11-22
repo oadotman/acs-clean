@@ -9,6 +9,7 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
+import os
 
 # Import the Tools SDK
 from packages.tools_sdk import ToolOrchestrator, ToolInput, ToolRegistry, default_registry
@@ -18,6 +19,12 @@ from packages.tools_sdk.tools import register_all_tools
 from app.schemas.ads import AdInput, CompetitorAd, AdScore, AdAlternative, AdAnalysisResponse
 from app.models.ad_analysis import AdAnalysis
 from app.core.logging import get_logger
+
+# Import AI service for real improvement generation
+from app.services.production_ai_generator import ProductionAIService
+from app.services.agent_system import MultiAgentOptimizer
+from app.services.recommendation_orchestrator import RecommendationOrchestrator
+from app.core.exceptions import AIProviderUnavailable
 
 logger = get_logger(__name__)
 
@@ -33,6 +40,23 @@ class EnhancedAdAnalysisService:
     def __init__(self, db: Session, registry: ToolRegistry = None):
         self.db = db
         self.orchestrator = ToolOrchestrator(registry or default_registry)
+        self.rec_orchestrator = RecommendationOrchestrator()  # NEW: Recommendation prioritization
+        
+        # Initialize AI service for improvement generation
+        openai_key = os.getenv('OPENAI_API_KEY')
+        gemini_key = os.getenv('GEMINI_API_KEY')
+        
+        try:
+            self.ai_service = ProductionAIService(openai_key, gemini_key)
+            logger.info("AI service initialized for improvement generation")
+            
+            # Initialize multi-agent optimizer
+            self.multi_agent_optimizer = MultiAgentOptimizer(self.ai_service)
+            logger.info("Multi-agent optimizer initialized")
+        except Exception as e:
+            logger.warning(f"AI service initialization failed: {e}. Will use fallback for improvements.")
+            self.ai_service = None
+            self.multi_agent_optimizer = None
         
         # Ensure tools are registered
         try:
@@ -172,16 +196,38 @@ class EnhancedAdAnalysisService:
                 orchestration_result
             )
         
-        # Generate quick wins from tool insights
-        quick_wins = self._extract_quick_wins(orchestration_result)
+        # Generate quick wins using Recommendation Orchestrator (prioritized from 45-72 recommendations down to top 5)
+        quick_wins = self._orchestrate_recommendations(orchestration_result)
+        
+        # Convert feedback list to string to match Pydantic schema expectations
+        feedback_text = "\n".join(str(f) for f in feedback if f) if feedback else "Analysis completed successfully"
+        
+        # Extract tool-specific results for frontend display
+        tool_results_dict = {}
+        try:
+            if hasattr(orchestration_result, 'tool_results') and orchestration_result.tool_results:
+                for tool_name, tool_output in orchestration_result.tool_results.items():
+                    if tool_output and hasattr(tool_output, 'success') and tool_output.success:
+                        tool_results_dict[tool_name] = {
+                            'success': True,
+                            'scores': getattr(tool_output, 'scores', {}),
+                            'insights': getattr(tool_output, 'insights', {}),
+                            'recommendations': getattr(tool_output, 'recommendations', []),
+                            'execution_time': getattr(tool_output, 'execution_time', 0.0),
+                            'confidence_score': getattr(tool_output, 'confidence_score', None)
+                        }
+        except Exception as e:
+            logger.warning(f"Could not extract tool_results: {e}. Continuing without detailed tool results.")
+            tool_results_dict = {}
         
         return AdAnalysisResponse(
             analysis_id=orchestration_result.request_id,
             scores=ad_scores,
-            feedback=feedback,
+            feedback=feedback_text,
             alternatives=alternatives,
             competitor_comparison=competitor_comparison,
-            quick_wins=quick_wins
+            quick_wins=quick_wins,
+            tool_results=tool_results_dict  # Include all tool-specific results
         )
     
     def _calculate_fallback_overall_score(self, scores_dict: Dict[str, float]) -> float:
@@ -205,17 +251,194 @@ class EnhancedAdAnalysisService:
         return weighted_sum / total_weight if total_weight > 0 else 70.0
     
     async def _generate_fallback_alternatives(self, ad: AdInput) -> List[AdAlternative]:
-        """Generate fallback alternatives (TODO: replace with AI generator tool)"""
-        # This would be replaced by the AI generator tool from the SDK
+        """Generate AI-powered improvement alternatives using ProductionAIService"""
+        
+        # If AI service is available, generate real improvements
+        if self.ai_service:
+            try:
+                logger.info("Generating AI-powered improvements")
+                
+                # Prepare ad data for AI service
+                ad_data = {
+                    'headline': ad.headline,
+                    'body_text': ad.body_text,
+                    'cta': ad.cta,
+                    'platform': ad.platform,
+                    'industry': getattr(ad, 'industry', 'general'),
+                    'target_audience': getattr(ad, 'target_audience', 'general audience')
+                }
+                
+                # Generate single improved version using AI (persuasive variant)
+                improved_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='persuasive',
+                    emoji_level='moderate',
+                    human_tone='conversational',
+                    brand_tone='casual',
+                    formality_level=5,
+                    include_cta=True,
+                    cta_style='medium',
+                    creativity_level=6,
+                    urgency_level=5,
+                    emotion_type='inspiring',
+                    filter_cliches=True
+                )
+                
+                # Generate A/B/C test variations with different strategic approaches
+                logger.info("Generating A/B/C test variations")
+                
+                # Variation A: Benefit-Focused (appeals to aspirations)
+                variation_a_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='persuasive',
+                    emoji_level='moderate',
+                    human_tone='aspirational',
+                    brand_tone='professional',
+                    formality_level=6,
+                    include_cta=True,
+                    cta_style='soft',
+                    creativity_level=5,
+                    urgency_level=4,
+                    emotion_type='inspiring',
+                    filter_cliches=True
+                )
+                
+                # Variation B: Problem-Focused (identifies with pain points)
+                variation_b_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='emotional',
+                    emoji_level='light',
+                    human_tone='empathetic',
+                    brand_tone='friendly',
+                    formality_level=5,
+                    include_cta=True,
+                    cta_style='medium',
+                    creativity_level=6,
+                    urgency_level=7,
+                    emotion_type='problem_solving',
+                    filter_cliches=True
+                )
+                
+                # Variation C: Story-Driven (creates emotional connection)
+                variation_c_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='emotional',
+                    emoji_level='moderate',
+                    human_tone='storytelling',
+                    brand_tone='authentic',
+                    formality_level=4,
+                    include_cta=True,
+                    cta_style='soft',
+                    creativity_level=7,
+                    urgency_level=3,
+                    emotion_type='trust_building',
+                    filter_cliches=True
+                )
+                
+                # Convert AI results to AdAlternative format
+                alternatives = [
+                    # Main improved version
+                    AdAlternative(
+                        variant_type="improved",
+                        headline=improved_result.get('headline', ad.headline),
+                        body_text=improved_result.get('body_text', ad.body_text),
+                        cta=improved_result.get('cta', ad.cta),
+                        improvement_reason=improved_result.get('improvement_reason', 'AI-enhanced copy with improved persuasion'),
+                        expected_improvement=20.0
+                    ),
+                    # Variation A: Benefit-Focused
+                    AdAlternative(
+                        variant_type="variation_a_benefit",
+                        headline=variation_a_result.get('headline', ad.headline),
+                        body_text=variation_a_result.get('body_text', ad.body_text),
+                        cta=variation_a_result.get('cta', ad.cta),
+                        improvement_reason="Variation A - Benefit-Focused: Appeals to aspirations and desired outcomes. Best for solution-seekers, warm leads, known problems.",
+                        expected_improvement=18.0
+                    ),
+                    # Variation B: Problem-Focused
+                    AdAlternative(
+                        variant_type="variation_b_problem",
+                        headline=variation_b_result.get('headline', ad.headline),
+                        body_text=variation_b_result.get('body_text', ad.body_text),
+                        cta=variation_b_result.get('cta', ad.cta),
+                        improvement_reason="Variation B - Problem-Focused: Identifies with pain points and frustrations. Best for pain-aware audiences, high urgency, immediate solutions.",
+                        expected_improvement=22.0
+                    ),
+                    # Variation C: Story-Driven
+                    AdAlternative(
+                        variant_type="variation_c_story",
+                        headline=variation_c_result.get('headline', ad.headline),
+                        body_text=variation_c_result.get('body_text', ad.body_text),
+                        cta=variation_c_result.get('cta', ad.cta),
+                        improvement_reason="Variation C - Story-Driven: Creates emotional connection through narrative. Best for building trust, cold traffic, brand awareness.",
+                        expected_improvement=16.0
+                    )
+                ]
+                
+                logger.info("Successfully generated 4 AI-powered alternatives (1 improved + 3 A/B/C variations)")
+                return alternatives
+                
+            except AIProviderUnavailable as e:
+                logger.error(f"AI provider unavailable: {e}. Using fallback alternatives.")
+            except Exception as e:
+                logger.error(f"Error generating AI alternatives: {e}. Using fallback alternatives.")
+        
+        # Fallback if AI service is not available or fails
+        logger.warning("Using fallback alternatives (AI service unavailable)")
         return [
             AdAlternative(
+                variant_type="fallback",
                 headline=f"Improved: {ad.headline}",
                 body_text=f"Enhanced version: {ad.body_text}",
                 cta=f"Better {ad.cta}",
-                improvement_reason="SDK-generated alternative",
-                expected_improvement=15.0
+                improvement_reason="Fallback alternative (AI service unavailable)",
+                expected_improvement=5.0
             )
         ]
+    
+    async def analyze_with_multi_agent(
+        self,
+        user_id: int,
+        ad: AdInput,
+        max_iterations: int = 1
+    ) -> Dict[str, Any]:
+        """
+        Advanced multi-agent optimization (optional premium feature)
+        
+        Uses 4 specialized agents:
+        1. Analyzer - Scores and identifies issues
+        2. Strategist - Plans improvement strategy
+        3. Writer - Generates 4 variations (Improved + A/B/C)
+        4. Quality Control - Validates output
+        
+        Args:
+            user_id: User ID
+            ad: Ad input
+            max_iterations: Number of refinement iterations (1-4)
+        
+        Returns:
+            Structured optimization result with reasoning and scores
+        """
+        if not self.multi_agent_optimizer:
+            raise Exception("Multi-agent optimizer not available. AI service may not be initialized.")
+        
+        logger.info(f"🤖 Starting multi-agent optimization for user {user_id}")
+        
+        ad_data = {
+            'headline': ad.headline,
+            'body_text': ad.body_text,
+            'cta': ad.cta,
+            'platform': ad.platform,
+            'industry': getattr(ad, 'industry', None),
+            'target_audience': getattr(ad, 'target_audience', None)
+        }
+        
+        # Run multi-agent optimization
+        result = await self.multi_agent_optimizer.optimize(ad_data, max_iterations)
+        
+        logger.info(f"✅ Multi-agent optimization complete. Improvement: {result.improved_score.overall - result.original_score.overall:.1f} points")
+        
+        return result.to_dict()
     
     async def _analyze_competitors_sdk(
         self,
@@ -238,10 +461,46 @@ class EnhancedAdAnalysisService:
             ]
         }
     
-    def _extract_quick_wins(self, orchestration_result) -> List[str]:
-        """Extract quick wins from tool insights"""
+    def _orchestrate_recommendations(self, orchestration_result) -> List[str]:
+        """
+        Use Recommendation Orchestrator to prioritize recommendations
+
+        Reduces 45-72 recommendations from all tools down to top 5 most impactful
+        """
+        # Orchestrate recommendations from all tool results
+        prioritized_recommendations = self.rec_orchestrator.orchestrate(
+            tool_results=orchestration_result.tool_results,
+            max_recommendations=5
+        )
+
+        # Convert to string format for quick_wins
         quick_wins = []
-        
+        for rec in prioritized_recommendations:
+            # Format: "🎯 [Priority] Title - Description"
+            priority_emoji = {
+                'CRITICAL': '❌',
+                'HIGH': '⚠️',
+                'MEDIUM': '💡',
+                'LOW': '✓'
+            }
+            emoji = priority_emoji.get(rec.priority.name, '•')
+            quick_win = f"{emoji} {rec.title}"
+            quick_wins.append(quick_win)
+
+        logger.info(f"Orchestrated {len(quick_wins)} prioritized recommendations")
+
+        return quick_wins
+
+    def _extract_quick_wins(self, orchestration_result) -> List[str]:
+        """
+        DEPRECATED: Old quick wins extraction logic
+        Kept for backward compatibility but now delegates to _orchestrate_recommendations
+        """
+        return self._orchestrate_recommendations(orchestration_result)
+
+        # OLD LOGIC (commented out, using orchestrator now):
+        quick_wins = []
+
         for tool_name, tool_output in orchestration_result.tool_results.items():
             if tool_output.success and tool_output.insights:
                 

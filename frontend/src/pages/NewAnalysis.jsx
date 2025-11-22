@@ -152,6 +152,8 @@ const NewAnalysis = () => {
   const isSPAMode = location.pathname === '/analysis/spa';
   const [step, setStep] = useState('input'); // 'input', 'comprehensive-analyzing', 'comprehensive-results'
   const [adCopy, setAdCopy] = useState('');
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [detectedLanguage, setDetectedLanguage] = useState(null);
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [comprehensiveResults, setComprehensiveResults] = useState(null);
   const [analysisProgress, setAnalysisProgress] = useState(0);
@@ -173,7 +175,8 @@ const NewAnalysis = () => {
     formality: 'casual',
     targetAudience: '',
     brandValues: '',
-    pastAds: '' // For learning from existing content
+    pastAds: '', // For learning from existing content
+    emojiPreference: 'auto' // 'auto', 'include', 'exclude'
   });
   
   // Brand voice collapsible state
@@ -283,9 +286,63 @@ const NewAnalysis = () => {
   }, [location.state, location.search]);
 
   // Handle ad copy paste/input
+  // Validation function
+  const validateAdCopy = (text) => {
+    const errors = [];
+    const MIN_LENGTH = 10;
+    const MAX_LENGTH = 5000;
+
+    // Length validation
+    if (text.trim().length < MIN_LENGTH) {
+      errors.push(`Ad copy must be at least ${MIN_LENGTH} characters`);
+    }
+    if (text.length > MAX_LENGTH) {
+      errors.push(`Ad copy must not exceed ${MAX_LENGTH} characters`);
+    }
+
+    // Placeholder text detection
+    const placeholderPatterns = ['lorem ipsum', 'your headline here', 'enter text', 'sample text'];
+    if (placeholderPatterns.some(pattern => text.toLowerCase().includes(pattern))) {
+      errors.push('Please use real ad copy, not placeholder text');
+    }
+
+    // Language detection (simple pattern-based)
+    if (text.trim().length >= 20) {
+      const englishWords = ['the', 'and', 'you', 'your', 'get', 'now', 'with', 'for'];
+      const spanishWords = ['el', 'la', 'los', 'las', 'de', 'que', 'tu', 'para'];
+      const germanWords = ['der', 'die', 'das', 'und', 'sie', 'für'];
+      const frenchWords = ['le', 'la', 'les', 'de', 'et', 'vous'];
+      const portugueseWords = ['o', 'a', 'os', 'as', 'de', 'que'];
+
+      const textLower = text.toLowerCase();
+      const words = textLower.split(/\s+/);
+
+      const scores = {
+        'English': englishWords.filter(w => words.includes(w)).length,
+        'Spanish': spanishWords.filter(w => words.includes(w)).length,
+        'German': germanWords.filter(w => words.includes(w)).length,
+        'French': frenchWords.filter(w => words.includes(w)).length,
+        'Portuguese': portugueseWords.filter(w => words.includes(w)).length
+      };
+
+      const detected = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
+      if (scores[detected] > 0) {
+        setDetectedLanguage(detected);
+      }
+    } else {
+      setDetectedLanguage(null);
+    }
+
+    return errors;
+  };
+
   const handleAdCopyChange = (event) => {
     const text = event.target.value;
     setAdCopy(text);
+
+    // Validate on change (but only show errors if text is long enough)
+    const errors = validateAdCopy(text);
+    setValidationErrors(text.trim().length > 0 ? errors : []);
   };
 
   // Handle platform selection
@@ -301,11 +358,20 @@ const NewAnalysis = () => {
 
   // Comprehensive analysis
   const runAnalysis = async () => {
+    console.log('👉 ANALYZE BUTTON CLICKED!');
+    console.log('💳 Checking credits for FULL_ANALYSIS...');
+    console.log('💳 hasEnoughCredits:', hasEnoughCredits('FULL_ANALYSIS'));
+    console.log('💳 Credit system state:', { hasEnoughCredits, executeWithCredits, getCreditRequirement });
+    
     // Check if user has enough credits for a full analysis
     if (!hasEnoughCredits('FULL_ANALYSIS')) {
+      console.error('❌ Not enough credits! Analysis blocked.');
+      toast.error('Not enough credits for analysis. Please check your credit balance.');
       // Toast will be shown automatically by the credit system
       return;
     }
+    
+    console.log('✅ Credits OK, starting analysis...');
     
     // Execute analysis with credit consumption
     const result = await executeWithCredits(
@@ -326,18 +392,43 @@ const NewAnalysis = () => {
 
   // Handle completion of comprehensive analysis
   const handleComprehensiveAnalysisComplete = (results) => {
-    console.log('🎯 Analysis complete! Results received:', results);
-    console.log('📊 Analysis ID:', results?.analysis_id);
-    
-    // Initialize improvement count if not present
-    results.improvementCount = results.improvementCount || 0;
-    setComprehensiveResults(results);
-    
-    // Show results in the current component using ComprehensiveResults
-    setStep('comprehensive-results');
-    toast.success('Comprehensive analysis complete! 🎉');
-    
-    console.log('✅ Results will be displayed using ComprehensiveResults component');
+    try {
+      console.log('🎯 Analysis complete! Results received:', results);
+      console.log('📊 Analysis ID:', results?.analysis_id);
+      console.log('🔍 Results structure:', {
+        hasOriginal: !!results?.original,
+        hasImproved: !!results?.improved,
+        hasAnalysisId: !!results?.analysis_id,
+        keys: Object.keys(results || {})
+      });
+      
+      // Validate results object
+      if (!results || typeof results !== 'object') {
+        console.error('❌ Invalid results object:', results);
+        toast.error('Invalid analysis results received');
+        setStep('input');
+        return;
+      }
+      
+      // Initialize improvement count if not present
+      results.improvementCount = results.improvementCount || 0;
+      
+      console.log('📦 Setting comprehensiveResults state...');
+      setComprehensiveResults(results);
+      
+      console.log('📦 Setting step to comprehensive-results...');
+      // Show results in the current component using ComprehensiveResults
+      setStep('comprehensive-results');
+      
+      console.log('✅ State updates complete, should now render ComprehensiveResults component');
+      toast.success('Comprehensive analysis complete! 🎉');
+      
+    } catch (error) {
+      console.error('❌ Error in handleComprehensiveAnalysisComplete:', error);
+      console.error('Error stack:', error.stack);
+      toast.error('Failed to display results: ' + error.message);
+      setStep('input');
+    }
   };
 
   // Handle further improvement requests
@@ -1096,11 +1187,27 @@ const NewAnalysis = () => {
         platform={selectedPlatform}
         brandVoice={brandVoice}
         onComplete={handleComprehensiveAnalysisComplete}
+        onError={(error) => {
+          console.error('❌ Analysis error in parent:', error);
+          toast.error('Analysis failed: ' + (error.message || 'Unknown error'));
+          setStep('input');
+        }}
       />
     );
   }
 
-  if (step === 'comprehensive-results' && comprehensiveResults) {
+  if (step === 'comprehensive-results') {
+    console.log('🔍 Rendering comprehensive-results step');
+    console.log('🔍 comprehensiveResults exists:', !!comprehensiveResults);
+    console.log('🔍 comprehensiveResults keys:', comprehensiveResults ? Object.keys(comprehensiveResults) : 'null');
+    
+    if (!comprehensiveResults) {
+      console.error('❌ comprehensiveResults is null/undefined, redirecting to input');
+      toast.error('Analysis results not found');
+      setStep('input');
+      return null;
+    }
+    
     return (
       <ComprehensiveResults
         results={comprehensiveResults}
@@ -1564,11 +1671,26 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                         variant="outlined"
                       />
                     </Grid>
+                    
+                    <Grid item xs={12} md={4}>
+                      <FormControl fullWidth>
+                        <InputLabel>Emoji Usage</InputLabel>
+                        <Select
+                          value={brandVoice.emojiPreference}
+                          onChange={(e) => setBrandVoice(prev => ({ ...prev, emojiPreference: e.target.value }))}
+                          label="Emoji Usage"
+                        >
+                          <MenuItem value="auto">Auto (Platform-appropriate) 🤖</MenuItem>
+                          <MenuItem value="include">Include Emojis 😊</MenuItem>
+                          <MenuItem value="exclude">No Emojis 🚫</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
                   </Grid>
                 </Box>
                 
                 {/* Brand Voice Status Indicator */}
-                {(brandVoice.pastAds.trim() || brandVoice.targetAudience.trim() || brandVoice.brandValues.trim()) && (
+                {(brandVoice.pastAds.trim() || brandVoice.targetAudience.trim() || brandVoice.brandValues.trim() || brandVoice.emojiPreference !== 'auto') && (
                   <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(124, 58, 237, 0.05)', borderRadius: 2 }}>
                     <Box display="flex" alignItems="center" gap={1}>
                       <CheckCircle sx={{ color: 'success.main', fontSize: '1.2rem' }} />
@@ -1579,7 +1701,8 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                       {brandVoice.pastAds.trim() ? '✅ Learning from past ads • ' : ''}
                       {brandVoice.targetAudience.trim() ? '✅ Target audience defined • ' : ''}
-                      {brandVoice.brandValues.trim() ? '✅ Brand values set' : ''}
+                      {brandVoice.brandValues.trim() ? '✅ Brand values set • ' : ''}
+                      {brandVoice.emojiPreference === 'include' ? '✅ Emojis: Include' : brandVoice.emojiPreference === 'exclude' ? '✅ Emojis: Exclude' : ''}
                     </Typography>
                   </Box>
                 )}
@@ -1647,6 +1770,30 @@ Get 50% off all products today! Limited time offer - shop now and save big on th
               }
             }}
           />
+
+          {/* Validation Errors */}
+          {validationErrors.length > 0 && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {validationErrors.map((error, idx) => (
+                <Typography key={idx} variant="body2">• {error}</Typography>
+              ))}
+            </Alert>
+          )}
+
+          {/* Language Support Indicator */}
+          {detectedLanguage && (
+            <Box sx={{ mb: 2, p: 2, bgcolor: 'rgba(76, 175, 80, 0.05)', borderRadius: 2, border: '1px solid rgba(76, 175, 80, 0.2)' }}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <CheckCircle sx={{ color: 'success.main', fontSize: '1.1rem' }} />
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                  Language Detected: {detectedLanguage}
+                </Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                ✅ Supported Languages: English, Spanish, German, French, Portuguese
+              </Typography>
+            </Box>
+          )}
 
           {/* Status indicators */}
           <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 1 }}>
