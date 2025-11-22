@@ -108,11 +108,12 @@ const ABCTestingGrid = ({
       title: 'Variation A',
       badge: 'Benefit-Focused',
       badgeColor: 'success',
-      headline: variations.find(v => v.variant_type?.includes('benefit'))?.headline || '(Benefit-focused variation)',
-      body_text: variations.find(v => v.variant_type?.includes('benefit'))?.body_text || 'Highlights positive outcomes and transformation',
-      cta: variations.find(v => v.variant_type?.includes('benefit'))?.cta || 'Discover Benefits',
-      score: variations.find(v => v.variant_type?.includes('benefit'))?.predicted_score || 82,
-      reasoning: [
+      headline: variations.find(v => v.variant_type === 'benefit_focused' || v.variant_type?.includes('benefit'))?.headline || '(Benefit-focused variation)',
+      body_text: variations.find(v => v.variant_type === 'benefit_focused' || v.variant_type?.includes('benefit'))?.body_text || 'Highlights positive outcomes and transformation',
+      cta: variations.find(v => v.variant_type === 'benefit_focused' || v.variant_type?.includes('benefit'))?.cta || 'Discover Benefits',
+      score: variations.find(v => v.variant_type === 'benefit_focused' || v.variant_type?.includes('benefit'))?.predicted_score || 82,
+      reasoning: variations.find(v => v.variant_type === 'benefit_focused' || v.variant_type?.includes('benefit'))?.reasoning ?
+        [variations.find(v => v.variant_type === 'benefit_focused' || v.variant_type?.includes('benefit'))?.reasoning] : [
         'Emphasizes transformation and positive outcomes',
         'Uses aspirational language to inspire action',
         'Focuses on "what you gain" messaging'
@@ -127,11 +128,12 @@ const ABCTestingGrid = ({
       title: 'Variation B',
       badge: 'Problem-Focused',
       badgeColor: 'warning',
-      headline: variations.find(v => v.variant_type?.includes('problem'))?.headline || '(Problem-focused variation)',
-      body_text: variations.find(v => v.variant_type?.includes('problem'))?.body_text || 'Identifies pain points and offers solutions',
-      cta: variations.find(v => v.variant_type?.includes('problem'))?.cta || 'Solve This Now',
-      score: variations.find(v => v.variant_type?.includes('problem'))?.predicted_score || 84,
-      reasoning: [
+      headline: variations.find(v => v.variant_type === 'problem_focused' || v.variant_type?.includes('problem'))?.headline || '(Problem-focused variation)',
+      body_text: variations.find(v => v.variant_type === 'problem_focused' || v.variant_type?.includes('problem'))?.body_text || 'Identifies pain points and offers solutions',
+      cta: variations.find(v => v.variant_type === 'problem_focused' || v.variant_type?.includes('problem'))?.cta || 'Solve This Now',
+      score: variations.find(v => v.variant_type === 'problem_focused' || v.variant_type?.includes('problem'))?.predicted_score || 84,
+      reasoning: variations.find(v => v.variant_type === 'problem_focused' || v.variant_type?.includes('problem'))?.reasoning ?
+        [variations.find(v => v.variant_type === 'problem_focused' || v.variant_type?.includes('problem'))?.reasoning] : [
         'Opens with pain point recognition',
         'Shows empathy and understanding',
         'Presents solution as immediate relief'
@@ -146,11 +148,12 @@ const ABCTestingGrid = ({
       title: 'Variation C',
       badge: 'Story-Driven',
       badgeColor: 'info',
-      headline: variations.find(v => v.variant_type?.includes('story'))?.headline || '(Story-driven variation)',
-      body_text: variations.find(v => v.variant_type?.includes('story'))?.body_text || 'Tells a compelling story to build emotional connection',
-      cta: variations.find(v => v.variant_type?.includes('story'))?.cta || 'Hear Our Story',
-      score: variations.find(v => v.variant_type?.includes('story'))?.predicted_score || 80,
-      reasoning: [
+      headline: variations.find(v => v.variant_type === 'story_driven' || v.variant_type?.includes('story'))?.headline || '(Story-driven variation)',
+      body_text: variations.find(v => v.variant_type === 'story_driven' || v.variant_type?.includes('story'))?.body_text || 'Tells a compelling story to build emotional connection',
+      cta: variations.find(v => v.variant_type === 'story_driven' || v.variant_type?.includes('story'))?.cta || 'Hear Our Story',
+      score: variations.find(v => v.variant_type === 'story_driven' || v.variant_type?.includes('story'))?.predicted_score || 80,
+      reasoning: variations.find(v => v.variant_type === 'story_driven' || v.variant_type?.includes('story'))?.reasoning ?
+        [variations.find(v => v.variant_type === 'story_driven' || v.variant_type?.includes('story'))?.reasoning] : [
         'Uses narrative structure (setup, conflict, resolution)',
         'Builds emotional connection through storytelling',
         'Includes social proof and testimonial angles'

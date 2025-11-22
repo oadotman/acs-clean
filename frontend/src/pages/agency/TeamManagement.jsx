@@ -87,7 +87,10 @@ const AgencyTeamManagement = () => {
   const [invitationCode, setInvitationCode] = useState('');
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
-  
+  const [pendingInvitesModalOpen, setPendingInvitesModalOpen] = useState(false);
+  const [pendingInvitations, setPendingInvitations] = useState([]);
+  const [loadingInvitations, setLoadingInvitations] = useState(false);
+
   // Data State
   const [agency, setAgency] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
@@ -436,6 +439,38 @@ const AgencyTeamManagement = () => {
     }
   };
 
+  // Pending invitations handlers
+  const handleViewPendingInvites = async () => {
+    try {
+      setLoadingInvitations(true);
+      setPendingInvitesModalOpen(true);
+      const invites = await teamService.getPendingInvitations(agency.id);
+      setPendingInvitations(invites);
+    } catch (err) {
+      console.error('Error loading pending invitations:', err);
+      toast.error('Failed to load pending invitations');
+    } finally {
+      setLoadingInvitations(false);
+    }
+  };
+
+  const handleDeleteInvitation = async (invitationId) => {
+    try {
+      setLoadingInvitations(true);
+      await teamService.revokeInvitation(invitationId);
+      // Refresh the list
+      const invites = await teamService.getPendingInvitations(agency.id);
+      setPendingInvitations(invites);
+      // Refresh analytics to update count
+      loadAgencyData();
+    } catch (err) {
+      console.error('Error deleting invitation:', err);
+      toast.error('Failed to delete invitation');
+    } finally {
+      setLoadingInvitations(false);
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return 'success';
@@ -682,13 +717,23 @@ const AgencyTeamManagement = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card
+            sx={{
+              cursor: teamAnalytics?.pendingMembers > 0 ? 'pointer' : 'default',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              '&:hover': teamAnalytics?.pendingMembers > 0 ? {
+                transform: 'translateY(-2px)',
+                boxShadow: 3
+              } : {}
+            }}
+            onClick={teamAnalytics?.pendingMembers > 0 ? handleViewPendingInvites : undefined}
+          >
             <CardContent>
               <Typography variant="h4" sx={{ fontWeight: 700, color: 'warning.main' }}>
                 {teamAnalytics?.pendingMembers || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Pending Invites
+                Pending Invites {teamAnalytics?.pendingMembers > 0 && '(Click to view)'}
               </Typography>
             </CardContent>
           </Card>
@@ -1146,6 +1191,112 @@ const AgencyTeamManagement = () => {
             onClick={() => setCodeDialogOpen(false)}
             sx={{ color: 'white' }}
           >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Pending Invitations Modal */}
+      <Dialog
+        open={pendingInvitesModalOpen}
+        onClose={() => setPendingInvitesModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Pending Invitations
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {pendingInvitations.length} pending
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {loadingInvitations ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : pendingInvitations.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="body1" color="text.secondary">
+                No pending invitations
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Role</TableCell>
+                    <TableCell>Code</TableCell>
+                    <TableCell>Invited By</TableCell>
+                    <TableCell>Expires</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {pendingInvitations.map((invitation) => (
+                    <TableRow key={invitation.id}>
+                      <TableCell>{invitation.email}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={ROLE_CONFIG[invitation.role]?.label || invitation.role}
+                          color={ROLE_CONFIG[invitation.role]?.color || 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                            {invitation.invitation_code}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              navigator.clipboard.writeText(invitation.invitation_code);
+                              toast.success('Code copied!');
+                            }}
+                          >
+                            <CopyIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {invitation.inviter_name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {new Date(invitation.expires_at).toLocaleDateString()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to delete this invitation?')) {
+                              handleDeleteInvitation(invitation.id);
+                            }
+                          }}
+                          disabled={loadingInvitations}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingInvitesModalOpen(false)}>
             Close
           </Button>
         </DialogActions>

@@ -892,9 +892,10 @@ REASON: [what changed and why it persuades]
     
     async def generate_multiple_alternatives(self, ad_data: Dict, variant_types: List[str] = None) -> List[Dict]:
         """Generate multiple alternatives in parallel - production implementation"""
-        
+
         if not variant_types:
-            variant_types = ['persuasive', 'emotional', 'data_driven', 'platform_optimized']
+            # Changed from persuasive/emotional/data_driven to match frontend expectations
+            variant_types = ['benefit_focused', 'problem_focused', 'story_driven']
         
         # Generate alternatives in parallel for efficiency
         tasks = [

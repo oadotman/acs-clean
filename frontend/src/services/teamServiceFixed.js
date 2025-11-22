@@ -37,16 +37,28 @@ class TeamServiceFixed {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
-      // Check if user is already a member
-      const { data: existingMember } = await supabase
-        .from('agency_team_members')
-        .select('id')
-        .eq('agency_id', agencyId)
-        .eq('user_id', inviterUserId)
+      // Check if user has permission to create invitations (owner or admin)
+      // First check if user is the agency owner
+      const { data: agency } = await supabase
+        .from('agencies')
+        .select('owner_id')
+        .eq('id', agencyId)
         .single();
 
-      if (!existingMember) {
-        throw new Error('You are not a member of this agency');
+      const isOwner = agency && agency.owner_id === inviterUserId;
+
+      // If not owner, check if they're an admin member
+      if (!isOwner) {
+        const { data: memberRole } = await supabase
+          .from('agency_team_members')
+          .select('role')
+          .eq('agency_id', agencyId)
+          .eq('user_id', inviterUserId)
+          .single();
+
+        if (!memberRole || memberRole.role !== 'admin') {
+          throw new Error('You do not have permission to create invitations. Only agency owners and admins can invite team members.');
+        }
       }
 
       // Check for existing invitation
@@ -130,6 +142,90 @@ class TeamServiceFixed {
 
     } catch (error) {
       console.error('Error creating invitation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get pending invitations for an agency
+   */
+  async getPendingInvitations(agencyId) {
+    try {
+      console.log('📋 Fetching pending invitations for agency:', agencyId);
+
+      const { data: invitations, error } = await supabase
+        .from('agency_invitations')
+        .select('*')
+        .eq('agency_id', agencyId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw new Error('Failed to fetch invitations: ' + error.message);
+      }
+
+      // Get inviter details for each invitation
+      if (invitations && invitations.length > 0) {
+        const inviterIds = [...new Set(invitations.map(inv => inv.invited_by).filter(Boolean))];
+
+        if (inviterIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('user_profiles')
+            .select('id, full_name, email')
+            .in('id', inviterIds);
+
+          const profileMap = {};
+          if (profiles) {
+            profiles.forEach(p => {
+              profileMap[p.id] = p;
+            });
+          }
+
+          // Add inviter details to each invitation
+          return invitations.map(inv => {
+            const inviter = profileMap[inv.invited_by];
+            return {
+              ...inv,
+              inviter_name: inviter?.full_name || inviter?.email || 'Unknown',
+              invitation_code: inv.invitation_code || inv.invitation_token,
+              expires_at: inv.expires_at,
+              created_at: inv.created_at
+            };
+          });
+        }
+      }
+
+      return invitations || [];
+
+    } catch (error) {
+      console.error('Error fetching pending invitations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Revoke/delete a pending invitation
+   */
+  async revokeInvitation(invitationId) {
+    try {
+      console.log('🗑️ Revoking invitation:', invitationId);
+
+      const { error } = await supabase
+        .from('agency_invitations')
+        .delete()
+        .eq('id', invitationId);
+
+      if (error) {
+        throw new Error('Failed to delete invitation: ' + error.message);
+      }
+
+      console.log('✅ Invitation revoked successfully');
+      toast.success('Invitation deleted');
+      return { success: true };
+
+    } catch (error) {
+      console.error('Error revoking invitation:', error);
+      toast.error(error.message);
       throw error;
     }
   }

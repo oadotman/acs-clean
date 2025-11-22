@@ -27,6 +27,7 @@ import ContactUs from './pages/ContactUs';
 import About from './pages/About';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import Support from './pages/Support';
 
 // New Dashboard Layout and Pages
 import AppLayout from './layout/AppLayout';
@@ -543,6 +544,7 @@ function App() {
                   {/* Redirect old /team route to new /agency/team */}
                   <Route path="/team" element={<Navigate to="/agency/team" replace />} />
                   <Route path="/billing" element={<BillingCredits />} />
+                  <Route path="/support" element={<Support />} />
                   {/* Agency Routes */}
                   <Route path="/agency/integrations" element={<AgencyIntegrations />} />
                   <Route path="/agency/team" element={<AgencyTeamManagement />} />

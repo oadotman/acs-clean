@@ -9,7 +9,7 @@ from tenacity import retry, wait_fixed, stop_after_attempt
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+# from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.responses import JSONResponse, Response
 import uvicorn
 
@@ -118,7 +118,7 @@ app = FastAPI(
 # Security Middleware (in production)
 if not settings.DEBUG:
     # Force HTTPS in production
-    app.add_middleware(HTTPSRedirectMiddleware)
+    # app.add_middleware(HTTPSRedirectMiddleware)
     
     # Trusted hosts
     app.add_middleware(
