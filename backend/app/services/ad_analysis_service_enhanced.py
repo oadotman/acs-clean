@@ -348,7 +348,7 @@ class EnhancedAdAnalysisService:
                     ),
                     # Variation A: Benefit-Focused
                     AdAlternative(
-                        variant_type="variation_a_benefit",
+                        variant_type="benefit_focused",
                         headline=variation_a_result.get('headline', ad.headline),
                         body_text=variation_a_result.get('body_text', ad.body_text),
                         cta=variation_a_result.get('cta', ad.cta),
@@ -357,7 +357,7 @@ class EnhancedAdAnalysisService:
                     ),
                     # Variation B: Problem-Focused
                     AdAlternative(
-                        variant_type="variation_b_problem",
+                        variant_type="problem_focused",
                         headline=variation_b_result.get('headline', ad.headline),
                         body_text=variation_b_result.get('body_text', ad.body_text),
                         cta=variation_b_result.get('cta', ad.cta),
@@ -366,7 +366,7 @@ class EnhancedAdAnalysisService:
                     ),
                     # Variation C: Story-Driven
                     AdAlternative(
-                        variant_type="variation_c_story",
+                        variant_type="story_driven",
                         headline=variation_c_result.get('headline', ad.headline),
                         body_text=variation_c_result.get('body_text', ad.body_text),
                         cta=variation_c_result.get('cta', ad.cta),

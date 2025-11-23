@@ -759,14 +759,22 @@ const AgencyTeamManagement = () => {
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               Team Members
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<PersonAddIcon />}
-              onClick={() => setInviteDialogOpen(true)}
-              disabled={!canInvite}
-            >
-              {!teamLimits?.canInviteTeamMembers ? 'Upgrade to Invite' : !canInvite ? 'Limit Reached' : 'Generate Invitation'}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                onClick={handleViewPendingInvites}
+              >
+                View Pending Invites {teamAnalytics?.pendingMembers > 0 && `(${teamAnalytics.pendingMembers})`}
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<PersonAddIcon />}
+                onClick={() => setInviteDialogOpen(true)}
+                disabled={!canInvite}
+              >
+                {!teamLimits?.canInviteTeamMembers ? 'Upgrade to Invite' : !canInvite ? 'Limit Reached' : 'Generate Invitation'}
+              </Button>
+            </Box>
           </Box>
 
           {/* Responsive layout: Cards on mobile, Table on desktop */}
