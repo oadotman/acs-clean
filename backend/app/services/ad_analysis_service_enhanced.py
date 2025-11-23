@@ -252,11 +252,12 @@ class EnhancedAdAnalysisService:
     
     async def _generate_fallback_alternatives(self, ad: AdInput) -> List[AdAlternative]:
         """Generate AI-powered improvement alternatives using ProductionAIService"""
-        
+
         # If AI service is available, generate real improvements
+        logger.info(f"AI service available: {self.ai_service is not None}")
         if self.ai_service:
             try:
-                logger.info("Generating AI-powered improvements")
+                logger.info(f"Generating AI-powered improvements for platform: {ad.platform}")
                 
                 # Prepare ad data for AI service
                 ad_data = {
@@ -335,6 +336,12 @@ class EnhancedAdAnalysisService:
                     filter_cliches=True
                 )
                 
+                # Log what AI generated
+                logger.info(f"AI Results - Improved: headline={len(improved_result.get('headline', ''))} chars, body={len(improved_result.get('body_text', ''))} chars")
+                logger.info(f"AI Results - Variation A: headline={len(variation_a_result.get('headline', ''))} chars, body={len(variation_a_result.get('body_text', ''))} chars")
+                logger.info(f"AI Results - Variation B: headline={len(variation_b_result.get('headline', ''))} chars, body={len(variation_b_result.get('body_text', ''))} chars")
+                logger.info(f"AI Results - Variation C: headline={len(variation_c_result.get('headline', ''))} chars, body={len(variation_c_result.get('body_text', ''))} chars")
+
                 # Convert AI results to AdAlternative format
                 alternatives = [
                     # Main improved version
@@ -554,9 +561,27 @@ class EnhancedAdAnalysisService:
             )
             
             self.db.add(analysis_record)
+
+            # Save alternatives to database
+            from app.models.ad_analysis import AdGeneration
+
+            logger.info(f"Saving {len(legacy_response.alternatives)} alternatives to database")
+            for alt in legacy_response.alternatives:
+                alt_record = AdGeneration(
+                    analysis_id=orchestration_result.request_id,
+                    variant_type=alt.variant_type,
+                    generated_headline=alt.headline,
+                    generated_body_text=alt.body_text,
+                    generated_cta=alt.cta,
+                    improvement_reason=alt.improvement_reason,
+                    predicted_score=alt.expected_improvement
+                )
+                self.db.add(alt_record)
+                logger.info(f"  - Saved alternative: {alt.variant_type} (headline: {len(alt.headline or '')} chars)")
+
             self.db.commit()
-            
-            logger.info(f"Saved analysis {orchestration_result.request_id} to database")
+
+            logger.info(f"Saved analysis {orchestration_result.request_id} with {len(legacy_response.alternatives)} alternatives to database")
             
         except Exception as e:
             logger.error(f"Failed to save analysis to database: {e}")
