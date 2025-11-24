@@ -87,16 +87,38 @@ class EnhancedAdAnalysisService:
         """
         logger.info(f"Starting enhanced analysis for user {user_id}")
         
-        # Convert to SDK format
+        # Convert to SDK format, including strategic context and brand voice
+        ad_data_dict = {
+            'headline': ad.headline,
+            'body_text': ad.body_text,
+            'cta': ad.cta,
+            'platform': ad.platform,
+            'industry': getattr(ad, 'industry', None),
+            'target_audience': getattr(ad, 'target_audience', None),
+            # 7 Strategic Context Inputs
+            'product_or_service': getattr(ad, 'product_or_service', None),
+            'target_audience_detail': getattr(ad, 'target_audience_detail', None),
+            'value_proposition': getattr(ad, 'value_proposition', None),
+            'audience_pain_points': getattr(ad, 'audience_pain_points', None),
+            'desired_outcomes': getattr(ad, 'desired_outcomes', None),
+            'trust_factors': getattr(ad, 'trust_factors', None),
+            'offer_details': getattr(ad, 'offer_details', None),
+        }
+
+        # Add brand voice config if present
+        if hasattr(ad, 'brand_voice') and ad.brand_voice:
+            brand_voice = ad.brand_voice
+            ad_data_dict['brand_voice_config'] = {
+                'tone': getattr(brand_voice, 'tone', None),
+                'personality': getattr(brand_voice, 'personality', None),
+                'formality': getattr(brand_voice, 'formality', None),
+                'brand_values': getattr(brand_voice, 'brand_values', None),
+                'past_ads': getattr(brand_voice, 'past_ads', None),
+                'emoji_preference': getattr(brand_voice, 'emoji_preference', 'auto')
+            }
+
         tool_input = ToolInput.from_legacy_ad_input(
-            ad_data={
-                'headline': ad.headline,
-                'body_text': ad.body_text,
-                'cta': ad.cta,
-                'platform': ad.platform,
-                'industry': getattr(ad, 'industry', None),
-                'target_audience': getattr(ad, 'target_audience', None)
-            },
+            ad_data=ad_data_dict,
             user_id=str(user_id)
         )
         
@@ -138,6 +160,26 @@ class EnhancedAdAnalysisService:
         
         return legacy_response
     
+    def _detect_missing_strategic_fields(self, ad: AdInput) -> List[str]:
+        """Detect which of the 7 strategic context fields are missing"""
+        missing_fields = []
+        strategic_fields = {
+            'product_or_service': 'Product or Service',
+            'target_audience_detail': 'Target Audience',
+            'value_proposition': 'Value Proposition',
+            'audience_pain_points': 'Audience Pain Points',
+            'desired_outcomes': 'Desired Outcomes',
+            'trust_factors': 'Trust Factors',
+            'offer_details': 'Offer Details'
+        }
+
+        for field_name, field_label in strategic_fields.items():
+            value = getattr(ad, field_name, None)
+            if not value or (isinstance(value, str) and value.strip() == ''):
+                missing_fields.append(field_label)
+
+        return missing_fields
+
     async def _convert_to_legacy_format(
         self,
         orchestration_result,
@@ -146,7 +188,12 @@ class EnhancedAdAnalysisService:
         competitor_ads: List[CompetitorAd]
     ) -> AdAnalysisResponse:
         """Convert SDK orchestration result to legacy AdAnalysisResponse format"""
-        
+
+        # Detect missing strategic fields for soft-required validation
+        missing_strategic_fields = self._detect_missing_strategic_fields(original_ad)
+        if missing_strategic_fields:
+            logger.info(f"Missing strategic fields detected: {missing_strategic_fields}")
+
         # Extract scores from successful tools
         scores_dict = {}
         feedback = []
@@ -227,7 +274,8 @@ class EnhancedAdAnalysisService:
             alternatives=alternatives,
             competitor_comparison=competitor_comparison,
             quick_wins=quick_wins,
-            tool_results=tool_results_dict  # Include all tool-specific results
+            tool_results=tool_results_dict,  # Include all tool-specific results
+            missing_strategic_fields=missing_strategic_fields if missing_strategic_fields else None
         )
     
     def _calculate_fallback_overall_score(self, scores_dict: Dict[str, float]) -> float:
@@ -259,24 +307,68 @@ class EnhancedAdAnalysisService:
             try:
                 logger.info(f"Generating AI-powered improvements for platform: {ad.platform}")
                 
-                # Prepare ad data for AI service
+                # Prepare ad data for AI service including strategic context
                 ad_data = {
                     'headline': ad.headline,
                     'body_text': ad.body_text,
                     'cta': ad.cta,
                     'platform': ad.platform,
                     'industry': getattr(ad, 'industry', 'general'),
-                    'target_audience': getattr(ad, 'target_audience', 'general audience')
+                    'target_audience': getattr(ad, 'target_audience', 'general audience'),
+                    # 7 Strategic Context Inputs
+                    'product_or_service': getattr(ad, 'product_or_service', None),
+                    'target_audience_detail': getattr(ad, 'target_audience_detail', None),
+                    'value_proposition': getattr(ad, 'value_proposition', None),
+                    'audience_pain_points': getattr(ad, 'audience_pain_points', None),
+                    'desired_outcomes': getattr(ad, 'desired_outcomes', None),
+                    'trust_factors': getattr(ad, 'trust_factors', None),
+                    'offer_details': getattr(ad, 'offer_details', None)
                 }
+
+                # Extract brand voice settings if present
+                brand_voice = getattr(ad, 'brand_voice', None)
+                tone = 'conversational'
+                personality = 'friendly'
+                formality = 'casual'
+                emoji_pref = 'auto'
+                brand_values = None
+                past_ads = None
+
+                if brand_voice:
+                    tone = getattr(brand_voice, 'tone', 'conversational')
+                    personality = getattr(brand_voice, 'personality', 'friendly')
+                    formality = getattr(brand_voice, 'formality', 'casual')
+                    emoji_pref = getattr(brand_voice, 'emoji_preference', 'auto')
+                    brand_values = getattr(brand_voice, 'brand_values', None)
+                    past_ads = getattr(brand_voice, 'past_ads', None)
+
+                # Map emoji preference to emoji level
+                emoji_level_map = {
+                    'include': 'heavy',
+                    'auto': 'moderate',
+                    'exclude': 'none'
+                }
+                emoji_level = emoji_level_map.get(emoji_pref, 'moderate')
+
+                # Map formality to numeric level (1-10)
+                formality_map = {
+                    'casual': 4,
+                    'semi-formal': 6,
+                    'formal': 8
+                }
+                formality_level = formality_map.get(formality, 5)
                 
                 # Generate single improved version using AI (persuasive variant)
                 improved_result = await self.ai_service.generate_ad_alternative(
                     ad_data=ad_data,
                     variant_type='persuasive',
-                    emoji_level='moderate',
-                    human_tone='conversational',
-                    brand_tone='casual',
-                    formality_level=5,
+                    emoji_level=emoji_level,
+                    human_tone=tone,
+                    brand_tone=formality,
+                    formality_level=formality_level,
+                    target_audience_description=ad_data.get('target_audience_detail'),
+                    brand_voice_description=brand_values,
+                    past_successful_ads=past_ads,
                     include_cta=True,
                     cta_style='medium',
                     creativity_level=6,
@@ -286,48 +378,57 @@ class EnhancedAdAnalysisService:
                 )
                 
                 # Generate A/B/C test variations with different strategic approaches
-                logger.info("Generating A/B/C test variations")
-                
-                # Variation A: Benefit-Focused (appeals to aspirations)
+                logger.info("Generating A/B/C test variations using psychology frameworks")
+
+                # Variation A: Benefit-Focused (outcome-driven, emphasizes desired outcomes and value prop)
                 variation_a_result = await self.ai_service.generate_ad_alternative(
                     ad_data=ad_data,
-                    variant_type='persuasive',
-                    emoji_level='moderate',
-                    human_tone='aspirational',
-                    brand_tone='professional',
-                    formality_level=6,
+                    variant_type='benefit_focused',
+                    emoji_level=emoji_level,
+                    human_tone=tone,
+                    brand_tone=formality,
+                    formality_level=formality_level,
+                    target_audience_description=ad_data.get('target_audience_detail'),
+                    brand_voice_description=brand_values,
+                    past_successful_ads=past_ads,
                     include_cta=True,
-                    cta_style='soft',
-                    creativity_level=5,
+                    cta_style='medium',
+                    creativity_level=6,
                     urgency_level=4,
                     emotion_type='inspiring',
                     filter_cliches=True
                 )
-                
-                # Variation B: Problem-Focused (identifies with pain points)
+
+                # Variation B: Problem-Focused (pain-aware, leads with pain points and urgency)
                 variation_b_result = await self.ai_service.generate_ad_alternative(
                     ad_data=ad_data,
-                    variant_type='emotional',
-                    emoji_level='light',
-                    human_tone='empathetic',
-                    brand_tone='friendly',
-                    formality_level=5,
+                    variant_type='problem_focused',
+                    emoji_level=emoji_level,
+                    human_tone=tone,
+                    brand_tone=formality,
+                    formality_level=formality_level,
+                    target_audience_description=ad_data.get('target_audience_detail'),
+                    brand_voice_description=brand_values,
+                    past_successful_ads=past_ads,
                     include_cta=True,
-                    cta_style='medium',
+                    cta_style='strong',
                     creativity_level=6,
                     urgency_level=7,
                     emotion_type='problem_solving',
                     filter_cliches=True
                 )
-                
-                # Variation C: Story-Driven (creates emotional connection)
+
+                # Variation C: Story-Driven (narrative arc, emotional journey, trust-building)
                 variation_c_result = await self.ai_service.generate_ad_alternative(
                     ad_data=ad_data,
-                    variant_type='emotional',
-                    emoji_level='moderate',
-                    human_tone='storytelling',
-                    brand_tone='authentic',
-                    formality_level=4,
+                    variant_type='story_driven',
+                    emoji_level=emoji_level,
+                    human_tone=tone,
+                    brand_tone=formality,
+                    formality_level=formality_level,
+                    target_audience_description=ad_data.get('target_audience_detail'),
+                    brand_voice_description=brand_values,
+                    past_successful_ads=past_ads,
                     include_cta=True,
                     cta_style='soft',
                     creativity_level=7,
@@ -350,8 +451,9 @@ class EnhancedAdAnalysisService:
                         headline=improved_result.get('headline', ad.headline),
                         body_text=improved_result.get('body_text', ad.body_text),
                         cta=improved_result.get('cta', ad.cta),
-                        improvement_reason=improved_result.get('improvement_reason', 'AI-enhanced copy with improved persuasion'),
-                        expected_improvement=20.0
+                        improvement_reason=improved_result.get('improvement_reason', 'AI-enhanced copy with improved persuasion and strategic context integration'),
+                        expected_improvement=20.0,
+                        psychology_framework="Comprehensive Optimization"
                     ),
                     # Variation A: Benefit-Focused
                     AdAlternative(
@@ -359,8 +461,9 @@ class EnhancedAdAnalysisService:
                         headline=variation_a_result.get('headline', ad.headline),
                         body_text=variation_a_result.get('body_text', ad.body_text),
                         cta=variation_a_result.get('cta', ad.cta),
-                        improvement_reason="Variation A - Benefit-Focused: Appeals to aspirations and desired outcomes. Best for solution-seekers, warm leads, known problems.",
-                        expected_improvement=18.0
+                        improvement_reason="Benefit-Focused (Outcome-Driven): Emphasizes desired outcomes, value proposition, and ROI. Appeals to aspirations and what customers will achieve. Best for solution-aware audiences, warm leads, and when the problem is already recognized.",
+                        expected_improvement=18.0,
+                        psychology_framework="Outcome-Driven Psychology"
                     ),
                     # Variation B: Problem-Focused
                     AdAlternative(
@@ -368,8 +471,9 @@ class EnhancedAdAnalysisService:
                         headline=variation_b_result.get('headline', ad.headline),
                         body_text=variation_b_result.get('body_text', ad.body_text),
                         cta=variation_b_result.get('cta', ad.cta),
-                        improvement_reason="Variation B - Problem-Focused: Identifies with pain points and frustrations. Best for pain-aware audiences, high urgency, immediate solutions.",
-                        expected_improvement=22.0
+                        improvement_reason="Problem-Focused (Pain-Aware): Leads with pain points, frustrations, and urgent problems. Creates identification and urgency. Best for pain-aware audiences, high-urgency scenarios, and immediate solution-seeking.",
+                        expected_improvement=22.0,
+                        psychology_framework="Pain-Awareness Framework"
                     ),
                     # Variation C: Story-Driven
                     AdAlternative(
@@ -377,8 +481,9 @@ class EnhancedAdAnalysisService:
                         headline=variation_c_result.get('headline', ad.headline),
                         body_text=variation_c_result.get('body_text', ad.body_text),
                         cta=variation_c_result.get('cta', ad.cta),
-                        improvement_reason="Variation C - Story-Driven: Creates emotional connection through narrative. Best for building trust, cold traffic, brand awareness.",
-                        expected_improvement=16.0
+                        improvement_reason="Story-Driven (Narrative Arc): Uses storytelling, customer journey, and emotional narrative. Builds trust through relatable experiences. Best for cold traffic, brand awareness, and building long-term trust.",
+                        expected_improvement=16.0,
+                        psychology_framework="Narrative Psychology"
                     )
                 ]
                 

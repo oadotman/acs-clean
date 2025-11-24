@@ -120,7 +120,7 @@ const analysisTips = [
   "Platform-specific optimization improves ad relevance scores by 45%"
 ];
 
-const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, brandVoice }) => {
+const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, strategicContext, brandVoice }) => {
   const [currentToolIndex, setCurrentToolIndex] = useState(0);
   const [completedTools, setCompletedTools] = useState([]);
   const [overallProgress, setOverallProgress] = useState(0);
@@ -189,20 +189,26 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
             body_text: adCopy.trim(),
             cta: extractedCTA.trim(),
             platform: platform,
-            target_audience: brandVoice?.targetAudience || null,
             industry: null,
-            // Include brand voice metadata for backend processing (if supported)
+            // 7 Strategic Context Inputs
+            product_or_service: strategicContext?.productOrService || null,
+            target_audience_detail: strategicContext?.targetAudienceDetail || null,
+            value_proposition: strategicContext?.valueProposition || null,
+            audience_pain_points: strategicContext?.audiencePainPoints || null,
+            desired_outcomes: strategicContext?.desiredOutcomes || null,
+            trust_factors: strategicContext?.trustFactors || null,
+            offer_details: strategicContext?.offerDetails || null,
+            // Structured Brand Voice
             brand_voice: brandVoice && Object.keys(brandVoice).length > 0 ? {
               tone: brandVoice.tone,
               personality: brandVoice.personality,
               formality: brandVoice.formality,
-              target_audience: brandVoice.targetAudience,
-              brand_values: brandVoice.brandValues,
-              past_ads: brandVoice.pastAds || null, // Include past ads for learning
-              emoji_preference: brandVoice.emojiPreference || 'auto' // Include emoji preference
+              brand_values: brandVoice.brandValues || null,
+              past_ads: brandVoice.pastAds || null,
+              emoji_preference: brandVoice.emojiPreference || 'auto'
             } : null
           },
-          competitor_ads: [] // Empty array as we don't have competitors in comprehensive analysis
+          competitor_ads: []
         };
         
         console.log('💾 Calling analyzeAd with proper format:', adData);

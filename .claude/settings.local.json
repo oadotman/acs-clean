@@ -28,7 +28,8 @@
       "Bash(npx react-scripts build --help)",
       "Bash(node test-export-report.js:*)",
       "Bash(node test-abc-export.js:*)",
-      "Bash(security_audit_clean.py)"
+      "Bash(security_audit_clean.py)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

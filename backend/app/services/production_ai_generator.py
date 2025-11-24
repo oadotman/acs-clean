@@ -127,13 +127,14 @@ class ProductionAIService:
         """Check if provider is available and configured"""
         return provider_name in self.providers
     
-    async def generate_ad_alternative(self, ad_data: Dict, variant_type: str, 
-                                    emoji_level: str = "moderate", 
+    async def generate_ad_alternative(self, ad_data: Dict, variant_type: str,
+                                    emoji_level: str = "moderate",
                                     human_tone: str = "conversational",
                                     brand_tone: str = "casual",
                                     formality_level: int = 5,
                                     target_audience_description: str = None,
                                     brand_voice_description: str = None,
+                                    past_successful_ads: str = None,
                                     include_cta: bool = True,
                                     cta_style: str = "medium",
                                     # Phase 4 & 5: Creative Controls
@@ -170,14 +171,14 @@ class ProductionAIService:
                 result = await self._openai_generate(
                     ad_data, variant_type, emoji_level, human_tone,
                     brand_tone, formality_level, target_audience_description,
-                    brand_voice_description, include_cta, cta_style,
+                    brand_voice_description, past_successful_ads, include_cta, cta_style,
                     creativity_level, urgency_level, emotion_type, filter_cliches
                 )
             elif provider == 'gemini':
                 result = await self._gemini_generate(
                     ad_data, variant_type, emoji_level, human_tone,
                     brand_tone, formality_level, target_audience_description,
-                    brand_voice_description, include_cta, cta_style,
+                    brand_voice_description, past_successful_ads, include_cta, cta_style,
                     creativity_level, urgency_level, emotion_type, filter_cliches
                 )
             else:
@@ -201,13 +202,14 @@ class ProductionAIService:
                     f"AI generation failed: {str(e)}"
                 )
     
-    async def _openai_generate(self, ad_data: Dict, variant_type: str, 
-                                emoji_level: str = "moderate", 
+    async def _openai_generate(self, ad_data: Dict, variant_type: str,
+                                emoji_level: str = "moderate",
                                 human_tone: str = "conversational",
                                 brand_tone: str = "casual",
                                 formality_level: int = 5,
                                 target_audience_description: str = None,
                                 brand_voice_description: str = None,
+                                past_successful_ads: str = None,
                                 include_cta: bool = True,
                                 cta_style: str = "medium",
                                 # Phase 4 & 5: Creative Controls
@@ -254,7 +256,7 @@ class ProductionAIService:
             prompt = self._build_production_prompt(
                 ad_data, variant_type, emoji_level, human_tone,
                 brand_tone, formality_level, target_audience_description,
-                brand_voice_description, include_cta, cta_style,
+                brand_voice_description, past_successful_ads, include_cta, cta_style,
                 creativity_level, urgency_level, emotion_type, filter_cliches
             )
             
@@ -328,6 +330,7 @@ class ProductionAIService:
                                 formality_level: int = 5,
                                 target_audience_description: str = None,
                                 brand_voice_description: str = None,
+                                past_successful_ads: str = None,
                                 include_cta: bool = True,
                                 cta_style: str = "medium",
                                 # Phase 4 & 5: Creative Controls
@@ -375,7 +378,7 @@ class ProductionAIService:
             prompt = self._build_production_prompt(
                 ad_data, variant_type, emoji_level, human_tone,
                 brand_tone, formality_level, target_audience_description,
-                brand_voice_description, include_cta, cta_style,
+                brand_voice_description, past_successful_ads, include_cta, cta_style,
                 creativity_level, urgency_level, emotion_type, filter_cliches
             )
             
@@ -413,13 +416,14 @@ class ProductionAIService:
                 f"Gemini generation error: {str(e)}"
             )
     
-    def _build_production_prompt(self, ad_data: Dict, variant_type: str, 
+    def _build_production_prompt(self, ad_data: Dict, variant_type: str,
                                  emoji_level: str = "moderate",
                                  human_tone: str = "conversational",
                                  brand_tone: str = "casual",
                                  formality_level: int = 5,
                                  target_audience_description: str = None,
                                  brand_voice_description: str = None,
+                                 past_successful_ads: str = None,
                                  include_cta: bool = True,
                                  cta_style: str = "medium",
                                  # Phase 4 & 5: Creative Controls
@@ -483,17 +487,41 @@ class ProductionAIService:
         # Enhanced audience context
         audience_context = target_audience_description or ad_data.get('target_audience', 'general audience')
         brand_voice_context = brand_voice_description or "authentic and engaging"
-        
+
         # Phase 4 & 5: Creative control descriptions
         try:
             emotion_enum = EmotionType(emotion_type)
             emotion_config = get_emotion_config(emotion_enum)
         except ValueError:
             emotion_config = get_emotion_config(EmotionType.INSPIRING)
-        
+
         creativity_desc = get_creativity_description(creativity_level)
         urgency_desc = get_urgency_description(urgency_level)
-        
+
+        # Build strategic context section (7 strategic inputs)
+        strategic_context_parts = []
+        if ad_data.get('product_or_service'):
+            strategic_context_parts.append(f"- Product/Service: {ad_data.get('product_or_service')}")
+        if ad_data.get('value_proposition'):
+            strategic_context_parts.append(f"- Value Proposition: {ad_data.get('value_proposition')}")
+        if ad_data.get('audience_pain_points'):
+            strategic_context_parts.append(f"- Audience Pain Points: {ad_data.get('audience_pain_points')}")
+        if ad_data.get('desired_outcomes'):
+            strategic_context_parts.append(f"- Desired Outcomes: {ad_data.get('desired_outcomes')}")
+        if ad_data.get('trust_factors'):
+            strategic_context_parts.append(f"- Trust Factors: {ad_data.get('trust_factors')}")
+        if ad_data.get('offer_details'):
+            strategic_context_parts.append(f"- Offer Details: {ad_data.get('offer_details')}")
+
+        strategic_context_section = ""
+        if strategic_context_parts:
+            strategic_context_section = "\n\nSTRATEGIC CONTEXT:\n" + "\n".join(strategic_context_parts)
+
+        # Build past ads learning section
+        past_ads_section = ""
+        if past_successful_ads and past_successful_ads.strip():
+            past_ads_section = f"\n\nPAST SUCCESSFUL ADS (Learn from these):\n{past_successful_ads}\n\nImportant: Match the style, tone, and winning patterns from these successful ads."
+
         base_context = f"""
 Original Ad Copy:
 - Headline: {ad_data.get('headline', '')}
@@ -501,6 +529,7 @@ Original Ad Copy:
 - CTA: {ad_data.get('cta', '')}
 - Platform: {platform}
 - Industry: {ad_data.get('industry', 'general')}
+{strategic_context_section}
 
 AUDIENCE & BRAND:
 - Target Audience: {audience_context}
@@ -528,6 +557,7 @@ STYLE GUIDELINES:
 
 CALL-TO-ACTION:
 {cta_instruction}
+{past_ads_section}
 """
         
         # Add TikTok-specific instructions if needed
@@ -672,45 +702,105 @@ Do NOT add bullet points, dashes, or section labels. Just the four lines above.
 """,
             'benefit_focused': f"""
 {base_context}{tiktok_note}{creative_instructions}
+
+⚠️ YOU ARE ADCOPYSURGE - An analytical, psychology-backed ad optimization system. NOT a generic copywriter.
+
+VARIANT TYPE: BENEFIT-FOCUSED (Outcome-Driven Psychology)
 {frameworks['benefit_focused']}
 
+STRATEGIC APPROACH:
+- Lead with DESIRED OUTCOMES from strategic context - what customers will achieve
+- Emphasize VALUE PROPOSITION - why this beats competitors
+- Highlight TRUST FACTORS to de-risk the decision
+- Feature OFFER DETAILS as added value, not discount desperation
+- Paint the aspirational future state (what they'll become/achieve)
+- Focus on ROI, transformation, and results
+- Appeal to solution-aware audiences who recognize the problem
+
+PSYCHOLOGY PRINCIPLES:
+- Future pacing (visualize success)
+- Social proof integration (if trust factors provided)
+- Value stacking (show cumulative benefits)
+- Aspirational identity (who they'll become)
+
 STRICT REQUIREMENTS:
-- 50–100 words
-- No problem language
+- Leverage strategic context: desired outcomes, value prop, trust factors, offer
 - Premium, aspirational tone; one emoji max if platform allows
+- No problem language - focus purely on gains and outcomes
 - Respond ONLY with:
 HEADLINE: ...
 BODY: ...
 CTA: ...
-REASON: [what changed and why it persuades]
+REASON: [what changed and why it persuades using outcome-driven psychology]
+{char_limit_note}
 """,
             'problem_focused': f"""
 {base_context}{tiktok_note}{creative_instructions}
+
+⚠️ YOU ARE ADCOPYSURGE - An analytical, psychology-backed ad optimization system. NOT a generic copywriter.
+
+VARIANT TYPE: PROBLEM-FOCUSED (Pain-Awareness Framework)
 {frameworks['problem_focused']}
 
+STRATEGIC APPROACH:
+- Open with AUDIENCE PAIN POINTS from strategic context - their frustrations/struggles
+- Agitate the problem (make them feel it viscerally)
+- Position product/service as the direct solution
+- Create urgency with OFFER DETAILS (limited time, scarcity)
+- Use TRUST FACTORS to overcome skepticism
+- Show clear before/after contrast
+- Appeal to pain-aware audiences seeking immediate solutions
+
+PSYCHOLOGY PRINCIPLES:
+- Pain amplification (make problem concrete)
+- Problem-solution bridge (direct path from pain to relief)
+- Urgency triggers (time sensitivity, scarcity)
+- Loss aversion (what they'll lose by not acting)
+
 STRICT REQUIREMENTS:
-- 50–100 words
+- Leverage strategic context: pain points, offer details, trust factors
 - Start with pain point; show clear before/after
-- Empathetic tone; one emoji max if platform allows
+- Empathetic but urgent tone; one emoji max if platform allows
 - Respond ONLY with:
 HEADLINE: ...
 BODY: ...
 CTA: ...
-REASON: [what changed and why it persuades]
+REASON: [what changed and why it persuades using pain-aware psychology]
+{char_limit_note}
 """,
             'story_driven': f"""
 {base_context}{tiktok_note}{creative_instructions}
+
+⚠️ YOU ARE ADCOPYSURGE - An analytical, psychology-backed ad optimization system. NOT a generic copywriter.
+
+VARIANT TYPE: STORY-DRIVEN (Narrative Psychology)
 {frameworks['story_driven']}
 
+STRATEGIC APPROACH:
+- Craft a relatable customer journey using AUDIENCE PAIN POINTS as the starting struggle
+- Show transformation arc leading to DESIRED OUTCOMES
+- Weave in VALUE PROPOSITION as the turning point
+- Use TRUST FACTORS as social proof in the narrative
+- Mention OFFER DETAILS naturally within the story
+- Build emotional connection through identification
+- Appeal to cold traffic and brand awareness (trust-building focus)
+
+PSYCHOLOGY PRINCIPLES:
+- Narrative transportation (pull into story)
+- Hero's journey micro-format (struggle → solution → transformation)
+- Identification (see themselves in the story)
+- Emotional resonance (feel the journey)
+
 STRICT REQUIREMENTS:
-- 50–100 words
+- Leverage strategic context: pain points (setup), desired outcomes (resolution), trust factors (credibility)
 - Mini-narrative (setup → tension → resolution)
-- Authentic tone; one emoji max if platform allows
+- Authentic, relatable tone; one emoji max if platform allows
 - Respond ONLY with:
 HEADLINE: ...
 BODY: ...
 CTA: ...
-REASON: [what changed and why it persuades]
+REASON: [what changed and why it persuades using narrative psychology]
+{char_limit_note}
 """
         }
         

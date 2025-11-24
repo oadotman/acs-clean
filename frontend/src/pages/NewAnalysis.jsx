@@ -168,17 +168,30 @@ const NewAnalysis = () => {
   const [showToolSelector, setShowToolSelector] = useState(false);
   const textareaRef = useRef(null);
   
+  // Strategic Context state (7 required inputs for AI quality)
+  const [strategicContext, setStrategicContext] = useState({
+    productOrService: '',
+    targetAudienceDetail: '',
+    valueProposition: '',
+    audiencePainPoints: '',
+    desiredOutcomes: '',
+    trustFactors: '',
+    offerDetails: ''
+  });
+
+  // Strategic context collapsible state
+  const [strategicContextExpanded, setStrategicContextExpanded] = useState(false);
+
   // Brand voice state
   const [brandVoice, setBrandVoice] = useState({
     tone: 'conversational',
     personality: 'friendly',
     formality: 'casual',
-    targetAudience: '',
     brandValues: '',
     pastAds: '', // For learning from existing content
     emojiPreference: 'auto' // 'auto', 'include', 'exclude'
   });
-  
+
   // Brand voice collapsible state
   const [brandVoiceExpanded, setBrandVoiceExpanded] = useState(false);
   
@@ -1185,6 +1198,7 @@ const NewAnalysis = () => {
       <ComprehensiveAnalysisLoader
         adCopy={adCopy}
         platform={selectedPlatform}
+        strategicContext={strategicContext}
         brandVoice={brandVoice}
         onComplete={handleComprehensiveAnalysisComplete}
         onError={(error) => {
@@ -1507,6 +1521,169 @@ const NewAnalysis = () => {
 
         </Paper>
 
+        {/* Strategic Context Configuration (7 Required Inputs for AI Quality) */}
+        {selectedPlatform && (
+          <Paper sx={{ borderRadius: 4, mb: 4, overflow: 'hidden' }}>
+            <Accordion
+              expanded={strategicContextExpanded}
+              onChange={(event, isExpanded) => setStrategicContextExpanded(isExpanded)}
+              sx={{
+                boxShadow: 'none',
+                '&:before': { display: 'none' },
+                border: 'none'
+              }}
+            >
+              <AccordionSummary
+                expandIcon={<ExpandMore />}
+                sx={{
+                  p: 4,
+                  bgcolor: 'rgba(34, 197, 94, 0.08)',
+                  '&:hover': { bgcolor: 'rgba(34, 197, 94, 0.12)' },
+                  transition: 'background-color 0.2s ease',
+                  border: '2px solid rgba(34, 197, 94, 0.3)'
+                }}
+              >
+                <Box display="flex" alignItems="center" gap={1} flex={1}>
+                  <Psychology color="success" />
+                  <Box flex={1}>
+                    <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      Strategic Context (Required for AI Variants)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {strategicContextExpanded
+                        ? 'Provide strategic insights to generate psychology-backed ad variants'
+                        : 'Complete these 7 inputs to unlock psychology-based variant generation'
+                      }
+                    </Typography>
+                  </Box>
+                  {!strategicContextExpanded && (
+                    <Chip
+                      label="Required for Variants"
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                      sx={{ ml: 2 }}
+                    />
+                  )}
+                </Box>
+              </AccordionSummary>
+
+              <AccordionDetails sx={{ p: 4, pt: 2 }}>
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  <Typography variant="body2">
+                    <strong>Why these inputs matter:</strong> AdCopySurge uses strategic context to generate 3 psychology-based variants (Benefit-Focused, Problem-Focused, Story-Driven). Analysis will run without this data, but AI variant generation requires complete strategic context for quality output.
+                  </Typography>
+                </Alert>
+
+                <Grid container spacing={3}>
+                  {/* Product or Service */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="1. Product or Service"
+                      placeholder="e.g., Project management SaaS for remote teams"
+                      value={strategicContext.productOrService}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, productOrService: e.target.value }))}
+                      variant="outlined"
+                      helperText="What are you advertising? Be specific."
+                    />
+                  </Grid>
+
+                  {/* Target Audience */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="2. Target Audience"
+                      placeholder="e.g., Tech-savvy remote team managers, 30-45 years old, managing 10-50 person distributed teams, frustrated with coordination tools"
+                      value={strategicContext.targetAudienceDetail}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, targetAudienceDetail: e.target.value }))}
+                      variant="outlined"
+                      helperText="Demographics + psychographics. Who are they? What do they care about?"
+                    />
+                  </Grid>
+
+                  {/* Value Proposition */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="3. Value Proposition"
+                      placeholder="e.g., Only project management tool built specifically for remote teams with automatic timezone coordination and async-first workflows"
+                      value={strategicContext.valueProposition}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, valueProposition: e.target.value }))}
+                      variant="outlined"
+                      helperText="Why customers buy from YOU vs. competitors"
+                    />
+                  </Grid>
+
+                  {/* Pain Points */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="4. Audience Pain Points"
+                      placeholder="e.g., Constant meeting interruptions, timezone confusion, work happening in silos, delayed decisions, team burnout from async overhead"
+                      value={strategicContext.audiencePainPoints}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, audiencePainPoints: e.target.value }))}
+                      variant="outlined"
+                      helperText="Problems, frustrations, struggles they face (bullet list format encouraged)"
+                    />
+                  </Grid>
+
+                  {/* Desired Outcomes */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="5. Desired Outcomes"
+                      placeholder="e.g., Teams aligned without meetings, faster project delivery, improved work-life balance, higher productivity, better team morale"
+                      value={strategicContext.desiredOutcomes}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, desiredOutcomes: e.target.value }))}
+                      variant="outlined"
+                      helperText="What they want to achieve (bullet list format encouraged)"
+                    />
+                  </Grid>
+
+                  {/* Trust Factors */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="6. Trust Factors"
+                      placeholder="e.g., 4.9/5 stars from 2,000+ reviews, Used by Fortune 500 companies, SOC 2 certified, 99.9% uptime SLA, Featured in TechCrunch"
+                      value={strategicContext.trustFactors}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, trustFactors: e.target.value }))}
+                      variant="outlined"
+                      helperText="Reviews, social proof, guarantees, certifications, credibility signals"
+                    />
+                  </Grid>
+
+                  {/* Offer Details */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="7. Offer Details"
+                      placeholder="e.g., 14-day free trial, no credit card required, 30-day money-back guarantee, 20% off first year with code REMOTE2024"
+                      value={strategicContext.offerDetails}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, offerDetails: e.target.value }))}
+                      variant="outlined"
+                      helperText="Discount, pricing, guarantee, terms, bundles, special offers"
+                    />
+                  </Grid>
+                </Grid>
+              </AccordionDetails>
+            </Accordion>
+          </Paper>
+        )}
+
         {/* Enhanced Brand Voice Configuration */}
         {selectedPlatform && (
           <Paper sx={{ borderRadius: 4, mb: 4, overflow: 'hidden' }}>
@@ -1653,22 +1830,12 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
-                        label="Target Audience"
-                        placeholder="e.g., Tech-savvy millennials, Small business owners"
-                        value={brandVoice.targetAudience}
-                        onChange={(e) => setBrandVoice(prev => ({ ...prev, targetAudience: e.target.value }))}
-                        variant="outlined"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
                         label="Brand Values"
-                        placeholder="e.g., Innovation, Sustainability, Quality"
+                        placeholder="e.g., Innovation, Sustainability, Quality, Authenticity"
                         value={brandVoice.brandValues}
                         onChange={(e) => setBrandVoice(prev => ({ ...prev, brandValues: e.target.value }))}
                         variant="outlined"
+                        helperText="Core brand identity values (separate from strategic context)"
                       />
                     </Grid>
                     
@@ -1690,7 +1857,7 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                 </Box>
                 
                 {/* Brand Voice Status Indicator */}
-                {(brandVoice.pastAds.trim() || brandVoice.targetAudience.trim() || brandVoice.brandValues.trim() || brandVoice.emojiPreference !== 'auto') && (
+                {(brandVoice.pastAds.trim() || brandVoice.brandValues.trim() || brandVoice.emojiPreference !== 'auto') && (
                   <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(124, 58, 237, 0.05)', borderRadius: 2 }}>
                     <Box display="flex" alignItems="center" gap={1}>
                       <CheckCircle sx={{ color: 'success.main', fontSize: '1.2rem' }} />

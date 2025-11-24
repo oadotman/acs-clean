@@ -29,22 +29,34 @@ class ToolExecutionMode(str, Enum):
 @dataclass
 class ToolInput:
     """Unified input structure for all tools"""
-    
+
     # Core ad copy data - REQUIRED
     headline: str
     body_text: str
     cta: str
     platform: str
-    
-    # Context data - OPTIONAL but recommended
+
+    # Basic Context data - OPTIONAL but recommended
     industry: Optional[str] = None
-    target_audience: Optional[str] = None
-    brand_voice: Optional[str] = None
+    target_audience: Optional[str] = None  # Deprecated - use target_audience_detail
+    brand_voice: Optional[str] = None  # Deprecated - use brand_voice_config
     campaign_goal: Optional[str] = None
-    
+
+    # 7 Strategic Context Inputs - OPTIONAL but enhance quality
+    product_or_service: Optional[str] = None
+    target_audience_detail: Optional[str] = None
+    value_proposition: Optional[str] = None
+    audience_pain_points: Optional[str] = None
+    desired_outcomes: Optional[str] = None
+    trust_factors: Optional[str] = None
+    offer_details: Optional[str] = None
+
+    # Structured Brand Voice - OPTIONAL
+    brand_voice_config: Optional[Dict[str, Any]] = None  # Contains tone, personality, formality, etc.
+
     # Tool-specific parameters
     tool_params: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Metadata
     request_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: datetime = field(default_factory=datetime.utcnow)
@@ -55,13 +67,21 @@ class ToolInput:
         """Convert to dictionary for serialization"""
         return {
             'headline': self.headline,
-            'body_text': self.body_text, 
+            'body_text': self.body_text,
             'cta': self.cta,
             'platform': self.platform,
             'industry': self.industry,
             'target_audience': self.target_audience,
             'brand_voice': self.brand_voice,
             'campaign_goal': self.campaign_goal,
+            'product_or_service': self.product_or_service,
+            'target_audience_detail': self.target_audience_detail,
+            'value_proposition': self.value_proposition,
+            'audience_pain_points': self.audience_pain_points,
+            'desired_outcomes': self.desired_outcomes,
+            'trust_factors': self.trust_factors,
+            'offer_details': self.offer_details,
+            'brand_voice_config': self.brand_voice_config,
             'tool_params': self.tool_params,
             'request_id': self.request_id,
             'timestamp': self.timestamp.isoformat(),
@@ -78,9 +98,19 @@ class ToolInput:
             cta=ad_data.get('cta', ''),
             platform=ad_data.get('platform', 'facebook'),
             industry=ad_data.get('industry'),
-            target_audience=ad_data.get('target_audience'), 
+            target_audience=ad_data.get('target_audience'),
             brand_voice=ad_data.get('brand_voice'),
             campaign_goal=ad_data.get('campaign_goal'),
+            # 7 Strategic Context Inputs
+            product_or_service=ad_data.get('product_or_service'),
+            target_audience_detail=ad_data.get('target_audience_detail'),
+            value_proposition=ad_data.get('value_proposition'),
+            audience_pain_points=ad_data.get('audience_pain_points'),
+            desired_outcomes=ad_data.get('desired_outcomes'),
+            trust_factors=ad_data.get('trust_factors'),
+            offer_details=ad_data.get('offer_details'),
+            # Structured Brand Voice
+            brand_voice_config=ad_data.get('brand_voice_config'),
             **kwargs
         )
 
