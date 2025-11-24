@@ -16,7 +16,22 @@ class ApiClient {
     };
 
     // Add authorization token if available
-    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    // First try custom authToken (for backwards compatibility)
+    let token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+
+    // If not found, try Supabase token
+    if (!token) {
+      try {
+        const supabaseAuth = localStorage.getItem('adcopysurge-supabase-auth-token');
+        if (supabaseAuth) {
+          const authData = JSON.parse(supabaseAuth);
+          token = authData.access_token;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
