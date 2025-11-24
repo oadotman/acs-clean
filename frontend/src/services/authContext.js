@@ -305,7 +305,11 @@ export const AuthProvider = ({ children }) => {
         setTimeout(() => reject(new Error('Profile fetch timeout')), 90000); // 90 seconds for long operations
       });
 
-      const fetchPromise = fetch(`${process.env.REACT_APP_API_URL}/api/user/profile`, {
+      // Construct API URL consistently: base URL + /api prefix
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+      const apiUrl = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
+
+      const fetchPromise = fetch(`${apiUrl}/user/profile`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
