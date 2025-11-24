@@ -9,6 +9,7 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
+import os
 
 # Import the Tools SDK
 from packages.tools_sdk import ToolOrchestrator, ToolInput, ToolRegistry, default_registry
@@ -18,6 +19,12 @@ from packages.tools_sdk.tools import register_all_tools
 from app.schemas.ads import AdInput, CompetitorAd, AdScore, AdAlternative, AdAnalysisResponse
 from app.models.ad_analysis import AdAnalysis
 from app.core.logging import get_logger
+
+# Import AI service for real improvement generation
+from app.services.production_ai_generator import ProductionAIService
+from app.services.agent_system import MultiAgentOptimizer
+from app.services.recommendation_orchestrator import RecommendationOrchestrator
+from app.core.exceptions import AIProviderUnavailable
 
 logger = get_logger(__name__)
 
@@ -33,6 +40,23 @@ class EnhancedAdAnalysisService:
     def __init__(self, db: Session, registry: ToolRegistry = None):
         self.db = db
         self.orchestrator = ToolOrchestrator(registry or default_registry)
+        self.rec_orchestrator = RecommendationOrchestrator()  # NEW: Recommendation prioritization
+        
+        # Initialize AI service for improvement generation
+        openai_key = os.getenv('OPENAI_API_KEY')
+        gemini_key = os.getenv('GEMINI_API_KEY')
+        
+        try:
+            self.ai_service = ProductionAIService(openai_key, gemini_key)
+            logger.info("AI service initialized for improvement generation")
+            
+            # Initialize multi-agent optimizer
+            self.multi_agent_optimizer = MultiAgentOptimizer(self.ai_service)
+            logger.info("Multi-agent optimizer initialized")
+        except Exception as e:
+            logger.warning(f"AI service initialization failed: {e}. Will use fallback for improvements.")
+            self.ai_service = None
+            self.multi_agent_optimizer = None
         
         # Ensure tools are registered
         try:
@@ -63,16 +87,38 @@ class EnhancedAdAnalysisService:
         """
         logger.info(f"Starting enhanced analysis for user {user_id}")
         
-        # Convert to SDK format
+        # Convert to SDK format, including strategic context and brand voice
+        ad_data_dict = {
+            'headline': ad.headline,
+            'body_text': ad.body_text,
+            'cta': ad.cta,
+            'platform': ad.platform,
+            'industry': getattr(ad, 'industry', None),
+            'target_audience': getattr(ad, 'target_audience', None),
+            # 7 Strategic Context Inputs
+            'product_or_service': getattr(ad, 'product_or_service', None),
+            'target_audience_detail': getattr(ad, 'target_audience_detail', None),
+            'value_proposition': getattr(ad, 'value_proposition', None),
+            'audience_pain_points': getattr(ad, 'audience_pain_points', None),
+            'desired_outcomes': getattr(ad, 'desired_outcomes', None),
+            'trust_factors': getattr(ad, 'trust_factors', None),
+            'offer_details': getattr(ad, 'offer_details', None),
+        }
+
+        # Add brand voice config if present
+        if hasattr(ad, 'brand_voice') and ad.brand_voice:
+            brand_voice = ad.brand_voice
+            ad_data_dict['brand_voice_config'] = {
+                'tone': getattr(brand_voice, 'tone', None),
+                'personality': getattr(brand_voice, 'personality', None),
+                'formality': getattr(brand_voice, 'formality', None),
+                'brand_values': getattr(brand_voice, 'brand_values', None),
+                'past_ads': getattr(brand_voice, 'past_ads', None),
+                'emoji_preference': getattr(brand_voice, 'emoji_preference', 'auto')
+            }
+
         tool_input = ToolInput.from_legacy_ad_input(
-            ad_data={
-                'headline': ad.headline,
-                'body_text': ad.body_text,
-                'cta': ad.cta,
-                'platform': ad.platform,
-                'industry': getattr(ad, 'industry', None),
-                'target_audience': getattr(ad, 'target_audience', None)
-            },
+            ad_data=ad_data_dict,
             user_id=str(user_id)
         )
         
@@ -114,6 +160,26 @@ class EnhancedAdAnalysisService:
         
         return legacy_response
     
+    def _detect_missing_strategic_fields(self, ad: AdInput) -> List[str]:
+        """Detect which of the 7 strategic context fields are missing"""
+        missing_fields = []
+        strategic_fields = {
+            'product_or_service': 'Product or Service',
+            'target_audience_detail': 'Target Audience',
+            'value_proposition': 'Value Proposition',
+            'audience_pain_points': 'Audience Pain Points',
+            'desired_outcomes': 'Desired Outcomes',
+            'trust_factors': 'Trust Factors',
+            'offer_details': 'Offer Details'
+        }
+
+        for field_name, field_label in strategic_fields.items():
+            value = getattr(ad, field_name, None)
+            if not value or (isinstance(value, str) and value.strip() == ''):
+                missing_fields.append(field_label)
+
+        return missing_fields
+
     async def _convert_to_legacy_format(
         self,
         orchestration_result,
@@ -122,7 +188,12 @@ class EnhancedAdAnalysisService:
         competitor_ads: List[CompetitorAd]
     ) -> AdAnalysisResponse:
         """Convert SDK orchestration result to legacy AdAnalysisResponse format"""
-        
+
+        # Detect missing strategic fields for soft-required validation
+        missing_strategic_fields = self._detect_missing_strategic_fields(original_ad)
+        if missing_strategic_fields:
+            logger.info(f"Missing strategic fields detected: {missing_strategic_fields}")
+
         # Extract scores from successful tools
         scores_dict = {}
         feedback = []
@@ -172,16 +243,39 @@ class EnhancedAdAnalysisService:
                 orchestration_result
             )
         
-        # Generate quick wins from tool insights
-        quick_wins = self._extract_quick_wins(orchestration_result)
+        # Generate quick wins using Recommendation Orchestrator (prioritized from 45-72 recommendations down to top 5)
+        quick_wins = self._orchestrate_recommendations(orchestration_result)
+        
+        # Convert feedback list to string to match Pydantic schema expectations
+        feedback_text = "\n".join(str(f) for f in feedback if f) if feedback else "Analysis completed successfully"
+        
+        # Extract tool-specific results for frontend display
+        tool_results_dict = {}
+        try:
+            if hasattr(orchestration_result, 'tool_results') and orchestration_result.tool_results:
+                for tool_name, tool_output in orchestration_result.tool_results.items():
+                    if tool_output and hasattr(tool_output, 'success') and tool_output.success:
+                        tool_results_dict[tool_name] = {
+                            'success': True,
+                            'scores': getattr(tool_output, 'scores', {}),
+                            'insights': getattr(tool_output, 'insights', {}),
+                            'recommendations': getattr(tool_output, 'recommendations', []),
+                            'execution_time': getattr(tool_output, 'execution_time', 0.0),
+                            'confidence_score': getattr(tool_output, 'confidence_score', None)
+                        }
+        except Exception as e:
+            logger.warning(f"Could not extract tool_results: {e}. Continuing without detailed tool results.")
+            tool_results_dict = {}
         
         return AdAnalysisResponse(
             analysis_id=orchestration_result.request_id,
             scores=ad_scores,
-            feedback=feedback,
+            feedback=feedback_text,
             alternatives=alternatives,
             competitor_comparison=competitor_comparison,
-            quick_wins=quick_wins
+            quick_wins=quick_wins,
+            tool_results=tool_results_dict,  # Include all tool-specific results
+            missing_strategic_fields=missing_strategic_fields if missing_strategic_fields else None
         )
     
     def _calculate_fallback_overall_score(self, scores_dict: Dict[str, float]) -> float:
@@ -205,17 +299,258 @@ class EnhancedAdAnalysisService:
         return weighted_sum / total_weight if total_weight > 0 else 70.0
     
     async def _generate_fallback_alternatives(self, ad: AdInput) -> List[AdAlternative]:
-        """Generate fallback alternatives (TODO: replace with AI generator tool)"""
-        # This would be replaced by the AI generator tool from the SDK
+        """Generate AI-powered improvement alternatives using ProductionAIService"""
+
+        # If AI service is available, generate real improvements
+        logger.info(f"AI service available: {self.ai_service is not None}")
+        if self.ai_service:
+            try:
+                logger.info(f"Generating AI-powered improvements for platform: {ad.platform}")
+                
+                # Prepare ad data for AI service including strategic context
+                ad_data = {
+                    'headline': ad.headline,
+                    'body_text': ad.body_text,
+                    'cta': ad.cta,
+                    'platform': ad.platform,
+                    'industry': getattr(ad, 'industry', 'general'),
+                    'target_audience': getattr(ad, 'target_audience', 'general audience'),
+                    # 7 Strategic Context Inputs
+                    'product_or_service': getattr(ad, 'product_or_service', None),
+                    'target_audience_detail': getattr(ad, 'target_audience_detail', None),
+                    'value_proposition': getattr(ad, 'value_proposition', None),
+                    'audience_pain_points': getattr(ad, 'audience_pain_points', None),
+                    'desired_outcomes': getattr(ad, 'desired_outcomes', None),
+                    'trust_factors': getattr(ad, 'trust_factors', None),
+                    'offer_details': getattr(ad, 'offer_details', None)
+                }
+
+                # Extract brand voice settings if present
+                brand_voice = getattr(ad, 'brand_voice', None)
+                tone = 'conversational'
+                personality = 'friendly'
+                formality = 'casual'
+                emoji_pref = 'auto'
+                brand_values = None
+                past_ads = None
+
+                if brand_voice:
+                    tone = getattr(brand_voice, 'tone', 'conversational')
+                    personality = getattr(brand_voice, 'personality', 'friendly')
+                    formality = getattr(brand_voice, 'formality', 'casual')
+                    emoji_pref = getattr(brand_voice, 'emoji_preference', 'auto')
+                    brand_values = getattr(brand_voice, 'brand_values', None)
+                    past_ads = getattr(brand_voice, 'past_ads', None)
+
+                # Map emoji preference to emoji level
+                emoji_level_map = {
+                    'include': 'heavy',
+                    'auto': 'moderate',
+                    'exclude': 'none'
+                }
+                emoji_level = emoji_level_map.get(emoji_pref, 'moderate')
+
+                # Map formality to numeric level (1-10)
+                formality_map = {
+                    'casual': 4,
+                    'semi-formal': 6,
+                    'formal': 8
+                }
+                formality_level = formality_map.get(formality, 5)
+                
+                # Generate single improved version using AI (persuasive variant)
+                improved_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='persuasive',
+                    emoji_level=emoji_level,
+                    human_tone=tone,
+                    brand_tone=formality,
+                    formality_level=formality_level,
+                    target_audience_description=ad_data.get('target_audience_detail'),
+                    brand_voice_description=brand_values,
+                    past_successful_ads=past_ads,
+                    include_cta=True,
+                    cta_style='medium',
+                    creativity_level=6,
+                    urgency_level=5,
+                    emotion_type='inspiring',
+                    filter_cliches=True
+                )
+                
+                # Generate A/B/C test variations with different strategic approaches
+                logger.info("Generating A/B/C test variations using psychology frameworks")
+
+                # Variation A: Benefit-Focused (outcome-driven, emphasizes desired outcomes and value prop)
+                variation_a_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='benefit_focused',
+                    emoji_level=emoji_level,
+                    human_tone=tone,
+                    brand_tone=formality,
+                    formality_level=formality_level,
+                    target_audience_description=ad_data.get('target_audience_detail'),
+                    brand_voice_description=brand_values,
+                    past_successful_ads=past_ads,
+                    include_cta=True,
+                    cta_style='medium',
+                    creativity_level=6,
+                    urgency_level=4,
+                    emotion_type='inspiring',
+                    filter_cliches=True
+                )
+
+                # Variation B: Problem-Focused (pain-aware, leads with pain points and urgency)
+                variation_b_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='problem_focused',
+                    emoji_level=emoji_level,
+                    human_tone=tone,
+                    brand_tone=formality,
+                    formality_level=formality_level,
+                    target_audience_description=ad_data.get('target_audience_detail'),
+                    brand_voice_description=brand_values,
+                    past_successful_ads=past_ads,
+                    include_cta=True,
+                    cta_style='strong',
+                    creativity_level=6,
+                    urgency_level=7,
+                    emotion_type='problem_solving',
+                    filter_cliches=True
+                )
+
+                # Variation C: Story-Driven (narrative arc, emotional journey, trust-building)
+                variation_c_result = await self.ai_service.generate_ad_alternative(
+                    ad_data=ad_data,
+                    variant_type='story_driven',
+                    emoji_level=emoji_level,
+                    human_tone=tone,
+                    brand_tone=formality,
+                    formality_level=formality_level,
+                    target_audience_description=ad_data.get('target_audience_detail'),
+                    brand_voice_description=brand_values,
+                    past_successful_ads=past_ads,
+                    include_cta=True,
+                    cta_style='soft',
+                    creativity_level=7,
+                    urgency_level=3,
+                    emotion_type='trust_building',
+                    filter_cliches=True
+                )
+                
+                # Log what AI generated
+                logger.info(f"AI Results - Improved: headline={len(improved_result.get('headline', ''))} chars, body={len(improved_result.get('body_text', ''))} chars")
+                logger.info(f"AI Results - Variation A: headline={len(variation_a_result.get('headline', ''))} chars, body={len(variation_a_result.get('body_text', ''))} chars")
+                logger.info(f"AI Results - Variation B: headline={len(variation_b_result.get('headline', ''))} chars, body={len(variation_b_result.get('body_text', ''))} chars")
+                logger.info(f"AI Results - Variation C: headline={len(variation_c_result.get('headline', ''))} chars, body={len(variation_c_result.get('body_text', ''))} chars")
+
+                # Convert AI results to AdAlternative format
+                alternatives = [
+                    # Main improved version
+                    AdAlternative(
+                        variant_type="improved",
+                        headline=improved_result.get('headline', ad.headline),
+                        body_text=improved_result.get('body_text', ad.body_text),
+                        cta=improved_result.get('cta', ad.cta),
+                        improvement_reason=improved_result.get('improvement_reason', 'AI-enhanced copy with improved persuasion and strategic context integration'),
+                        expected_improvement=20.0,
+                        psychology_framework="Comprehensive Optimization"
+                    ),
+                    # Variation A: Benefit-Focused
+                    AdAlternative(
+                        variant_type="benefit_focused",
+                        headline=variation_a_result.get('headline', ad.headline),
+                        body_text=variation_a_result.get('body_text', ad.body_text),
+                        cta=variation_a_result.get('cta', ad.cta),
+                        improvement_reason="Benefit-Focused (Outcome-Driven): Emphasizes desired outcomes, value proposition, and ROI. Appeals to aspirations and what customers will achieve. Best for solution-aware audiences, warm leads, and when the problem is already recognized.",
+                        expected_improvement=18.0,
+                        psychology_framework="Outcome-Driven Psychology"
+                    ),
+                    # Variation B: Problem-Focused
+                    AdAlternative(
+                        variant_type="problem_focused",
+                        headline=variation_b_result.get('headline', ad.headline),
+                        body_text=variation_b_result.get('body_text', ad.body_text),
+                        cta=variation_b_result.get('cta', ad.cta),
+                        improvement_reason="Problem-Focused (Pain-Aware): Leads with pain points, frustrations, and urgent problems. Creates identification and urgency. Best for pain-aware audiences, high-urgency scenarios, and immediate solution-seeking.",
+                        expected_improvement=22.0,
+                        psychology_framework="Pain-Awareness Framework"
+                    ),
+                    # Variation C: Story-Driven
+                    AdAlternative(
+                        variant_type="story_driven",
+                        headline=variation_c_result.get('headline', ad.headline),
+                        body_text=variation_c_result.get('body_text', ad.body_text),
+                        cta=variation_c_result.get('cta', ad.cta),
+                        improvement_reason="Story-Driven (Narrative Arc): Uses storytelling, customer journey, and emotional narrative. Builds trust through relatable experiences. Best for cold traffic, brand awareness, and building long-term trust.",
+                        expected_improvement=16.0,
+                        psychology_framework="Narrative Psychology"
+                    )
+                ]
+                
+                logger.info("Successfully generated 4 AI-powered alternatives (1 improved + 3 A/B/C variations)")
+                return alternatives
+                
+            except AIProviderUnavailable as e:
+                logger.error(f"AI provider unavailable: {e}. Using fallback alternatives.")
+            except Exception as e:
+                logger.error(f"Error generating AI alternatives: {e}. Using fallback alternatives.")
+        
+        # Fallback if AI service is not available or fails
+        logger.warning("Using fallback alternatives (AI service unavailable)")
         return [
             AdAlternative(
+                variant_type="fallback",
                 headline=f"Improved: {ad.headline}",
                 body_text=f"Enhanced version: {ad.body_text}",
                 cta=f"Better {ad.cta}",
-                improvement_reason="SDK-generated alternative",
-                expected_improvement=15.0
+                improvement_reason="Fallback alternative (AI service unavailable)",
+                expected_improvement=5.0
             )
         ]
+    
+    async def analyze_with_multi_agent(
+        self,
+        user_id: int,
+        ad: AdInput,
+        max_iterations: int = 1
+    ) -> Dict[str, Any]:
+        """
+        Advanced multi-agent optimization (optional premium feature)
+        
+        Uses 4 specialized agents:
+        1. Analyzer - Scores and identifies issues
+        2. Strategist - Plans improvement strategy
+        3. Writer - Generates 4 variations (Improved + A/B/C)
+        4. Quality Control - Validates output
+        
+        Args:
+            user_id: User ID
+            ad: Ad input
+            max_iterations: Number of refinement iterations (1-4)
+        
+        Returns:
+            Structured optimization result with reasoning and scores
+        """
+        if not self.multi_agent_optimizer:
+            raise Exception("Multi-agent optimizer not available. AI service may not be initialized.")
+        
+        logger.info(f"🤖 Starting multi-agent optimization for user {user_id}")
+        
+        ad_data = {
+            'headline': ad.headline,
+            'body_text': ad.body_text,
+            'cta': ad.cta,
+            'platform': ad.platform,
+            'industry': getattr(ad, 'industry', None),
+            'target_audience': getattr(ad, 'target_audience', None)
+        }
+        
+        # Run multi-agent optimization
+        result = await self.multi_agent_optimizer.optimize(ad_data, max_iterations)
+        
+        logger.info(f"✅ Multi-agent optimization complete. Improvement: {result.improved_score.overall - result.original_score.overall:.1f} points")
+        
+        return result.to_dict()
     
     async def _analyze_competitors_sdk(
         self,
@@ -238,10 +573,46 @@ class EnhancedAdAnalysisService:
             ]
         }
     
-    def _extract_quick_wins(self, orchestration_result) -> List[str]:
-        """Extract quick wins from tool insights"""
+    def _orchestrate_recommendations(self, orchestration_result) -> List[str]:
+        """
+        Use Recommendation Orchestrator to prioritize recommendations
+
+        Reduces 45-72 recommendations from all tools down to top 5 most impactful
+        """
+        # Orchestrate recommendations from all tool results
+        prioritized_recommendations = self.rec_orchestrator.orchestrate(
+            tool_results=orchestration_result.tool_results,
+            max_recommendations=5
+        )
+
+        # Convert to string format for quick_wins
         quick_wins = []
-        
+        for rec in prioritized_recommendations:
+            # Format: "🎯 [Priority] Title - Description"
+            priority_emoji = {
+                'CRITICAL': '❌',
+                'HIGH': '⚠️',
+                'MEDIUM': '💡',
+                'LOW': '✓'
+            }
+            emoji = priority_emoji.get(rec.priority.name, '•')
+            quick_win = f"{emoji} {rec.title}"
+            quick_wins.append(quick_win)
+
+        logger.info(f"Orchestrated {len(quick_wins)} prioritized recommendations")
+
+        return quick_wins
+
+    def _extract_quick_wins(self, orchestration_result) -> List[str]:
+        """
+        DEPRECATED: Old quick wins extraction logic
+        Kept for backward compatibility but now delegates to _orchestrate_recommendations
+        """
+        return self._orchestrate_recommendations(orchestration_result)
+
+        # OLD LOGIC (commented out, using orchestrator now):
+        quick_wins = []
+
         for tool_name, tool_output in orchestration_result.tool_results.items():
             if tool_output.success and tool_output.insights:
                 
@@ -295,9 +666,27 @@ class EnhancedAdAnalysisService:
             )
             
             self.db.add(analysis_record)
+
+            # Save alternatives to database
+            from app.models.ad_analysis import AdGeneration
+
+            logger.info(f"Saving {len(legacy_response.alternatives)} alternatives to database")
+            for alt in legacy_response.alternatives:
+                alt_record = AdGeneration(
+                    analysis_id=orchestration_result.request_id,
+                    variant_type=alt.variant_type,
+                    generated_headline=alt.headline,
+                    generated_body_text=alt.body_text,
+                    generated_cta=alt.cta,
+                    improvement_reason=alt.improvement_reason,
+                    predicted_score=alt.expected_improvement
+                )
+                self.db.add(alt_record)
+                logger.info(f"  - Saved alternative: {alt.variant_type} (headline: {len(alt.headline or '')} chars)")
+
             self.db.commit()
-            
-            logger.info(f"Saved analysis {orchestration_result.request_id} to database")
+
+            logger.info(f"Saved analysis {orchestration_result.request_id} with {len(legacy_response.alternatives)} alternatives to database")
             
         except Exception as e:
             logger.error(f"Failed to save analysis to database: {e}")

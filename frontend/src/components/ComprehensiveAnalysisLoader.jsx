@@ -120,7 +120,7 @@ const analysisTips = [
   "Platform-specific optimization improves ad relevance scores by 45%"
 ];
 
-const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, brandVoice }) => {
+const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, strategicContext, brandVoice }) => {
   const [currentToolIndex, setCurrentToolIndex] = useState(0);
   const [completedTools, setCompletedTools] = useState([]);
   const [overallProgress, setOverallProgress] = useState(0);
@@ -129,65 +129,51 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
 
   // Real API analysis process
   useEffect(() => {
-    let intervalId;
-    let safetyTimeoutId;
+    let progressIntervalId;
     let isCompleted = false;
     
     const runRealAnalysis = async () => {
       try {
-        // Start visual progress animation
-        let currentIndex = 0;
-        intervalId = setInterval(() => {
-          if (currentIndex < analysisTools.length && !isCompleted) {
-            // Mark current tool as complete
-            const toolToComplete = analysisTools[currentIndex];
-            console.log(`✅ Completing tool ${currentIndex + 1}/${analysisTools.length}: ${toolToComplete.name}`);
+        console.log('🚀 Starting REAL analysis - visual progress will sync with backend...');
+        
+        // Start the API call IMMEDIATELY
+        console.log('🚀 Starting API call at:', new Date().toISOString());
+        const startTime = Date.now();
+        
+        // Simulate gradual progress as API processes (more honest UX)
+        // Progress moves slowly to match typical API duration (60-120s)
+        let currentProgress = 0;
+        let currentToolIndex = 0;
+        
+        progressIntervalId = setInterval(() => {
+          if (!isCompleted && currentProgress < 95) {
+            // Slow, steady progress - completes in ~100 seconds (matching typical API time)
+            currentProgress += 1; // 1% every 1.2 seconds = ~120s to reach 95%
+            setOverallProgress(currentProgress);
             
-            // Update both index and completed tools simultaneously to avoid race condition
-            const nextIndex = currentIndex + 1;
+            // Update tool completion based on progress
+            // Each tool represents ~11% of progress (100/9)
+            const toolsShouldBeComplete = Math.floor(currentProgress / 11.11);
             
-            setCompletedTools(prev => {
-              // Ensure we don't add duplicates
-              if (!prev.includes(toolToComplete.id)) {
-                const newCompleted = [...prev, toolToComplete.id];
-                console.log(`   Total completed: ${newCompleted.length}/${analysisTools.length}`);
-                return newCompleted;
-              }
-              return prev;
-            });
-            
-            // Update current index and progress together
-            setCurrentToolIndex(nextIndex);
-            
-            // Calculate accurate progress: each tool = 11.11% (100/9)
-            const progressPercentage = (nextIndex / analysisTools.length) * 100;
-            setOverallProgress(progressPercentage);
-            console.log(`   Progress: ${Math.round(progressPercentage)}%`);
-            
-            // Increment for next iteration
-            currentIndex = nextIndex;
-            
-            // If we've completed all tools visually but API hasn't finished yet
-            if (currentIndex >= analysisTools.length) {
-              console.log('🎯 All tools completed visually, waiting for API...');
-              clearInterval(intervalId);
+            if (toolsShouldBeComplete > currentToolIndex && toolsShouldBeComplete <= analysisTools.length) {
+              const toolToComplete = analysisTools[currentToolIndex];
+              console.log(`✅ Tool ${currentToolIndex + 1}/${analysisTools.length} processing: ${toolToComplete.name}`);
               
-              // Set a safety timeout - if API doesn't respond in 10 seconds, show error
-              safetyTimeoutId = setTimeout(() => {
-                if (!isCompleted) {
-                  console.error('⏰ API timeout after 10 seconds');
-                  isCompleted = true;
-                  throw new Error('Analysis timed out. Please try again.');
+              setCompletedTools(prev => {
+                if (!prev.includes(toolToComplete.id)) {
+                  return [...prev, toolToComplete.id];
                 }
-              }, 10000);
+                return prev;
+              });
+              
+              currentToolIndex++;
+              setCurrentToolIndex(currentToolIndex);
             }
           }
-        }, 2500); // Update UI every 2.5 seconds
-
-        // Call real API using the working analyzeAd method
-        console.log('💾 Using the working analyzeAd method to ensure database saving');
+        }, 1200); // Update every 1.2 seconds for smooth, realistic progress
         
-        // Extract headline from ad copy - first line or first sentence up to 100 chars
+        // Now make the REAL API call while progress bar moves
+        // When API completes, we jump to 100% and show results
         let headline = adCopy.split('\n')[0] || adCopy.split('.')[0] || adCopy.substring(0, 100);
         if (headline.length > 100) {
           headline = headline.substring(0, 97) + '...';
@@ -203,19 +189,26 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
             body_text: adCopy.trim(),
             cta: extractedCTA.trim(),
             platform: platform,
-            target_audience: brandVoice?.targetAudience || null,
             industry: null,
-            // Include brand voice metadata for backend processing (if supported)
+            // 7 Strategic Context Inputs
+            product_or_service: strategicContext?.productOrService || null,
+            target_audience_detail: strategicContext?.targetAudienceDetail || null,
+            value_proposition: strategicContext?.valueProposition || null,
+            audience_pain_points: strategicContext?.audiencePainPoints || null,
+            desired_outcomes: strategicContext?.desiredOutcomes || null,
+            trust_factors: strategicContext?.trustFactors || null,
+            offer_details: strategicContext?.offerDetails || null,
+            // Structured Brand Voice
             brand_voice: brandVoice && Object.keys(brandVoice).length > 0 ? {
               tone: brandVoice.tone,
               personality: brandVoice.personality,
               formality: brandVoice.formality,
-              target_audience: brandVoice.targetAudience,
-              brand_values: brandVoice.brandValues,
-              past_ads: brandVoice.pastAds || null // Include past ads for learning
+              brand_values: brandVoice.brandValues || null,
+              past_ads: brandVoice.pastAds || null,
+              emoji_preference: brandVoice.emojiPreference || 'auto'
             } : null
           },
-          competitor_ads: [] // Empty array as we don't have competitors in comprehensive analysis
+          competitor_ads: []
         };
         
         console.log('💾 Calling analyzeAd with proper format:', adData);
@@ -230,8 +223,13 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
           hasCompetitors: Array.isArray(adData.competitor_ads)
         });
         
-        // Use the working analyzeAd method (this handles DB creation + backend call)
+        // Make the actual API call
         const standardResponse = await apiService.analyzeAd(adData);
+        const apiDuration = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`⏱️ API responded in ${apiDuration} seconds`);
+        
+        // Stop the progress interval now that API is complete
+        if (progressIntervalId) clearInterval(progressIntervalId);
         console.log('💾 StandardResponse received:', standardResponse);
         console.log('💾 Response validation:', {
           hasAnalysisId: !!standardResponse.analysis_id,
@@ -259,6 +257,79 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
                             standardResponse.alternatives?.[0]?.body_text || 
                             adCopy.replace(/Learn More/gi, 'Get Started Free').replace(/Click Here/gi, 'Shop Now');
         
+        // Extract REAL tool results from backend (no more mock data!)
+        const toolResults = standardResponse.tool_results || {};
+        console.log('🔧 Tool results from backend:', toolResults);
+        
+        // Helper function to extract tool data
+        const getToolData = (toolName) => {
+          const tool = toolResults[toolName];
+          return tool?.success ? tool : null;
+        };
+        
+        // Map real compliance data
+        const complianceTool = getToolData('compliance_checker');
+        const compliance = complianceTool ? {
+          status: complianceTool.insights?.compliance_status || 'COMPLIANT',
+          totalIssues: complianceTool.insights?.issues?.length || 0,
+          issues: complianceTool.insights?.issues || []
+        } : { status: 'PENDING', totalIssues: 0, issues: [] };
+        
+        // Map real psychology data
+        const psychologyTool = getToolData('psychology_scorer');
+        const psychology = psychologyTool ? {
+          overallScore: psychologyTool.scores?.psychology_score || 0,
+          topOpportunity: psychologyTool.recommendations?.[0] || 'Analysis complete',
+          triggers: psychologyTool.insights?.triggers || [],
+          opportunities: psychologyTool.insights?.opportunities || []
+        } : { overallScore: 0, triggers: [], opportunities: [] };
+        
+        // Map real legal data
+        const legalTool = getToolData('legal_risk_scanner');
+        const legal = legalTool ? {
+          riskLevel: legalTool.insights?.risk_level || 'Low',
+          issues: legalTool.insights?.issues || [],
+          recommendations: legalTool.recommendations || []
+        } : { riskLevel: 'PENDING', issues: [], recommendations: [] };
+        
+        // Map real ROI data
+        const roiTool = getToolData('roi_copy_generator');
+        const roi = roiTool ? {
+          segment: roiTool.insights?.target_segment || 'General',
+          premiumVersions: roiTool.insights?.premium_versions || [],
+          recommendations: roiTool.recommendations || []
+        } : { segment: 'PENDING', premiumVersions: [], recommendations: [] };
+        
+        // Map real brand voice data
+        const brandVoiceTool = getToolData('brand_voice_engine');
+        const brandVoiceData = brandVoiceTool ? {
+          tone: brandVoiceTool.insights?.detected_tone || brandVoice?.tone || 'Conversational',
+          personality: brandVoiceTool.insights?.personality || brandVoice?.personality || 'Friendly',
+          formality: brandVoiceTool.insights?.formality || brandVoice?.formality || 'Casual',
+          targetAudience: brandVoice?.targetAudience || '',
+          brandValues: brandVoice?.brandValues || '',
+          pastAds: brandVoice?.pastAds || '',
+          consistency: brandVoiceTool.scores?.consistency_score || 0,
+          learningFromPastAds: brandVoice?.pastAds && brandVoice.pastAds.trim().length > 50,
+          recommendations: brandVoiceTool.recommendations || []
+        } : {
+          tone: brandVoice?.tone || 'Conversational',
+          personality: brandVoice?.personality || 'Friendly',
+          formality: brandVoice?.formality || 'Casual',
+          targetAudience: brandVoice?.targetAudience || '',
+          brandValues: brandVoice?.brandValues || '',
+          pastAds: brandVoice?.pastAds || '',
+          consistency: 0,
+          learningFromPastAds: false,
+          recommendations: ['Brand voice analysis pending']
+        };
+        
+        // Get improvements from AI alternatives (real data)
+        const improvements = standardResponse.alternatives?.slice(0, 3).map(alt => ({
+          category: alt.variant_type || 'Optimization',
+          description: alt.improvement_reason || 'AI-powered enhancement'
+        })) || [];
+        
         const response = {
           original: {
             copy: adCopy,
@@ -267,75 +338,92 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
           improved: {
             copy: improvedCopy,
             score: Math.min(95, (standardResponse.scores?.overall_score || 65) + 15),
-            improvements: [
-              { category: 'Headline', description: 'Enhanced for better engagement' },
-              { category: 'CTA', description: 'Optimized call-to-action' },
-              { category: 'Platform', description: `Tailored for ${platform}` }
+            improvements: improvements.length > 0 ? improvements : [
+              { category: 'Analysis', description: 'Comprehensive analysis complete' }
             ]
           },
-          compliance: { status: 'COMPLIANT', totalIssues: 0, issues: [] },
-          psychology: { overallScore: Math.round((standardResponse.scores?.overall_score || 65) * 1.1), topOpportunity: 'Add social proof', triggers: [] },
+          compliance: compliance,
+          psychology: psychology,
           abTests: { variations: standardResponse.alternatives || [] },
-          roi: { segment: 'Mass market', premiumVersions: [] },
-          legal: { riskLevel: 'Low', issues: [] },
-          brandVoice: { 
-            tone: brandVoice?.tone || (platform === 'linkedin' ? 'Professional' : platform === 'tiktok' ? 'Casual' : platform === 'facebook' ? 'Friendly' : 'Conversational'),
-            personality: brandVoice?.personality || 'Friendly',
-            formality: brandVoice?.formality || 'Casual',
-            targetAudience: brandVoice?.targetAudience || '',
-            brandValues: brandVoice?.brandValues || '',
-            pastAds: brandVoice?.pastAds || '',
-            consistency: Math.round(75 + Math.random() * 20),
-            learningFromPastAds: brandVoice?.pastAds && brandVoice.pastAds.trim().length > 50,
-            recommendations: [
-              brandVoice?.pastAds && brandVoice.pastAds.trim().length > 50 ? 'AI has learned from your past successful ads to match your winning style' : 'Consider providing past successful ads for better style matching',
-              brandVoice?.tone ? `Maintain ${brandVoice.tone} tone across campaigns` : 'Maintain consistent tone across campaigns',
-              'Use active voice for stronger impact',
-              brandVoice?.targetAudience ? `Tailor messaging to ${brandVoice.targetAudience}` : 'Match audience expectations for the platform'
-            ]
-          },
+          roi: roi,
+          legal: legal,
+          brandVoice: brandVoiceData,
           platform: platform,
           // Preserve the database analysis ID and response
           analysis_id: standardResponse.analysis_id,
           databaseSaved: true,
-          analysisRecord: standardResponse.analysis // Include the full analysis record from DB
+          analysisRecord: standardResponse.analysis,
+          tool_results: toolResults // Include raw tool results for debugging
         };
+        
+        console.log('✅ Mapped REAL tool results to UI format:', {
+          compliance: compliance.status,
+          psychology: psychology.overallScore,
+          legal: legal.riskLevel,
+          roi: roi.segment,
+          brandVoice: brandVoiceData.consistency
+        });
         
         // Mark as completed
         isCompleted = true;
         
-        // Clear interval and safety timeout
-        if (intervalId) clearInterval(intervalId);
-        if (safetyTimeoutId) clearTimeout(safetyTimeoutId);
+        console.log('✅ Analysis API complete! Jumping to 100%...');
         
-        console.log('✅ Analysis API complete! Forcing all tools to complete...');
-        
-        // Ensure all tools are marked complete with proper synchronization
-        // Use functional update to ensure we get the latest state
+        // NOW jump to 100% since API is actually done
         setCompletedTools(() => analysisTools.map(t => t.id));
         setCurrentToolIndex(analysisTools.length);
         setOverallProgress(100);
         
-        // Give user time to see all tools completed before transition
+        // Brief delay to let user see 100% completion before showing results
         setTimeout(() => {
           console.log('🚀 Transitioning to results...');
           console.log('Response data:', response);
           console.log('Improved copy in response:', response?.improved?.copy);
-          onComplete(response);
-        }, 1500); // Increased delay to show completion state
+          console.log('onComplete callback type:', typeof onComplete);
+          console.log('onComplete callback exists:', !!onComplete);
+          
+          try {
+            if (onComplete && typeof onComplete === 'function') {
+              onComplete(response);
+              console.log('✅ onComplete callback executed successfully');
+            } else {
+              console.error('❌ onComplete is not a function:', onComplete);
+              toast.error('Failed to display results - callback error');
+            }
+          } catch (callbackError) {
+            console.error('❌ Error calling onComplete:', callbackError);
+            toast.error('Failed to display results: ' + callbackError.message);
+          }
+          }, 800); // Brief pause to show 100% before transition
       } catch (error) {
         console.error('❌ Analysis error:', error);
+        console.error('❌ Full error details:', {
+          message: error.message,
+          name: error.name,
+          stack: error.stack,
+          response: error.response?.data,
+          status: error.response?.status,
+          statusText: error.response?.statusText
+        });
+        
         isCompleted = true;
         
-        // Clear interval and safety timeout
-        if (intervalId) clearInterval(intervalId);
-        if (safetyTimeoutId) clearTimeout(safetyTimeoutId);
+        // Clear progress interval
+        if (progressIntervalId) clearInterval(progressIntervalId);
         
-        // Show error without mock data fallback
-        const errorMessage = error.message || 'Analysis failed. Please check your connection and try again.';
-        toast.error(errorMessage);
+        // Show detailed error message
+        let errorMessage = error.message || 'Analysis failed. Please check your connection and try again.';
+        if (error.response?.status === 403) {
+          errorMessage = '🔒 Access Denied: CSRF protection or authentication issue. Please refresh and try again.';
+        } else if (error.response?.status === 401) {
+          errorMessage = '🔐 Session Expired: Please log in again.';
+        } else if (error.response?.status === 500) {
+          errorMessage = '⚠️ Server Error: Our team has been notified. Please try again later.';
+        }
         
-        console.error('❌ Analysis failed:', error);
+        toast.error(errorMessage, { duration: 6000 });
+        
+        console.error('❌ Analysis failed with error:', errorMessage);
         
         // Call onError callback instead of providing mock data
         if (onError) {
@@ -350,11 +438,8 @@ const ComprehensiveAnalysisLoader = ({ platform, onComplete, onError, adCopy, br
     runRealAnalysis();
 
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-      if (safetyTimeoutId) {
-        clearTimeout(safetyTimeoutId);
+      if (progressIntervalId) {
+        clearInterval(progressIntervalId);
       }
       isCompleted = true;
     };

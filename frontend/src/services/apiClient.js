@@ -16,7 +16,22 @@ class ApiClient {
     };
 
     // Add authorization token if available
-    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    // First try custom authToken (for backwards compatibility)
+    let token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+
+    // If not found, try Supabase token
+    if (!token) {
+      try {
+        const supabaseAuth = localStorage.getItem('adcopysurge-supabase-auth-token');
+        if (supabaseAuth) {
+          const authData = JSON.parse(supabaseAuth);
+          token = authData.access_token;
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
@@ -145,6 +160,8 @@ class ApiClient {
 }
 
 // Export singleton instance with backend URL from environment
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api';
-const apiClient = new ApiClient(API_BASE_URL.replace('/api', ''));
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
+// Ensure base URL ends with /api for all API routes
+const baseWithApi = API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`;
+const apiClient = new ApiClient(baseWithApi);
 export default apiClient;

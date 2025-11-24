@@ -1,6 +1,7 @@
 """
 Enhanced Ad Copy Analyzer Tool - Comprehensive marketing copy evaluation
 Uses NLP and marketing frameworks to evaluate copy effectiveness
+Now with platform-specific intelligence (emoji analysis, power words, formality matching)
 """
 
 import time
@@ -8,6 +9,7 @@ import re
 from typing import Dict, Any, List, Optional
 from ..core import ToolRunner, ToolInput, ToolOutput, ToolConfig, ToolType
 from ..exceptions import ToolValidationError, ToolDependencyError
+from ..platform_adapter import platform_adapter
 
 # Import analysis dependencies
 try:
@@ -455,12 +457,17 @@ class AdCopyAnalyzerToolRunner(ToolRunner):
         }
     
     def _analyze_platform_fit(self, input_data: ToolInput, full_text: str) -> Dict[str, Any]:
-        """Analyze how well the copy fits the target platform"""
+        """Analyze how well the copy fits the target platform with platform intelligence"""
         platform = input_data.platform.lower()
         guidelines = self.platform_guidelines.get(platform, self.platform_guidelines['facebook'])
-        
-        score = 75  # Base score
-        
+
+        # Get platform intelligence
+        platform_intel = platform_adapter.get_platform_intelligence(platform)
+        power_words = platform_intel.get('power_words', [])
+        formality_level = platform_intel.get('formality_level', 5)
+
+        score = 50  # Base score
+
         # Headline length check
         headline_words = len(input_data.headline.split())
         if isinstance(guidelines['headline_ideal'], tuple):
@@ -469,7 +476,7 @@ class AdCopyAnalyzerToolRunner(ToolRunner):
                 score += 10
             elif headline_words < min_words or headline_words > max_words:
                 score -= 10
-        
+
         # Body text length check
         body_chars = len(input_data.body_text)
         if isinstance(guidelines['body_ideal'], tuple):
@@ -478,28 +485,90 @@ class AdCopyAnalyzerToolRunner(ToolRunner):
                 score += 10
             elif body_chars > max_chars:
                 score -= 15
-        
+
         # CTA length check
         cta_words = len(input_data.cta.split())
         if isinstance(guidelines['cta_ideal'], tuple):
             min_cta, max_cta = guidelines['cta_ideal']
             if min_cta <= cta_words <= max_cta:
                 score += 5
-        
+
         # Platform-specific tone analysis
         tone_score = self._analyze_tone_for_platform(full_text, guidelines['tone'])
         score += tone_score
-        
+
+        # NEW: Emoji analysis (if platform supports it)
+        emoji_analysis = ""
+        if platform_adapter.should_analyze_emojis(platform):
+            emoji_count = len(re.findall(r'[\U0001F300-\U0001F9FF]', full_text))
+            emoji_analysis = platform_adapter.get_emoji_recommendations(platform, emoji_count)
+
+            # Score adjustment based on emoji usage
+            emoji_default = str(platform_intel.get('emoji_default', 'moderate')).lower()
+            if emoji_default == 'minimal' and emoji_count <= 2:
+                score += 10
+            elif emoji_default == 'moderate' and 3 <= emoji_count <= 5:
+                score += 10
+            elif emoji_default == 'expressive' and emoji_count >= 3:
+                score += 10
+            elif emoji_default == 'minimal' and emoji_count > 2:
+                score -= 10
+
+        # NEW: Power word usage from platform config
+        power_word_count = sum(1 for word in power_words if word.lower() in full_text.lower())
+        power_word_analysis = (
+            f"Using {power_word_count}/{len(power_words)} platform power words. "
+            f"Consider: {', '.join(power_words[:3])}."
+        )
+        if power_word_count >= 2:
+            score += 15
+
+        # NEW: Formality match
+        detected_formality = self._detect_formality_level(full_text)
+        formality_diff = abs(detected_formality - formality_level)
+
+        formality_analysis = ""
+        if formality_diff > 2:
+            if detected_formality > formality_level:
+                formality_analysis = f"Too formal for {platform}. Expected {formality_level}/10, detected {detected_formality}/10."
+                score -= 10
+            else:
+                formality_analysis = f"Too casual for {platform}. Expected {formality_level}/10, detected {detected_formality}/10."
+                score -= 10
+        else:
+            score += 10
+
         platform_fit_score = max(0, min(100, score))
-        
+
         return {
             'platform_fit_score': platform_fit_score,
             'platform': platform,
             'platform_guidelines': guidelines,
+            'emoji_analysis': emoji_analysis,  # NEW
+            'power_word_usage': power_word_analysis,  # NEW
+            'formality_match': formality_analysis,  # NEW
+            'platform_tips': platform_intel.get('optimization_tips', [])[:3],  # NEW
             'optimization_suggestions': self._generate_platform_suggestions(
                 input_data, guidelines, platform
             )
         }
+
+    def _detect_formality_level(self, text: str) -> int:
+        """Detect formality level 0-10 from text"""
+        formal_indicators = ['utilize', 'leverage', 'facilitate', 'furthermore', 'therefore', 'hereby', 'pursuant', 'regarding']
+        casual_indicators = ['hey', 'yeah', 'wanna', 'gonna', 'cool', 'awesome', 'lol', 'omg']
+
+        formal_count = sum(1 for word in formal_indicators if word in text.lower())
+        casual_count = sum(1 for word in casual_indicators if word in text.lower())
+
+        # Use contractions as indicator
+        contraction_count = len(re.findall(r"\b\w+'\w+\b", text))
+
+        # Calculate formality (0-10)
+        if casual_count > formal_count:
+            return max(0, 5 - casual_count - contraction_count)
+        else:
+            return min(10, 5 + formal_count - contraction_count)
     
     def _analyze_tone_for_platform(self, text: str, expected_tone: str) -> int:
         """Analyze if the tone matches platform expectations"""

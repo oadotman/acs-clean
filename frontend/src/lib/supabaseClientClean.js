@@ -12,12 +12,22 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Create a minimal Supabase client
+// Create a minimal Supabase client with proper headers
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     storageKey: 'adcopysurge-supabase-auth-token',
     storage: typeof window !== 'undefined' ? window.localStorage : undefined
+  },
+  global: {
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }
+  },
+  db: {
+    schema: 'public'
   }
 });
 

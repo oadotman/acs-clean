@@ -27,6 +27,7 @@ import ContactUs from './pages/ContactUs';
 import About from './pages/About';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import Support from './pages/Support';
 
 // New Dashboard Layout and Pages
 import AppLayout from './layout/AppLayout';
@@ -49,6 +50,9 @@ import LegalRiskScanner from './pages/LegalRiskScanner';
 // New Shared Workflow Pages
 import ProjectsList from './pages/ProjectsList';
 import ProjectWorkspace from './pages/ProjectWorkspace';
+
+// Debug Pages
+import AnalysisDebugPage from './pages/AnalysisDebugPage';
 
 // NEW Projects Feature (for organizing ad analyses)
 import ProjectsListNew from './pages/ProjectsListNew';
@@ -79,15 +83,25 @@ import { BlogProvider } from './contexts/BlogContext';
 
 // Settings
 import { SettingsProvider } from './contexts/SettingsContext';
+
+// Support Widget
+import SupportWidget from './components/SupportWidget';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import BlogCategory from './pages/BlogCategory';
+
+// Google Analytics
+import GoogleAnalytics from './components/Analytics/GoogleAnalytics';
 
 // Agency Pages
 import AgencyIntegrations from './pages/agency/Integrations';
 import AgencyTeamManagement from './pages/agency/TeamManagement';
 import AgencyReportsBranding from './pages/agency/ReportsBranding';
 import AgencyWhiteLabelSettings from './pages/agency/WhiteLabelSettings';
+
+// Team Invitation
+import InviteAccept from './pages/InviteAccept';
+import JoinTeam from './pages/JoinTeam';
 
 // Theme
 import { ThemeModeProvider } from './contexts/ThemeContext';
@@ -475,7 +489,8 @@ function App() {
               <AuthProvider>
                 <BlogProvider>
                 <Router>
-              <Routes>
+                  <GoogleAnalytics />
+                  <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<LegacyAppLayout><LandingPage /></LegacyAppLayout>} />
                 <Route path="/login" element={<LegacyAppLayout><Login /></LegacyAppLayout>} />
@@ -495,6 +510,10 @@ function App() {
                 <Route path="/blog/:slug" element={<LegacyAppLayout><BlogPost /></LegacyAppLayout>} />
                 <Route path="/blog/category/:category" element={<LegacyAppLayout><BlogCategory /></LegacyAppLayout>} />
                 <Route path="/blog/tag/:tag" element={<LegacyAppLayout><BlogCategory /></LegacyAppLayout>} />
+                
+                {/* Team Invitation Acceptance - Public Routes */}
+                <Route path="/invite/accept/:token" element={<LegacyAppLayout><InviteAccept /></LegacyAppLayout>} />
+                <Route path="/join-team" element={<LegacyAppLayout><JoinTeam /></LegacyAppLayout>} />
                 
                 {/* Legal and Company Pages */}
                 <Route path="/privacy" element={<LegacyAppLayout><Privacy /></LegacyAppLayout>} />
@@ -522,9 +541,10 @@ function App() {
                   <Route path="/projects/:id" element={<ProjectDetailNew />} />
                   <Route path="/history" element={<AnalysisHistoryNew />} />
                   <Route path="/profile" element={<Profile />} />
-                  <Route path="/team" element={<div>Team Management - Coming Soon</div>} />
-                  <Route path="/integrations" element={<div>Integrations - Coming Soon</div>} />
+                  {/* Redirect old /team route to new /agency/team */}
+                  <Route path="/team" element={<Navigate to="/agency/team" replace />} />
                   <Route path="/billing" element={<BillingCredits />} />
+                  <Route path="/support" element={<Support />} />
                   {/* Agency Routes */}
                   <Route path="/agency/integrations" element={<AgencyIntegrations />} />
                   <Route path="/agency/team" element={<AgencyTeamManagement />} />
@@ -546,6 +566,8 @@ function App() {
                   {/* Workspace Routes */}
                   <Route path="/project/new/workspace" element={<ProjectWorkspace />} />
                   <Route path="/project/:projectId/workspace" element={<ProjectWorkspace />} />
+                  {/* Debug Tools */}
+                  <Route path="/debug/analysis" element={<AnalysisDebugPage />} />
                 </Route>
                 
                 
@@ -553,6 +575,7 @@ function App() {
                 <Route path="/app" element={<Navigate to="/analysis/new" replace />} />
                 </Routes>
                 <Toaster position="top-right" />
+                <SupportWidget />
               </Router>
               </BlogProvider>
             </AuthProvider>

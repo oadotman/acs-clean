@@ -86,9 +86,17 @@ const Login = () => {
         } else {
           localStorage.removeItem('adcopysurge-saved-email');
         }
-        
-        console.log('✅ Login successful, navigating to new analysis...');
-        navigate('/analysis/new', { replace: true });
+
+        // Check if there's a pending team invitation
+        const pendingInviteCode = localStorage.getItem('pendingInviteCode');
+
+        if (pendingInviteCode) {
+          console.log('🎫 Found pending invitation code, redirecting to join-team page...');
+          navigate('/join-team', { replace: true });
+        } else {
+          console.log('✅ Login successful, navigating to new analysis...');
+          navigate('/analysis/new', { replace: true });
+        }
       } else {
         setError(result.error || 'Login failed');
       }

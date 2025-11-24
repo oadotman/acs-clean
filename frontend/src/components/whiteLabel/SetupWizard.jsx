@@ -77,7 +77,8 @@ const STEPS = [
 const StepBranding = ({ data, onChange, errors }) => {
   const [logoFile, setLogoFile] = useState(null);
   const [logoUploading, setLogoUploading] = useState(false);
-  const [logoPreview, setLogoPreview] = useState(data.logo);
+  const [logoPreview, setLogoPreview] = useState(data.customLogo);
+  const { handleLogoUpload: contextLogoUpload } = useWhiteLabel();
 
   const handleLogoUpload = async (event) => {
     const file = event.target.files[0];
@@ -86,11 +87,11 @@ const StepBranding = ({ data, onChange, errors }) => {
     setLogoUploading(true);
     try {
       const result = await FileUploadService.uploadLogo(file);
-      
+
       if (result.success) {
         setLogoFile(result.data.file);
         setLogoPreview(result.data.base64);
-        onChange('logo', result.data.base64);
+        onChange('customLogo', result.data.base64);
         toast.success('Logo uploaded successfully!');
       } else {
         toast.error(result.error);
@@ -106,7 +107,7 @@ const StepBranding = ({ data, onChange, errors }) => {
   const removeLogo = () => {
     setLogoFile(null);
     setLogoPreview(null);
-    onChange('logo', null);
+    onChange('customLogo', null);
     if (logoPreview && logoPreview.startsWith('blob:')) {
       FileUploadService.cleanupPreviewUrl(logoPreview);
     }
@@ -580,11 +581,11 @@ const StepPreview = ({ data, onComplete }) => {
                 
                 <ListItem>
                   <ListItemIcon>
-                    {data.logo ? <CheckCircle color="success" /> : <RadioButtonUnchecked />}
+                    {data.customLogo ? <CheckCircle color="success" /> : <RadioButtonUnchecked />}
                   </ListItemIcon>
                   <ListItemText
                     primary="Logo"
-                    secondary={data.logo ? 'Uploaded' : 'Not uploaded'}
+                    secondary={data.customLogo ? 'Uploaded' : 'Not uploaded'}
                   />
                 </ListItem>
                 
@@ -655,7 +656,7 @@ export const WhiteLabelSetupWizard = ({ onComplete, sx = {}, ...props }) => {
   // Local state for wizard data
   const [wizardData, setWizardData] = useState({
     companyName: settings.companyName || '',
-    logo: settings.logo || null,
+    customLogo: settings.customLogo || null,
     primaryColor: settings.primaryColor || '#2563eb',
     secondaryColor: settings.secondaryColor || '#7c3aed',
     customDomain: settings.customDomain || '',

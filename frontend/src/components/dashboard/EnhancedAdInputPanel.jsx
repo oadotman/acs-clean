@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import CreativeControls from '../shared/CreativeControls';
-import ABCTestVariants from '../shared/ABCTestVariants';
+import ABCTestingGrid from '../shared/ABCTestingGrid';
 import creativeControlsService from '../../services/creativeControlsService';
 import {
   Box,
@@ -1505,7 +1505,7 @@ const EnhancedAdInputPanel = ({
         </Box>
       </Paper>
 
-      {/* A/B/C Test Results */}
+      {/* A/B/C Test Results - Using ABCTestingGrid */}
       <AnimatePresence>
         {showABCResults && abcVariants.length > 0 && (
           <motion.div
@@ -1515,14 +1515,29 @@ const EnhancedAdInputPanel = ({
             transition={{ duration: 0.4 }}
           >
             <Box sx={{ mt: 3 }}>
-              <ABCTestVariants
-                variants={abcVariants}
-                onGenerate={handleGenerateABCVariants}
-                onRegenerateVariant={handleRegenerateABCVariant}
-                onSaveVariant={(variant) => console.log('Save variant:', variant)}
-                onFeedbackSubmit={handleFeedbackSubmit}
-                isGenerating={isGeneratingABC}
+              <ABCTestingGrid
+                originalCopy={{
+                  headline: activeTab === 0 ? headline : adText.split('\n')[0] || '',
+                  body_text: activeTab === 0 ? adText : adText,
+                  cta: activeTab === 0 ? cta : ''
+                }}
+                improvedCopy={{
+                  headline: abcVariants[0]?.headline || '',
+                  body_text: abcVariants[0]?.body_text || '',
+                  cta: abcVariants[0]?.cta || '',
+                  score: abcVariants[0]?.predicted_score || 85
+                }}
+                variations={abcVariants.slice(1)} // Skip first as it's the improved copy
                 platform={platform}
+                onImprove={(variation) => {
+                  console.log('Further improve:', variation);
+                  handleRegenerateABCVariant(variation.id);
+                }}
+                onExport={(variations) => {
+                  console.log('Export variations:', variations);
+                  // Implement export functionality
+                }}
+                isLoading={isGeneratingABC}
               />
             </Box>
           </motion.div>

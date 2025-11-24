@@ -116,10 +116,21 @@ const Register = () => {
 
       if (result.success) {
         setSuccess(true);
-        // Navigate to new analysis after a brief success message
-        setTimeout(() => {
-          navigate('/analysis/new');
-        }, 2000);
+
+        // Check if there's a pending team invitation
+        const pendingInviteCode = localStorage.getItem('pendingInviteCode');
+
+        if (pendingInviteCode) {
+          // If there's a pending invitation, redirect to join-team page
+          setTimeout(() => {
+            navigate('/join-team');
+          }, 1500);
+        } else {
+          // Navigate to new analysis after a brief success message
+          setTimeout(() => {
+            navigate('/analysis/new');
+          }, 2000);
+        }
       } else {
         const errorMessage = result.error || 'Registration failed';
         

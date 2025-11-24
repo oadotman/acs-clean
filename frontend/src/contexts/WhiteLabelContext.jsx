@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
+import * as whitelabelAPI from '../services/whitelabelService';
 
 const WhiteLabelContext = createContext();
 
@@ -42,7 +43,7 @@ const DEFAULT_SETTINGS = {
 
 export const WhiteLabelProvider = ({ children }) => {
   const [settings, setSettings] = useState(() => {
-    // Load from localStorage on initialization
+    // Load from localStorage on initialization (fallback)
     try {
       const saved = localStorage.getItem('whiteLabel-settings');
       return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
@@ -54,6 +55,10 @@ export const WhiteLabelProvider = ({ children }) => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [agencyId, setAgencyId] = useState(() => {
+    // Get agency ID from localStorage
+    return localStorage.getItem('whiteLabel-agencyId') || null;
+  });
 
   // Persist settings to localStorage whenever they change
   useEffect(() => {
@@ -130,16 +135,35 @@ export const WhiteLabelProvider = ({ children }) => {
     }
   };
 
-  // Handle logo upload
+  // Handle logo upload (with backend API)
   const handleLogoUpload = async (file) => {
     try {
-      const logoData = await uploadFile(file, 'logo');
-      updateSetting('customLogo', logoData);
-      toast.success('Logo uploaded successfully!');
+      setIsLoading(true);
+
+      // If no agency exists, create one first
+      if (!agencyId) {
+        const defaultName = settings.companyName || 'My Agency';
+        const agency = await whitelabelAPI.createAgency(defaultName);
+        setAgencyId(agency.id);
+        localStorage.setItem('whiteLabel-agencyId', agency.id);
+      }
+
+      // Upload logo to backend (Supabase Storage)
+      const result = await whitelabelAPI.uploadLogo(agencyId, file);
+
+      if (result.success) {
+        updateSetting('customLogo', result.url);
+        toast.success('Logo uploaded successfully!');
+        return result.url;
+      } else {
+        throw new Error('Upload failed');
+      }
     } catch (error) {
       console.error('Logo upload failed:', error);
-      toast.error(error.message);
+      toast.error(error.message || 'Failed to upload logo');
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -209,23 +233,32 @@ export const WhiteLabelProvider = ({ children }) => {
   // Get effective branding values (kept for backward compatibility)
   const getEffectiveBranding = () => effectiveBranding;
 
-  // Save settings (for wizard completion)
+  // Save settings (with backend API)
   const saveSettings = async () => {
     try {
       setIsLoading(true);
-      
-      // In production, this would save to backend API
-      // For now, we just ensure localStorage is updated
+
+      // If no agency exists, create one first
+      if (!agencyId) {
+        const defaultName = settings.companyName || 'My Agency';
+        const agency = await whitelabelAPI.createAgency(defaultName);
+        setAgencyId(agency.id);
+        localStorage.setItem('whiteLabel-agencyId', agency.id);
+      }
+
+      // Save settings to backend
+      await whitelabelAPI.updateWhitelabelSettings(agencyId, settings);
+
+      // Also save to localStorage as backup
       localStorage.setItem('whiteLabel-settings', JSON.stringify(settings));
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       console.log('✅ White-label settings saved successfully');
+      toast.success('Settings saved successfully!');
       return { success: true };
     } catch (error) {
       console.error('Failed to save white-label settings:', error);
       setError(error.message);
+      toast.error('Failed to save settings');
       throw error;
     } finally {
       setIsLoading(false);
@@ -251,42 +284,65 @@ export const WhiteLabelProvider = ({ children }) => {
            settings.primaryColor;
   };
 
+  // Load settings from backend on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      const savedAgencyId = localStorage.getItem('whiteLabel-agencyId');
+      if (savedAgencyId) {
+        try {
+          setIsLoading(true);
+          const backendSettings = await whitelabelAPI.getWhitelabelSettings(savedAgencyId);
+          setSettings(prev => ({ ...prev, ...backendSettings }));
+          console.log('✅ Loaded settings from backend');
+        } catch (error) {
+          console.warn('Could not load backend settings, using localStorage:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadSettings();
+  }, []);
+
   const value = {
     // Settings state
     settings,
     isLoading,
     error,
-    
+    agencyId,
+    setAgencyId,
+
     // Settings actions
     updateSetting,
     updateSettings,
     resetSettings,
     saveSettings,
-    
+
     // File uploads
     handleLogoUpload,
     handleFaviconUpload,
     handleReportLogoUpload,
     uploadFile,
-    
+
     // Preview mode
     togglePreviewMode,
     enablePreview,
     disablePreview,
-    
+
     // Setup wizard
     nextStep,
     prevStep,
     completeSetup,
-    
+
     // Validation
     validateDomain,
     isMinimumSetupComplete,
-    
+
     // Computed values
     effectiveBranding,
     getEffectiveBranding,
-    
+
     // Constants
     DEFAULT_SETTINGS
   };

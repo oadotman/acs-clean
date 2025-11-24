@@ -33,7 +33,7 @@ import {
   EVIDENCE_LEVELS 
 } from '../utils/evidenceUtils';
 import UserFeedback from './shared/UserFeedback';
-import ABCTestVariants from './shared/ABCTestVariants';
+import ABCTestingGrid from './shared/ABCTestingGrid';
 import creativeControlsService from '../services/creativeControlsService';
 
 const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, onExport }) => {
@@ -132,8 +132,10 @@ const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, o
       scoreImprovement: analysisData.improvement || Math.max(0, (analysisData.score || 75) - (analysisData.originalScore || 60)),
       text: (() => {
         // Try to get the best alternative from AI analysis
-        if (analysisData.fullAnalysis?.alternatives && analysisData.fullAnalysis.alternatives.length > 0) {
-          const bestAlt = analysisData.fullAnalysis.alternatives.reduce((best, current) => 
+        // Backend returns alternatives directly, not in fullAnalysis
+        const alternatives = analysisData.alternatives || analysisData.fullAnalysis?.alternatives || [];
+        if (alternatives.length > 0) {
+          const bestAlt = alternatives.reduce((best, current) => 
             (current.predicted_score || 0) > (best.predicted_score || 0) ? current : best
           );
           return `${bestAlt.headline}\n\n${bestAlt.body_text}\n\n${bestAlt.cta}`;
@@ -159,14 +161,26 @@ const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, o
       ];
     })(),
     variations: (() => {
-      if (analysisData.fullAnalysis?.alternatives && analysisData.fullAnalysis.alternatives.length > 0) {
-        return analysisData.fullAnalysis.alternatives.map((alt, index) => ({
+      // Backend returns alternatives directly, not in fullAnalysis
+      console.log('🔍 AnalysisResults: analysisData =', analysisData);
+      console.log('🔍 AnalysisResults: analysisData.alternatives =', analysisData?.alternatives);
+      console.log('🔍 AnalysisResults: analysisData.fullAnalysis?.alternatives =', analysisData?.fullAnalysis?.alternatives);
+      
+      const alternatives = analysisData.alternatives || analysisData.fullAnalysis?.alternatives || [];
+      console.log('🔍 AnalysisResults: Final alternatives =', alternatives);
+      console.log('🔍 AnalysisResults: alternatives.length =', alternatives.length);
+      
+      if (alternatives.length > 0) {
+        const mapped = alternatives.map((alt, index) => ({
           name: alt.variant_type || `Variation ${index + 1}`,
           score: alt.predicted_score || 75,
           text: `${alt.headline}\n\n${alt.body_text}\n\n${alt.cta}`,
           description: alt.improvement_reason || "AI-generated alternative"
         }));
+        console.log('✅ AnalysisResults: Mapped variations =', mapped);
+        return mapped;
       }
+      console.log('❌ AnalysisResults: No alternatives found, returning empty array');
       return [];
     })()
   } : {
@@ -445,27 +459,47 @@ const AnalysisResults = ({ originalText, analysisData, onClose, onNewAnalysis, o
         compact={false}
       />
 
-      {/* A/B/C Test Results */}
-      <AnimatePresence>
-        {showABCResults && abcVariants.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.4 }}
-          >
-            <ABCTestVariants
-              variants={abcVariants}
-              onGenerate={handleGenerateABCVariants}
-              onRegenerateVariant={handleRegenerateABCVariant}
-              onSaveVariant={(variant) => console.log('Save variant:', variant)}
-              onFeedbackSubmit={handleFeedbackSubmit}
-              isGenerating={isGeneratingABC}
+      {/* NEW Dynamic A/B/C Testing Grid */}
+      {(() => {
+        console.log('🎨 AnalysisResults: Checking if should render ABCTestingGrid');
+        console.log('🎨 AnalysisResults: results.variations =', results.variations);
+        console.log('🎨 AnalysisResults: results.variations.length =', results.variations?.length);
+        const shouldRender = results.variations && results.variations.length > 0;
+        console.log('🎨 AnalysisResults: Should render =', shouldRender);
+        return shouldRender;
+      })() && (
+        <Card elevation={3} sx={{ mb: 4 }}>
+          <CardContent>
+            {console.log('✅ AnalysisResults: Rendering ABCTestingGrid with variations:', results.variations)}
+            <ABCTestingGrid
+              originalCopy={{
+                headline: originalText?.split('\n')[0] || '',
+                body_text: originalText || '',
+                cta: ''
+              }}
+              improvedCopy={{
+                headline: results.improved.text.split('\n')[0] || '',
+                body_text: results.improved.text.split('\n').slice(1).join('\n') || '',
+                cta: '',
+                score: results.improved.score
+              }}
+              variations={analysisData?.alternatives || results.variations}
               platform={analysisData?.platform || 'facebook'}
+              onImprove={(variation) => {
+                console.log('Further improve:', variation);
+                toast('Iterative improvement coming soon!', { icon: '🚀' });
+              }}
+              onExport={(variations) => {
+                console.log('Export variations:', variations);
+                if (onExport) onExport();
+              }}
+              isLoading={false}
             />
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* A/B/C Test Results now handled by ABCTestingGrid above */}
 
       {/* A/B Variations Section */}
       <Collapse in={showVariations}>

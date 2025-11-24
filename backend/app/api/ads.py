@@ -5,8 +5,11 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.services.ad_analysis_service_enhanced import EnhancedAdAnalysisService
 from app.services.production_ai_generator import ProductionAIService
-from app.auth import get_current_user, require_subscription_limit
+from app.auth import get_current_user, require_subscription_limit, require_active_user
 from app.models.user import User
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 from app.schemas.ads import (
     AdInput, 
     CompetitorAd, 
@@ -17,6 +20,7 @@ from app.schemas.ads import (
 )
 from app.utils.text_parser import TextParser
 from app.utils.file_extract import FileExtractor
+from app.utils.input_validator import AdInputValidator, ValidationError
 from app.core.config import settings
 import json
 import uuid
@@ -42,27 +46,46 @@ async def comprehensive_analyze_ad(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_subscription_limit)
 ):
-    """Comprehensive analysis with all 9 tools - new endpoint"""
+    """Comprehensive analysis with all 9 tools - new endpoint with input validation"""
     try:
         # Extract data from request
         ad_copy = request.get('ad_copy', '')
         platform = request.get('platform', 'facebook')
         user_id = request.get('user_id')
-        
+
         if not ad_copy:
             raise HTTPException(status_code=400, detail="ad_copy is required")
-        
+
         # Convert ad_copy string to AdInput format if needed
         if isinstance(ad_copy, str):
-            # Parse the ad copy into components
-            ad_input = AdInput(
-                headline=ad_copy[:100] if len(ad_copy) > 100 else ad_copy,  # First 100 chars as headline
-                body_text=ad_copy,
-                cta="Learn More",  # Default CTA
+            # Parse the ad copy into components (simple split)
+            headline = ad_copy[:100] if len(ad_copy) > 100 else ad_copy  # First 100 chars as headline
+            body_text = ad_copy
+            cta = "Learn More"  # Default CTA
+        else:
+            headline = ad_copy.get('headline', '')
+            body_text = ad_copy.get('body_text', '')
+            cta = ad_copy.get('cta', 'Learn More')
+
+        # Validate input (prevents crashes on edge cases)
+        try:
+            validated = AdInputValidator.validate_ad_input(
+                headline=headline,
+                body_text=body_text,
+                cta=cta,
                 platform=platform
             )
-        else:
-            ad_input = AdInput(**ad_copy)
+
+            # Use validated and sanitized values
+            ad_input = AdInput(
+                headline=validated['headline'],
+                body_text=validated['body_text'],
+                cta=validated['cta'],
+                platform=validated['platform']
+            )
+
+        except ValidationError as ve:
+            raise HTTPException(status_code=400, detail=str(ve))
         
         # Create analysis request
         analysis_request = AdAnalysisRequest(
@@ -93,95 +116,122 @@ async def analyze_ad(
     request: AdAnalysisRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_subscription_limit)
+    current_user: User = Depends(require_active_user)  # ✅ FIXED: Enforce authentication
 ):
-    """Analyze an ad using real OpenAI and generate alternatives"""
+    """
+    Analyze an ad using EnhancedAdAnalysisService with AI-powered improvements.
+
+    SECURITY: This endpoint now requires authentication and atomically deducts credits
+    before analysis with automatic refund on failure.
+    """
+    from app.services.credit_service import CreditService
+
     analysis_id = str(uuid.uuid4())
-    
+    credit_service = CreditService(db)
+    credits_consumed = False
+
     try:
-        # Prepare ad data for AI analysis
-        ad_data = {
-            "headline": request.ad.headline,
-            "body_text": request.ad.body_text,
-            "cta": request.ad.cta,
-            "platform": request.ad.platform,
-            "industry": getattr(request.ad, 'industry', None),
-            "target_audience": getattr(request.ad, 'target_audience', None)
-        }
-        
-        # Use real AI service if available, otherwise fallback to enhanced service
-        if ai_service:
-            try:
-                # Generate AI-powered analysis and improvement
-                ai_result = await ai_service.generate_ad_alternative(
-                    ad_data=ad_data,
-                    variant_type="comprehensive_analysis"
-                )
-                
-                # Extract scores from AI result
-                ai_scores = ai_result.get('scores', {})
-                ai_feedback = ai_result.get('feedback', [])
-                ai_alternatives = ai_result.get('alternatives', [])
-                
-                # Create comprehensive scores
-                scores = {
-                    "overall_score": ai_scores.get('overall_score', 75),
-                    "clarity_score": ai_scores.get('clarity_score', 75),
-                    "persuasion_score": ai_scores.get('persuasion_score', 75),
-                    "emotion_score": ai_scores.get('emotion_score', 75),
-                    "cta_strength_score": ai_scores.get('cta_strength_score', 75),
-                    "platform_fit_score": ai_scores.get('platform_fit_score', 75),
-                    "analysis_data": {
-                        "feedback": ai_feedback,
-                        "ai_powered": True,
-                        "model_used": "gpt-4",
-                        "timestamp": datetime.utcnow().isoformat(),
-                        "full_ai_response": ai_result
-                    }
+        print(f"🔍 Starting analysis for user {current_user.id}: {request.ad.headline[:50]}...")
+
+        # ✅ FIXED: Atomic credit consumption with race condition protection
+        success, credit_result = credit_service.consume_credits_atomic(
+            user_id=current_user.supabase_user_id,
+            operation='FULL_ANALYSIS',
+            quantity=1,
+            description=f"Analysis for ad: {request.ad.headline[:50]}"
+        )
+
+        if not success:
+            print(f"❌ Insufficient credits for user {current_user.id}")
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    'error': 'Insufficient credits',
+                    'required': credit_result.get('required', 2),
+                    'available': credit_result.get('available', 0),
+                    'message': 'You do not have enough credits for this analysis. Please upgrade your plan.'
                 }
-                
-                # Format alternatives from AI
-                alternatives = []
-                for alt in ai_alternatives:
-                    alternatives.append({
-                        "variant_type": alt.get("type", "ai_improved"),
-                        "headline": alt.get("headline", request.ad.headline),
-                        "body_text": alt.get("body_text", request.ad.body_text),
-                        "cta": alt.get("cta", request.ad.cta),
-                        "improvement_reason": alt.get("reason", "AI-generated improvement"),
-                        "predicted_score": alt.get("expected_score", 85)
-                    })
-                
-                feedback_text = " ".join(ai_feedback) if isinstance(ai_feedback, list) else str(ai_feedback)
-                
-            except Exception as ai_error:
-                print(f"AI service failed: {ai_error}")
-                # Fallback to enhanced service if AI fails
-                return await _fallback_to_enhanced_service(request, db, current_user, analysis_id)
-        else:
-            # AI service not available, use enhanced service
-            return await _fallback_to_enhanced_service(request, db, current_user, analysis_id)
-        
-        # Save analysis to database
-        await _save_analysis_to_supabase(
-            analysis_id=analysis_id,
+            )
+
+        credits_consumed = True
+        print(f"✅ Credits deducted: {credit_result.get('consumed')} credits, remaining: {credit_result.get('remaining')}")
+
+        # ALWAYS use EnhancedAdAnalysisService - it has all our AI improvements
+        ad_service = EnhancedAdAnalysisService(db)
+        analysis = await ad_service.analyze_ad(
             user_id=current_user.id,
-            ad_data=ad_data,
-            scores=scores,
-            alternatives=alternatives,
-            feedback=feedback_text,
-            db=db
+            ad=request.ad,
+            competitor_ads=request.competitor_ads
         )
         
+        print(f"✅ Analysis complete. Generated {len(analysis.alternatives)} alternatives")
+        
+        # Format response for frontend compatibility
+        # Include tool_results if available (from SDK orchestration)
+        tool_results = {}
+        if hasattr(analysis, 'tool_results'):
+            tool_results = analysis.tool_results
+        elif hasattr(analysis, 'analysis_data') and isinstance(analysis.analysis_data, dict):
+            # Try to extract from analysis_data if stored there
+            tool_results = analysis.analysis_data.get('tool_results', {})
+        
         return {
-            "analysis_id": analysis_id,
-            "scores": scores,
-            "alternatives": alternatives,
-            "feedback": feedback_text
+            "analysis_id": analysis.analysis_id,
+            "scores": {
+                "overall_score": analysis.scores.overall_score,
+                "clarity_score": analysis.scores.clarity_score,
+                "persuasion_score": analysis.scores.persuasion_score,
+                "emotion_score": analysis.scores.emotion_score,
+                "cta_strength_score": analysis.scores.cta_strength,
+                "platform_fit_score": analysis.scores.platform_fit_score,
+                "analysis_data": {
+                    "feedback": analysis.feedback,
+                    "quick_wins": analysis.quick_wins,
+                    "competitor_comparison": analysis.competitor_comparison,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "ai_powered": True
+                }
+            },
+            "alternatives": [{
+                "variant_type": alt.variant_type,
+                "headline": alt.headline,
+                "body_text": alt.body_text,
+                "cta": alt.cta,
+                "improvement_reason": alt.improvement_reason,
+                "predicted_score": alt.expected_improvement if hasattr(alt, 'expected_improvement') else 75
+            } for alt in analysis.alternatives],
+            "feedback": analysis.feedback,
+            # Include detailed tool results for comprehensive display
+            "tool_results": tool_results
         }
         
+    except HTTPException:
+        # Re-raise HTTP exceptions without refund (e.g., insufficient credits)
+        raise
     except Exception as e:
-        print(f"Analysis failed: {str(e)}")
+        print(f"❌ Analysis failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+        # ✅ FIXED: Refund credits if analysis failed after consumption
+        if credits_consumed:
+            print(f"🔄 Refunding credits to user {current_user.id} due to analysis failure")
+            refund_success, refund_result = credit_service.refund_credits(
+                user_id=current_user.supabase_user_id,
+                operation='FULL_ANALYSIS',
+                quantity=1,
+                reason=f"Analysis failed: {str(e)[:100]}"
+            )
+            if refund_success:
+                print(f"✅ Credits refunded: {refund_result.get('refunded')} credits")
+            else:
+                print(f"❌ Refund failed: {refund_result.get('error')}")
+                # Log for manual resolution
+                logger.error(
+                    f"MANUAL REFUND NEEDED: user_id={current_user.id}, "
+                    f"operation=FULL_ANALYSIS, reason={str(e)}"
+                )
+
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 @router.get("/history", response_model=List[dict])
@@ -387,7 +437,7 @@ async def _fallback_to_enhanced_service(request: AdAnalysisRequest, db: Session,
             "cta_strength_score": analysis.scores.cta_strength,
             "platform_fit_score": analysis.scores.platform_fit_score,
             "analysis_data": {
-                "feedback": "\n".join(analysis.feedback) if isinstance(analysis.feedback, list) else analysis.feedback,
+                "feedback": "\n".join(str(f) for f in analysis.feedback if f) if isinstance(analysis.feedback, list) else (str(analysis.feedback) if analysis.feedback else "Analysis completed successfully"),
                 "quick_wins": analysis.quick_wins,
                 "competitor_comparison": analysis.competitor_comparison,
                 "tools_used": getattr(analysis, 'tools_used', []),
@@ -403,7 +453,7 @@ async def _fallback_to_enhanced_service(request: AdAnalysisRequest, db: Session,
             "improvement_reason": alt.improvement_reason if hasattr(alt, 'improvement_reason') else "Enhanced analysis",
             "predicted_score": alt.expected_improvement if hasattr(alt, 'expected_improvement') else 75
         } for alt in analysis.alternatives],
-        "feedback": "\n".join(analysis.feedback) if isinstance(analysis.feedback, list) else analysis.feedback
+        "feedback": "\n".join(str(f) for f in analysis.feedback if f) if isinstance(analysis.feedback, list) else (str(analysis.feedback) if analysis.feedback else "Analysis completed successfully")
     }
 
 

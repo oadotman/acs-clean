@@ -48,15 +48,8 @@ export const MAIN_NAV_ITEMS = [
     icon: Folder,
     path: '/projects',
     description: 'Manage your projects'
-  },
-  {
-    id: 'team',
-    label: 'Team',
-    icon: Groups,
-    path: '/team',
-    description: 'Team management',
-    requiresTeam: true // Show only for team/agency plans
   }
+  // Team management is now under Agency section (/agency/team)
 ];
 
 // Account & Settings navigation items
@@ -185,7 +178,6 @@ export const PATHS = {
   NEW_ANALYSIS: '/analysis/new',
   ANALYSES: '/history',
   PROJECTS: '/projects',
-  TEAM: '/team',
   SETTINGS: '/profile',
   BILLING: '/billing',
   // Agency paths

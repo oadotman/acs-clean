@@ -152,6 +152,8 @@ const NewAnalysis = () => {
   const isSPAMode = location.pathname === '/analysis/spa';
   const [step, setStep] = useState('input'); // 'input', 'comprehensive-analyzing', 'comprehensive-results'
   const [adCopy, setAdCopy] = useState('');
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [detectedLanguage, setDetectedLanguage] = useState(null);
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [comprehensiveResults, setComprehensiveResults] = useState(null);
   const [analysisProgress, setAnalysisProgress] = useState(0);
@@ -166,16 +168,30 @@ const NewAnalysis = () => {
   const [showToolSelector, setShowToolSelector] = useState(false);
   const textareaRef = useRef(null);
   
+  // Strategic Context state (7 required inputs for AI quality)
+  const [strategicContext, setStrategicContext] = useState({
+    productOrService: '',
+    targetAudienceDetail: '',
+    valueProposition: '',
+    audiencePainPoints: '',
+    desiredOutcomes: '',
+    trustFactors: '',
+    offerDetails: ''
+  });
+
+  // Strategic context collapsible state
+  const [strategicContextExpanded, setStrategicContextExpanded] = useState(false);
+
   // Brand voice state
   const [brandVoice, setBrandVoice] = useState({
     tone: 'conversational',
     personality: 'friendly',
     formality: 'casual',
-    targetAudience: '',
     brandValues: '',
-    pastAds: '' // For learning from existing content
+    pastAds: '', // For learning from existing content
+    emojiPreference: 'auto' // 'auto', 'include', 'exclude'
   });
-  
+
   // Brand voice collapsible state
   const [brandVoiceExpanded, setBrandVoiceExpanded] = useState(false);
   
@@ -283,9 +299,63 @@ const NewAnalysis = () => {
   }, [location.state, location.search]);
 
   // Handle ad copy paste/input
+  // Validation function
+  const validateAdCopy = (text) => {
+    const errors = [];
+    const MIN_LENGTH = 10;
+    const MAX_LENGTH = 5000;
+
+    // Length validation
+    if (text.trim().length < MIN_LENGTH) {
+      errors.push(`Ad copy must be at least ${MIN_LENGTH} characters`);
+    }
+    if (text.length > MAX_LENGTH) {
+      errors.push(`Ad copy must not exceed ${MAX_LENGTH} characters`);
+    }
+
+    // Placeholder text detection
+    const placeholderPatterns = ['lorem ipsum', 'your headline here', 'enter text', 'sample text'];
+    if (placeholderPatterns.some(pattern => text.toLowerCase().includes(pattern))) {
+      errors.push('Please use real ad copy, not placeholder text');
+    }
+
+    // Language detection (simple pattern-based)
+    if (text.trim().length >= 20) {
+      const englishWords = ['the', 'and', 'you', 'your', 'get', 'now', 'with', 'for'];
+      const spanishWords = ['el', 'la', 'los', 'las', 'de', 'que', 'tu', 'para'];
+      const germanWords = ['der', 'die', 'das', 'und', 'sie', 'für'];
+      const frenchWords = ['le', 'la', 'les', 'de', 'et', 'vous'];
+      const portugueseWords = ['o', 'a', 'os', 'as', 'de', 'que'];
+
+      const textLower = text.toLowerCase();
+      const words = textLower.split(/\s+/);
+
+      const scores = {
+        'English': englishWords.filter(w => words.includes(w)).length,
+        'Spanish': spanishWords.filter(w => words.includes(w)).length,
+        'German': germanWords.filter(w => words.includes(w)).length,
+        'French': frenchWords.filter(w => words.includes(w)).length,
+        'Portuguese': portugueseWords.filter(w => words.includes(w)).length
+      };
+
+      const detected = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
+      if (scores[detected] > 0) {
+        setDetectedLanguage(detected);
+      }
+    } else {
+      setDetectedLanguage(null);
+    }
+
+    return errors;
+  };
+
   const handleAdCopyChange = (event) => {
     const text = event.target.value;
     setAdCopy(text);
+
+    // Validate on change (but only show errors if text is long enough)
+    const errors = validateAdCopy(text);
+    setValidationErrors(text.trim().length > 0 ? errors : []);
   };
 
   // Handle platform selection
@@ -301,11 +371,20 @@ const NewAnalysis = () => {
 
   // Comprehensive analysis
   const runAnalysis = async () => {
+    console.log('👉 ANALYZE BUTTON CLICKED!');
+    console.log('💳 Checking credits for FULL_ANALYSIS...');
+    console.log('💳 hasEnoughCredits:', hasEnoughCredits('FULL_ANALYSIS'));
+    console.log('💳 Credit system state:', { hasEnoughCredits, executeWithCredits, getCreditRequirement });
+    
     // Check if user has enough credits for a full analysis
     if (!hasEnoughCredits('FULL_ANALYSIS')) {
+      console.error('❌ Not enough credits! Analysis blocked.');
+      toast.error('Not enough credits for analysis. Please check your credit balance.');
       // Toast will be shown automatically by the credit system
       return;
     }
+    
+    console.log('✅ Credits OK, starting analysis...');
     
     // Execute analysis with credit consumption
     const result = await executeWithCredits(
@@ -326,18 +405,43 @@ const NewAnalysis = () => {
 
   // Handle completion of comprehensive analysis
   const handleComprehensiveAnalysisComplete = (results) => {
-    console.log('🎯 Analysis complete! Results received:', results);
-    console.log('📊 Analysis ID:', results?.analysis_id);
-    
-    // Initialize improvement count if not present
-    results.improvementCount = results.improvementCount || 0;
-    setComprehensiveResults(results);
-    
-    // Show results in the current component using ComprehensiveResults
-    setStep('comprehensive-results');
-    toast.success('Comprehensive analysis complete! 🎉');
-    
-    console.log('✅ Results will be displayed using ComprehensiveResults component');
+    try {
+      console.log('🎯 Analysis complete! Results received:', results);
+      console.log('📊 Analysis ID:', results?.analysis_id);
+      console.log('🔍 Results structure:', {
+        hasOriginal: !!results?.original,
+        hasImproved: !!results?.improved,
+        hasAnalysisId: !!results?.analysis_id,
+        keys: Object.keys(results || {})
+      });
+      
+      // Validate results object
+      if (!results || typeof results !== 'object') {
+        console.error('❌ Invalid results object:', results);
+        toast.error('Invalid analysis results received');
+        setStep('input');
+        return;
+      }
+      
+      // Initialize improvement count if not present
+      results.improvementCount = results.improvementCount || 0;
+      
+      console.log('📦 Setting comprehensiveResults state...');
+      setComprehensiveResults(results);
+      
+      console.log('📦 Setting step to comprehensive-results...');
+      // Show results in the current component using ComprehensiveResults
+      setStep('comprehensive-results');
+      
+      console.log('✅ State updates complete, should now render ComprehensiveResults component');
+      toast.success('Comprehensive analysis complete! 🎉');
+      
+    } catch (error) {
+      console.error('❌ Error in handleComprehensiveAnalysisComplete:', error);
+      console.error('Error stack:', error.stack);
+      toast.error('Failed to display results: ' + error.message);
+      setStep('input');
+    }
   };
 
   // Handle further improvement requests
@@ -1094,13 +1198,30 @@ const NewAnalysis = () => {
       <ComprehensiveAnalysisLoader
         adCopy={adCopy}
         platform={selectedPlatform}
+        strategicContext={strategicContext}
         brandVoice={brandVoice}
         onComplete={handleComprehensiveAnalysisComplete}
+        onError={(error) => {
+          console.error('❌ Analysis error in parent:', error);
+          toast.error('Analysis failed: ' + (error.message || 'Unknown error'));
+          setStep('input');
+        }}
       />
     );
   }
 
-  if (step === 'comprehensive-results' && comprehensiveResults) {
+  if (step === 'comprehensive-results') {
+    console.log('🔍 Rendering comprehensive-results step');
+    console.log('🔍 comprehensiveResults exists:', !!comprehensiveResults);
+    console.log('🔍 comprehensiveResults keys:', comprehensiveResults ? Object.keys(comprehensiveResults) : 'null');
+    
+    if (!comprehensiveResults) {
+      console.error('❌ comprehensiveResults is null/undefined, redirecting to input');
+      toast.error('Analysis results not found');
+      setStep('input');
+      return null;
+    }
+    
     return (
       <ComprehensiveResults
         results={comprehensiveResults}
@@ -1400,6 +1521,169 @@ const NewAnalysis = () => {
 
         </Paper>
 
+        {/* Strategic Context Configuration (7 Required Inputs for AI Quality) */}
+        {selectedPlatform && (
+          <Paper sx={{ borderRadius: 4, mb: 4, overflow: 'hidden' }}>
+            <Accordion
+              expanded={strategicContextExpanded}
+              onChange={(event, isExpanded) => setStrategicContextExpanded(isExpanded)}
+              sx={{
+                boxShadow: 'none',
+                '&:before': { display: 'none' },
+                border: 'none'
+              }}
+            >
+              <AccordionSummary
+                expandIcon={<ExpandMore />}
+                sx={{
+                  p: 4,
+                  bgcolor: 'rgba(34, 197, 94, 0.08)',
+                  '&:hover': { bgcolor: 'rgba(34, 197, 94, 0.12)' },
+                  transition: 'background-color 0.2s ease',
+                  border: '2px solid rgba(34, 197, 94, 0.3)'
+                }}
+              >
+                <Box display="flex" alignItems="center" gap={1} flex={1}>
+                  <Psychology color="success" />
+                  <Box flex={1}>
+                    <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      Strategic Context (Required for AI Variants)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {strategicContextExpanded
+                        ? 'Provide strategic insights to generate psychology-backed ad variants'
+                        : 'Complete these 7 inputs to unlock psychology-based variant generation'
+                      }
+                    </Typography>
+                  </Box>
+                  {!strategicContextExpanded && (
+                    <Chip
+                      label="Required for Variants"
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                      sx={{ ml: 2 }}
+                    />
+                  )}
+                </Box>
+              </AccordionSummary>
+
+              <AccordionDetails sx={{ p: 4, pt: 2 }}>
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  <Typography variant="body2">
+                    <strong>Why these inputs matter:</strong> AdCopySurge uses strategic context to generate 3 psychology-based variants (Benefit-Focused, Problem-Focused, Story-Driven). Analysis will run without this data, but AI variant generation requires complete strategic context for quality output.
+                  </Typography>
+                </Alert>
+
+                <Grid container spacing={3}>
+                  {/* Product or Service */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="1. Product or Service"
+                      placeholder="e.g., Project management SaaS for remote teams"
+                      value={strategicContext.productOrService}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, productOrService: e.target.value }))}
+                      variant="outlined"
+                      helperText="What are you advertising? Be specific."
+                    />
+                  </Grid>
+
+                  {/* Target Audience */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="2. Target Audience"
+                      placeholder="e.g., Tech-savvy remote team managers, 30-45 years old, managing 10-50 person distributed teams, frustrated with coordination tools"
+                      value={strategicContext.targetAudienceDetail}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, targetAudienceDetail: e.target.value }))}
+                      variant="outlined"
+                      helperText="Demographics + psychographics. Who are they? What do they care about?"
+                    />
+                  </Grid>
+
+                  {/* Value Proposition */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="3. Value Proposition"
+                      placeholder="e.g., Only project management tool built specifically for remote teams with automatic timezone coordination and async-first workflows"
+                      value={strategicContext.valueProposition}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, valueProposition: e.target.value }))}
+                      variant="outlined"
+                      helperText="Why customers buy from YOU vs. competitors"
+                    />
+                  </Grid>
+
+                  {/* Pain Points */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="4. Audience Pain Points"
+                      placeholder="e.g., Constant meeting interruptions, timezone confusion, work happening in silos, delayed decisions, team burnout from async overhead"
+                      value={strategicContext.audiencePainPoints}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, audiencePainPoints: e.target.value }))}
+                      variant="outlined"
+                      helperText="Problems, frustrations, struggles they face (bullet list format encouraged)"
+                    />
+                  </Grid>
+
+                  {/* Desired Outcomes */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="5. Desired Outcomes"
+                      placeholder="e.g., Teams aligned without meetings, faster project delivery, improved work-life balance, higher productivity, better team morale"
+                      value={strategicContext.desiredOutcomes}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, desiredOutcomes: e.target.value }))}
+                      variant="outlined"
+                      helperText="What they want to achieve (bullet list format encouraged)"
+                    />
+                  </Grid>
+
+                  {/* Trust Factors */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="6. Trust Factors"
+                      placeholder="e.g., 4.9/5 stars from 2,000+ reviews, Used by Fortune 500 companies, SOC 2 certified, 99.9% uptime SLA, Featured in TechCrunch"
+                      value={strategicContext.trustFactors}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, trustFactors: e.target.value }))}
+                      variant="outlined"
+                      helperText="Reviews, social proof, guarantees, certifications, credibility signals"
+                    />
+                  </Grid>
+
+                  {/* Offer Details */}
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="7. Offer Details"
+                      placeholder="e.g., 14-day free trial, no credit card required, 30-day money-back guarantee, 20% off first year with code REMOTE2024"
+                      value={strategicContext.offerDetails}
+                      onChange={(e) => setStrategicContext(prev => ({ ...prev, offerDetails: e.target.value }))}
+                      variant="outlined"
+                      helperText="Discount, pricing, guarantee, terms, bundles, special offers"
+                    />
+                  </Grid>
+                </Grid>
+              </AccordionDetails>
+            </Accordion>
+          </Paper>
+        )}
+
         {/* Enhanced Brand Voice Configuration */}
         {selectedPlatform && (
           <Paper sx={{ borderRadius: 4, mb: 4, overflow: 'hidden' }}>
@@ -1546,29 +1830,34 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                     <Grid item xs={12} md={6}>
                       <TextField
                         fullWidth
-                        label="Target Audience"
-                        placeholder="e.g., Tech-savvy millennials, Small business owners"
-                        value={brandVoice.targetAudience}
-                        onChange={(e) => setBrandVoice(prev => ({ ...prev, targetAudience: e.target.value }))}
-                        variant="outlined"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
                         label="Brand Values"
-                        placeholder="e.g., Innovation, Sustainability, Quality"
+                        placeholder="e.g., Innovation, Sustainability, Quality, Authenticity"
                         value={brandVoice.brandValues}
                         onChange={(e) => setBrandVoice(prev => ({ ...prev, brandValues: e.target.value }))}
                         variant="outlined"
+                        helperText="Core brand identity values (separate from strategic context)"
                       />
+                    </Grid>
+                    
+                    <Grid item xs={12} md={4}>
+                      <FormControl fullWidth>
+                        <InputLabel>Emoji Usage</InputLabel>
+                        <Select
+                          value={brandVoice.emojiPreference}
+                          onChange={(e) => setBrandVoice(prev => ({ ...prev, emojiPreference: e.target.value }))}
+                          label="Emoji Usage"
+                        >
+                          <MenuItem value="auto">Auto (Platform-appropriate) 🤖</MenuItem>
+                          <MenuItem value="include">Include Emojis 😊</MenuItem>
+                          <MenuItem value="exclude">No Emojis 🚫</MenuItem>
+                        </Select>
+                      </FormControl>
                     </Grid>
                   </Grid>
                 </Box>
                 
                 {/* Brand Voice Status Indicator */}
-                {(brandVoice.pastAds.trim() || brandVoice.targetAudience.trim() || brandVoice.brandValues.trim()) && (
+                {(brandVoice.pastAds.trim() || brandVoice.brandValues.trim() || brandVoice.emojiPreference !== 'auto') && (
                   <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(124, 58, 237, 0.05)', borderRadius: 2 }}>
                     <Box display="flex" alignItems="center" gap={1}>
                       <CheckCircle sx={{ color: 'success.main', fontSize: '1.2rem' }} />
@@ -1579,7 +1868,8 @@ Ad 2: "Stop losing customers to poor follow-up. Our automated system keeps every
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                       {brandVoice.pastAds.trim() ? '✅ Learning from past ads • ' : ''}
                       {brandVoice.targetAudience.trim() ? '✅ Target audience defined • ' : ''}
-                      {brandVoice.brandValues.trim() ? '✅ Brand values set' : ''}
+                      {brandVoice.brandValues.trim() ? '✅ Brand values set • ' : ''}
+                      {brandVoice.emojiPreference === 'include' ? '✅ Emojis: Include' : brandVoice.emojiPreference === 'exclude' ? '✅ Emojis: Exclude' : ''}
                     </Typography>
                   </Box>
                 )}
@@ -1647,6 +1937,30 @@ Get 50% off all products today! Limited time offer - shop now and save big on th
               }
             }}
           />
+
+          {/* Validation Errors */}
+          {validationErrors.length > 0 && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {validationErrors.map((error, idx) => (
+                <Typography key={idx} variant="body2">• {error}</Typography>
+              ))}
+            </Alert>
+          )}
+
+          {/* Language Support Indicator */}
+          {detectedLanguage && (
+            <Box sx={{ mb: 2, p: 2, bgcolor: 'rgba(76, 175, 80, 0.05)', borderRadius: 2, border: '1px solid rgba(76, 175, 80, 0.2)' }}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <CheckCircle sx={{ color: 'success.main', fontSize: '1.1rem' }} />
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                  Language Detected: {detectedLanguage}
+                </Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                ✅ Supported Languages: English, Spanish, German, French, Portuguese
+              </Typography>
+            </Box>
+          )}
 
           {/* Status indicators */}
           <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 1 }}>

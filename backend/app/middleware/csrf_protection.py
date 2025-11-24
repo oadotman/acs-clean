@@ -53,6 +53,9 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
             "/api/openapi.json",
             "/api/auth/login",     # Initial login doesn't have CSRF token yet
             "/api/auth/register",  # Initial registration doesn't have CSRF token yet
+            "/api/subscriptions/webhook",  # Webhook from Paddle (validated by signature)
+            # Note: Removed /api/ads/analyze and /api/ads/generate-alternatives
+            # These critical endpoints now require CSRF protection
         }
         
         # Paths that need CSRF protection (all others by default)

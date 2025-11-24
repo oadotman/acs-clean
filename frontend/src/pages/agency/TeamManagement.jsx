@@ -30,7 +30,9 @@ import {
   useMediaQuery,
   useTheme,
   CircularProgress,
-  Alert
+  Alert,
+  Checkbox,
+  ListItemText
 } from '@mui/material';
 import {
   Groups as TeamIcon,
@@ -39,14 +41,19 @@ import {
   PersonAdd as PersonAddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Email as EmailIcon
+  Email as EmailIcon,
+  ContentCopy as CopyIcon,
+  WhatsApp as WhatsAppIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 
 // Import services
-import teamService from '../../services/teamService';
+// Using the fixed version that works directly with Supabase (no backend API)
+import teamService from '../../services/teamServiceFixed';
 import { useAuth } from '../../services/authContext';
 import { canInviteTeamMembers, getTeamMemberLimits } from '../../utils/creditSystem';
 import { SUBSCRIPTION_TIERS } from '../../constants/plans';
+import toast from 'react-hot-toast';
 
 // Roles configuration with proper capitalization
 const ROLE_CONFIG = {
@@ -77,7 +84,13 @@ const AgencyTeamManagement = () => {
   const [selectedProjects, setSelectedProjects] = useState([]);
   const [selectedClients, setSelectedClients] = useState([]);
   const [isClientUser, setIsClientUser] = useState(false);
-  
+  const [invitationCode, setInvitationCode] = useState('');
+  const [codeDialogOpen, setCodeDialogOpen] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [pendingInvitesModalOpen, setPendingInvitesModalOpen] = useState(false);
+  const [pendingInvitations, setPendingInvitations] = useState([]);
+  const [loadingInvitations, setLoadingInvitations] = useState(false);
+
   // Data State
   const [agency, setAgency] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
@@ -92,6 +105,9 @@ const AgencyTeamManagement = () => {
   const [teamLimits, setTeamLimits] = useState(null);
   const [canInvite, setCanInvite] = useState(false);
 
+  // Use ref to store timeout ID so it can be cleared from anywhere
+  const loadingTimeoutRef = React.useRef(null);
+
   const handleMenuClick = (event, member) => {
     setAnchorEl(event.currentTarget);
     setSelectedMember(member);
@@ -104,40 +120,62 @@ const AgencyTeamManagement = () => {
 
   // Load agency data and team members
   useEffect(() => {
-    if (!user || !isAuthenticated) return;
-    
+    if (!user || !isAuthenticated || authLoading) {
+      console.log('⏳ Waiting for auth to complete', { user: !!user, isAuthenticated, authLoading });
+      return;
+    }
+
     // Prevent duplicate calls
     let cancelled = false;
-    
+
     const loadData = async () => {
       if (cancelled) return;
-      await loadAgencyData();
+
+      console.log('🚀 Starting agency data load for user:', user?.id);
+
+      try {
+        await loadAgencyData();
+        // Clear timeout on successful load
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+      } catch (err) {
+        console.error('❌ Error loading agency data:', err);
+        if (!cancelled) {
+          setError(err.message || 'Failed to load agency data');
+          setLoading(false);
+        }
+        // Clear timeout on error too
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+      }
     };
-    
+
     loadData();
-    
+
     // Add timeout fallback to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      if (loading && !cancelled) {
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (!cancelled) {
         console.warn('⚠️ Loading timeout - forcing completion');
+        setError('Loading timeout. Please refresh the page.');
         setLoading(false);
       }
-    }, 10000);
-    
+    }, 15000); // 15 seconds timeout
+
     return () => {
       cancelled = true;
-      clearTimeout(timeoutId);
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
     };
-  }, [user?.id, isAuthenticated]); // Only re-run if user ID or auth status changes
+  }, [user?.id, isAuthenticated, authLoading]); // Added authLoading dependency
 
   const loadAgencyData = async () => {
     console.log('\n==================== LOAD AGENCY DATA START ====================');
-    
-    // Prevent concurrent calls
-    if (loading) {
-      console.log('⚠️ Already loading, skipping duplicate call');
-      return;
-    }
     
     try {
       setLoading(true);
@@ -152,25 +190,76 @@ const AgencyTeamManagement = () => {
       
       if (!user?.id) {
         console.error('❌ No user ID available');
-        setError('User session not found. Please refresh the page.');
-        setLoading(false);
-        return;
+        throw new Error('User session not found. Please refresh the page.');
       }
       
-      // Get or create agency for the user
+      // Get or create agency for the user with proper error handling
       console.log('🔍 Calling teamService.getOrCreateUserAgency...');
-      const agencyData = await teamService.getOrCreateUserAgency(user.id);
+      const agencyData = await teamService.getOrCreateUserAgency(user.id).catch(err => {
+        console.error('❌ teamService.getOrCreateUserAgency failed:', err);
+        throw new Error(err.message || 'Unable to load agency data. Please try again.');
+      });
+      
       console.log('✅ Agency data received:', agencyData);
+      
+      // Validate agency data
+      if (!agencyData || !agencyData.id) {
+        console.error('❌ No valid agency data returned');
+        throw new Error('Failed to load or create agency. Please try refreshing the page.');
+      }
+      
       setAgency(agencyData);
       
-      // Load team members and analytics
-      const [members, analytics, agencyProjects, agencyClients] = await Promise.all([
-        teamService.getTeamMembers(agencyData.id),
-        teamService.getTeamAnalytics(agencyData.id),
-        teamService.getAgencyProjects(agencyData.id),
-        teamService.getAgencyClients(agencyData.id)
-      ]);
-      
+      // Load team members and analytics with error handling for each
+      let members = [];
+      let analytics = null;
+      let agencyProjects = [];
+      let agencyClients = [];
+
+      // Try to load team members
+      try {
+        members = await teamService.getTeamMembers(agencyData.id);
+        console.log('✅ Loaded team members:', members.length);
+      } catch (err) {
+        console.error('⚠️ Could not load team members:', err);
+        toast.error('Could not load team members. Please refresh the page.');
+        members = []; // Use empty array as fallback
+      }
+
+      // Try to load analytics
+      try {
+        analytics = await teamService.getTeamAnalytics(agencyData.id);
+        console.log('✅ Loaded analytics:', analytics);
+      } catch (err) {
+        console.error('⚠️ Could not load analytics:', err);
+        analytics = {
+          totalMembers: members.length,
+          activeMembers: members.filter(m => m.status === 'active').length,
+          pendingMembers: 0,
+          totalAnalyses: 0,
+          totalCredits: 0,
+          roleDistribution: {}
+        };
+      }
+
+      // Try to load projects
+      try {
+        agencyProjects = await teamService.getAgencyProjects(agencyData.id);
+        console.log('✅ Loaded projects:', agencyProjects.length);
+      } catch (err) {
+        console.error('⚠️ Could not load projects:', err);
+        agencyProjects = [];
+      }
+
+      // Try to load clients
+      try {
+        agencyClients = await teamService.getAgencyClients(agencyData.id);
+        console.log('✅ Loaded clients:', agencyClients.length);
+      } catch (err) {
+        console.error('⚠️ Could not load clients:', err);
+        agencyClients = [];
+      }
+
       setTeamMembers(members);
       setTeamAnalytics(analytics);
       setProjects(agencyProjects);
@@ -178,10 +267,11 @@ const AgencyTeamManagement = () => {
       
       // Check team member limits based on subscription
       // Read subscription_tier from the subscription object (user_profiles row)
-      const userTier = subscription?.subscription_tier || subscription?.tier || 'free';
+      const userTier = subscription?.subscription_tier || subscription?.tier || agencyData?.subscription_tier || 'free';
       
       console.log('\n========== TEAM LIMITS DEBUG ==========');
       console.log('📊 Raw subscription object:', subscription);
+      console.log('📊 Agency subscription_tier:', agencyData?.subscription_tier);
       console.log('📊 Subscription tier field:', subscription?.subscription_tier);
       console.log('📊 User tier field:', user?.subscription_tier);
       console.log('🔑 Final userTier determined:', userTier);
@@ -215,23 +305,32 @@ const AgencyTeamManagement = () => {
 
   const handleInviteMember = async () => {
     if (!newMemberEmail || !agency) return;
-    
+
     try {
       setActionLoading(true);
-      
+
       const invitationData = {
         email: newMemberEmail,
         role: newMemberRole,
         projectAccess: selectedProjects,
         clientAccess: selectedClients
       };
-      
-      await teamService.sendInvitation(agency.id, user.id, invitationData);
-      
-      // Refresh team members to show the pending invitation
-      const updatedMembers = await teamService.getTeamMembers(agency.id);
-      setTeamMembers(updatedMembers);
-      
+
+      // Use the new createInvitation method that works directly with Supabase
+      const response = await teamService.createInvitation(agency.id, user.id, invitationData);
+
+      // Show invitation code dialog if code is returned
+      if (response?.invitation_code) {
+        setInvitationCode(response.invitation_code);
+        setCodeDialogOpen(true);
+        setCodeCopied(false);
+
+        // Show success toast
+        toast.success(`Invitation code generated: ${response.invitation_code}`, {
+          duration: 8000, // Show longer so user can copy
+        });
+      }
+
       // Reset form
       setInviteDialogOpen(false);
       setNewMemberEmail('');
@@ -239,12 +338,57 @@ const AgencyTeamManagement = () => {
       setSelectedProjects([]);
       setSelectedClients([]);
       setIsClientUser(false);
+
+      // Optionally refresh team members list
+      try {
+        const updatedMembers = await teamService.getTeamMembers(agency.id);
+        setTeamMembers(updatedMembers);
+      } catch (err) {
+        console.log('Could not refresh team members');
+      }
     } catch (err) {
-      console.error('Error inviting member:', err);
-      // Error already handled by service with toast
+      console.error('Error generating invitation:', err);
+      toast.error(err.message || 'Failed to generate invitation code');
     } finally {
       setActionLoading(false);
     }
+  };
+  
+  const handleCopyCode = () => {
+    const joinLink = `${window.location.origin}/join-team?code=${invitationCode}`;
+    const agencyName = agency?.name || 'our team';
+    const message = `${agencyName} has invited you to join their team on AdCopySurge!\n\n` +
+      `Click here to join: ${joinLink}\n\n` +
+      `Or enter this code manually: ${invitationCode}`;
+    navigator.clipboard.writeText(message);
+    setCodeCopied(true);
+    toast.success('Invitation message copied to clipboard!');
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
+  
+  const handleShareWhatsApp = () => {
+    const joinLink = `${window.location.origin}/join-team?code=${invitationCode}`;
+    const agencyName = agency?.name || 'our team';
+    const message = encodeURIComponent(
+      `${agencyName} has invited you to join their team on AdCopySurge!\n\n` +
+      `Click here to join: ${joinLink}\n\n` +
+      `Or enter this code manually: ${invitationCode}`
+    );
+    window.open(`https://wa.me/?text=${message}`, '_blank');
+  };
+
+  const handleShareEmail = () => {
+    const joinLink = `${window.location.origin}/join-team?code=${invitationCode}`;
+    const agencyName = agency?.name || 'our team';
+    const subject = encodeURIComponent(`${agencyName} invited you to join AdCopySurge`);
+    const body = encodeURIComponent(
+      `You've been invited to join ${agencyName} on AdCopySurge!\n\n` +
+      `Click here to accept the invitation:\n${joinLink}\n\n` +
+      `Or enter this code manually on the join page:\n${invitationCode}\n\n` +
+      `This invitation expires in 7 days.\n\n` +
+      `---\nAdCopySurge - AI-Powered Ad Copy Analysis`
+    );
+    window.open(`mailto:${newMemberEmail}?subject=${subject}&body=${body}`, '_blank');
   };
   
   const handleUpdateMember = async (memberId, updates) => {
@@ -292,6 +436,38 @@ const AgencyTeamManagement = () => {
       console.error('Error resending invitation:', err);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  // Pending invitations handlers
+  const handleViewPendingInvites = async () => {
+    try {
+      setLoadingInvitations(true);
+      setPendingInvitesModalOpen(true);
+      const invites = await teamService.getPendingInvitations(agency.id);
+      setPendingInvitations(invites);
+    } catch (err) {
+      console.error('Error loading pending invitations:', err);
+      toast.error('Failed to load pending invitations');
+    } finally {
+      setLoadingInvitations(false);
+    }
+  };
+
+  const handleDeleteInvitation = async (invitationId) => {
+    try {
+      setLoadingInvitations(true);
+      await teamService.revokeInvitation(invitationId);
+      // Refresh the list
+      const invites = await teamService.getPendingInvitations(agency.id);
+      setPendingInvitations(invites);
+      // Refresh analytics to update count
+      loadAgencyData();
+    } catch (err) {
+      console.error('Error deleting invitation:', err);
+      toast.error('Failed to delete invitation');
+    } finally {
+      setLoadingInvitations(false);
     }
   };
 
@@ -369,9 +545,10 @@ const AgencyTeamManagement = () => {
     );
   }
   
-  // If agency is null but we have user, show appropriate message
-  if (!agency && !loading) {
-    console.log('⚠️ No agency data but user is authenticated');
+  // If agency is null but we have user and not loading, this should not trigger a loop
+  // Only show this if there's no error (error state is handled above)
+  if (!agency && !loading && !error) {
+    console.log('⚠️ No agency data but user is authenticated (no error yet)');
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Alert 
@@ -382,7 +559,7 @@ const AgencyTeamManagement = () => {
             </Button>
           }
         >
-          Unable to load agency data. {error || 'Please try again.'}
+          Unable to load agency data. Please try again.
         </Alert>
       </Container>
     );
@@ -540,13 +717,23 @@ const AgencyTeamManagement = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card
+            sx={{
+              cursor: teamAnalytics?.pendingMembers > 0 ? 'pointer' : 'default',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              '&:hover': teamAnalytics?.pendingMembers > 0 ? {
+                transform: 'translateY(-2px)',
+                boxShadow: 3
+              } : {}
+            }}
+            onClick={teamAnalytics?.pendingMembers > 0 ? handleViewPendingInvites : undefined}
+          >
             <CardContent>
               <Typography variant="h4" sx={{ fontWeight: 700, color: 'warning.main' }}>
                 {teamAnalytics?.pendingMembers || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Pending Invites
+                Pending Invites {teamAnalytics?.pendingMembers > 0 && '(Click to view)'}
               </Typography>
             </CardContent>
           </Card>
@@ -572,14 +759,22 @@ const AgencyTeamManagement = () => {
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               Team Members
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<PersonAddIcon />}
-              onClick={() => setInviteDialogOpen(true)}
-              disabled={!canInvite}
-            >
-              {!teamLimits?.canInviteTeamMembers ? 'Upgrade to Invite' : !canInvite ? 'Limit Reached' : 'Invite Member'}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                onClick={handleViewPendingInvites}
+              >
+                View Pending Invites {teamAnalytics?.pendingMembers > 0 && `(${teamAnalytics.pendingMembers})`}
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<PersonAddIcon />}
+                onClick={() => setInviteDialogOpen(true)}
+                disabled={!canInvite}
+              >
+                {!teamLimits?.canInviteTeamMembers ? 'Upgrade to Invite' : !canInvite ? 'Limit Reached' : 'Generate Invitation'}
+              </Button>
+            </Box>
           </Box>
 
           {/* Responsive layout: Cards on mobile, Table on desktop */}
@@ -723,7 +918,7 @@ const AgencyTeamManagement = () => {
 
       {/* Invite Member Dialog */}
       <Dialog open={inviteDialogOpen} onClose={() => setInviteDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Invite Team Member</DialogTitle>
+        <DialogTitle>Generate Team Invitation</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <TextField
@@ -766,19 +961,40 @@ const AgencyTeamManagement = () => {
                   value={selectedProjects}
                   label="Project Access"
                   onChange={(e) => setSelectedProjects(e.target.value)}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={projects.find(p => p.id === value)?.name} size="small" />
-                      ))}
-                    </Box>
-                  )}
+                  renderValue={(selected) => {
+                    if (selected.length === 0) {
+                      return <em>Select projects...</em>;
+                    }
+                    return (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip
+                            key={value}
+                            label={projects.find(p => p.id === value)?.name || value}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    );
+                  }}
                 >
-                  {projects.map((project) => (
-                    <MenuItem key={project.id} value={project.id}>
-                      {project.name}
+                  {projects.length === 0 ? (
+                    <MenuItem disabled>
+                      <em>No projects available</em>
                     </MenuItem>
-                  ))}
+                  ) : (
+                    projects.map((project) => (
+                      <MenuItem key={project.id} value={project.id}>
+                        <Checkbox
+                          checked={selectedProjects.indexOf(project.id) > -1}
+                          sx={{ mr: 1 }}
+                        />
+                        <ListItemText primary={project.name} />
+                      </MenuItem>
+                    ))
+                  )}
                 </Select>
               </FormControl>
             )}
@@ -792,11 +1008,20 @@ const AgencyTeamManagement = () => {
                   label="Client Association"
                   onChange={(e) => setSelectedClients([e.target.value])}
                 >
-                  {clients.map((client) => (
-                    <MenuItem key={client.id} value={client.id}>
-                      {client.name}
+                  {clients.length === 0 ? (
+                    <MenuItem disabled>
+                      <em>No clients available</em>
                     </MenuItem>
-                  ))}
+                  ) : (
+                    clients.map((client) => (
+                      <MenuItem key={client.id} value={client.id}>
+                        <ListItemText
+                          primary={client.name}
+                          secondary={client.email || client.type}
+                        />
+                      </MenuItem>
+                    ))
+                  )}
                 </Select>
               </FormControl>
             )}
@@ -833,7 +1058,254 @@ const AgencyTeamManagement = () => {
             disabled={!newMemberEmail || actionLoading}
             startIcon={actionLoading ? <CircularProgress size={16} /> : null}
           >
-            {actionLoading ? 'Sending...' : 'Send Invite'}
+            {actionLoading ? 'Generating...' : 'Generate Code'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Invitation Code Dialog */}
+      <Dialog 
+        open={codeDialogOpen} 
+        onClose={() => setCodeDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: 'white', pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CheckCircleIcon />
+            <Typography variant="h6" component="span">
+              Invitation Created!
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Box sx={{
+            bgcolor: 'rgba(255, 255, 255, 0.95)',
+            p: 3,
+            borderRadius: 2,
+            textAlign: 'center'
+          }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Share this link or code with <strong>{newMemberEmail}</strong>:
+            </Typography>
+
+            {/* Shareable Link */}
+            <Box sx={{
+              bgcolor: '#f5f5f5',
+              p: 2,
+              borderRadius: 1,
+              mb: 2,
+              border: '1px solid #e0e0e0'
+            }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                JOIN LINK
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontFamily: 'monospace',
+                  color: '#667eea',
+                  wordBreak: 'break-all'
+                }}
+              >
+                {`${window.location.origin}/join-team?code=${invitationCode}`}
+              </Typography>
+            </Box>
+
+            {/* Invitation Code */}
+            <Box sx={{
+              bgcolor: '#f5f5f5',
+              p: 2,
+              borderRadius: 1,
+              mb: 3,
+              border: '2px dashed #667eea'
+            }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                OR USE CODE
+              </Typography>
+              <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 700,
+                  letterSpacing: 4,
+                  fontFamily: 'monospace',
+                  color: '#667eea'
+                }}
+              >
+                {invitationCode}
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
+              <Button
+                variant="contained"
+                fullWidth
+                startIcon={codeCopied ? <CheckCircleIcon /> : <CopyIcon />}
+                onClick={handleCopyCode}
+                sx={{
+                  bgcolor: codeCopied ? '#4caf50' : '#667eea',
+                  '&:hover': { bgcolor: codeCopied ? '#45a049' : '#5568d3' }
+                }}
+              >
+                {codeCopied ? 'Copied!' : 'Copy Invitation Message'}
+              </Button>
+              
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<WhatsAppIcon />}
+                  onClick={handleShareWhatsApp}
+                  sx={{ 
+                    borderColor: '#25D366',
+                    color: '#25D366',
+                    '&:hover': { 
+                      borderColor: '#25D366',
+                      bgcolor: 'rgba(37, 211, 102, 0.1)'
+                    }
+                  }}
+                >
+                  WhatsApp
+                </Button>
+                
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<EmailIcon />}
+                  onClick={handleShareEmail}
+                  sx={{ 
+                    borderColor: '#667eea',
+                    color: '#667eea',
+                    '&:hover': { 
+                      borderColor: '#667eea',
+                      bgcolor: 'rgba(102, 126, 234, 0.1)'
+                    }
+                  }}
+                >
+                  Email
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button 
+            onClick={() => setCodeDialogOpen(false)}
+            sx={{ color: 'white' }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Pending Invitations Modal */}
+      <Dialog
+        open={pendingInvitesModalOpen}
+        onClose={() => setPendingInvitesModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Pending Invitations
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {pendingInvitations.length} pending
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {loadingInvitations ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : pendingInvitations.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="body1" color="text.secondary">
+                No pending invitations
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Role</TableCell>
+                    <TableCell>Code</TableCell>
+                    <TableCell>Invited By</TableCell>
+                    <TableCell>Expires</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {pendingInvitations.map((invitation) => (
+                    <TableRow key={invitation.id}>
+                      <TableCell>{invitation.email}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={ROLE_CONFIG[invitation.role]?.label || invitation.role}
+                          color={ROLE_CONFIG[invitation.role]?.color || 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                            {invitation.invitation_code}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              navigator.clipboard.writeText(invitation.invitation_code);
+                              toast.success('Code copied!');
+                            }}
+                          >
+                            <CopyIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {invitation.inviter_name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {new Date(invitation.expires_at).toLocaleDateString()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to delete this invitation?')) {
+                              handleDeleteInvitation(invitation.id);
+                            }
+                          }}
+                          disabled={loadingInvitations}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingInvitesModalOpen(false)}>
+            Close
           </Button>
         </DialogActions>
       </Dialog>

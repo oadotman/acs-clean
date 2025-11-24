@@ -48,14 +48,39 @@ class CTAStyle(str, Enum):
     MEDIUM = "medium"    # Get started, Try it now
     HARD = "hard"        # Buy now, Limited spots - claim yours
 
-# Character limits for optimal engagement per platform
+# Detailed character limits for each platform component
+PLATFORM_LIMITS_DETAILED: Dict[str, Dict[str, Dict[str, int]]] = {
+    Platform.FACEBOOK: {
+        "primary_text": {"optimal": 125, "max": 500},
+        "headline": {"optimal": 27, "max": 40},
+        "description": {"optimal": 30, "max": 30},
+    },
+    Platform.INSTAGRAM: {
+        "caption": {"optimal": 125, "max": 2200},  # 125 visible before "more"
+    },
+    Platform.GOOGLE: {
+        "headline": {"optimal": 30, "max": 30},  # 3 headlines
+        "description": {"optimal": 90, "max": 90},  # 2 descriptions
+    },
+    Platform.LINKEDIN: {
+        "intro_text": {"optimal": 150, "max": 3000},  # 150 optimal for feed display
+    },
+    Platform.TWITTER: {
+        "tweet": {"optimal": 280, "max": 280},
+    },
+    Platform.TIKTOK: {
+        "caption": {"optimal": 150, "max": 2200},  # 150 optimal, but much shorter works better
+    },
+}
+
+# Simple character limits for backwards compatibility
 PLATFORM_LIMITS: Dict[str, int] = {
-    Platform.FACEBOOK: 125,     # Optimal for engagement
-    Platform.INSTAGRAM: 2200,   # Platform maximum
-    Platform.LINKEDIN: 3000,    # Platform maximum  
+    Platform.FACEBOOK: 125,     # Primary text optimal
+    Platform.INSTAGRAM: 125,    # Visible caption before "more"
+    Platform.LINKEDIN: 150,     # Feed display optimal
     Platform.TWITTER: 280,      # Platform maximum
-    Platform.TIKTOK: 100,       # Hard limit for TikTok culture
-    Platform.GOOGLE: 90,        # Google Ads description line limit
+    Platform.TIKTOK: 150,       # Optimal length
+    Platform.GOOGLE: 90,        # Google Ads description
 }
 
 # Platform-specific metadata and recommendations
@@ -69,8 +94,16 @@ PLATFORM_CONFIG: Dict[str, Dict[str, Any]] = {
         "optimization_tips": [
             "Use clear, benefit-focused headlines",
             "Include social proof when possible",
-            "Keep it scannable with short paragraphs"
+            "Keep it scannable with short paragraphs",
+            "Use questions to create curiosity gaps",
+            "Strategic emoji placement enhances engagement"
         ],
+        "platform_warnings": [
+            "Avoid 'Click here' or similar CTAs that violate Meta policies",
+            "Don't use excessive capitalization or special characters",
+            "Avoid making exaggerated health/financial claims"
+        ],
+        "power_words": ["Discover", "Proven", "Exclusive", "Transform", "Revolutionary"],
         # Phase 4 & 5: Creative controls
         "recommended_creativity": 6,  # Balanced creative
         "max_safe_creativity": 8,
@@ -90,8 +123,16 @@ PLATFORM_CONFIG: Dict[str, Dict[str, Any]] = {
         "optimization_tips": [
             "Be authentic and relatable",
             "Use storytelling approach",
-            "Hashtag strategy is crucial"
+            "Hashtag strategy is crucial",
+            "First 125 chars visible - front-load key message",
+            "Use line breaks for readability"
         ],
+        "platform_warnings": [
+            "Avoid overly promotional language - native feel is key",
+            "Don't use banned hashtags or spam hashtags",
+            "Excessive emojis can look spammy despite platform culture"
+        ],
+        "power_words": ["Authentic", "Lifestyle", "Community", "Inspiration", "Journey"],
         # Phase 4 & 5: Creative controls
         "recommended_creativity": 7,  # Creative
         "max_safe_creativity": 9,
@@ -109,10 +150,18 @@ PLATFORM_CONFIG: Dict[str, Dict[str, Any]] = {
         "typical_cta": ["Learn More", "Download", "Connect"],
         "audience_mindset": "Professional networking, business focus",
         "optimization_tips": [
-            "Lead with business value",
-            "Use industry-specific language",
-            "Include credibility indicators"
+            "Lead with business value and ROI",
+            "Use industry-specific language and terminology",
+            "Include credibility indicators and data/statistics",
+            "First 150 chars are crucial for feed visibility",
+            "Professional authority and thought leadership angle"
         ],
+        "platform_warnings": [
+            "Avoid overly casual language or slang",
+            "Don't use aggressive sales tactics",
+            "Excessive emojis hurt professional credibility"
+        ],
+        "power_words": ["Professional", "ROI", "Strategy", "Insights", "Industry-Leading"],
         # Phase 4 & 5: Creative controls
         "recommended_creativity": 4,  # Balanced conservative
         "max_safe_creativity": 6,
@@ -127,13 +176,21 @@ PLATFORM_CONFIG: Dict[str, Dict[str, Any]] = {
         "recommended_tone": HumanTone.CONVERSATIONAL,
         "emoji_default": EmojiLevel.MODERATE,
         "formality_level": 4,
-        "typical_cta": ["Click here", "RT", "Reply"],
+        "typical_cta": ["Read more", "RT", "Reply"],
         "audience_mindset": "Quick consumption, real-time engagement",
         "optimization_tips": [
-            "Be concise and punchy",
-            "Use trending topics/hashtags",
-            "Encourage engagement"
+            "Be concise and punchy - every word counts",
+            "Use trending topics/hashtags strategically",
+            "Encourage engagement (replies, RTs)",
+            "Thread potential for longer stories",
+            "Conversational and shareable content performs best"
         ],
+        "platform_warnings": [
+            "Avoid hashtag spam (max 2-3 hashtags)",
+            "Don't be overly promotional - native feel required",
+            "Excessive emojis can look unprofessional"
+        ],
+        "power_words": ["Breaking", "Thread", "Quick", "Now", "Here's how"],
         # Phase 4 & 5: Creative controls
         "recommended_creativity": 7,  # Creative
         "max_safe_creativity": 9,
@@ -152,10 +209,19 @@ PLATFORM_CONFIG: Dict[str, Dict[str, Any]] = {
         "audience_mindset": "Entertainment-first, trend-aware",
         "optimization_tips": [
             "Use Gen Z language naturally (not forced)",
-            "Focus on hooks that stop the scroll",
+            "Focus on hooks that stop the scroll in first 3 seconds",
             "Be conversational and relatable, not promotional",
-            "Embrace humor and authenticity over polish"
+            "Embrace humor and authenticity over polish",
+            "Trend-aware content and challenges perform best",
+            "Educational or entertaining - pick one angle"
         ],
+        "platform_warnings": [
+            "Avoid corporate/professional language - instant skip",
+            "Don't use hard sales tactics - native content only",
+            "Overly polished content feels inauthentic",
+            "Forced Gen Z slang is cringe - be natural"
+        ],
+        "power_words": ["POV", "How to", "This is your sign", "Wait for it", "Day in the life"],
         # Phase 4 & 5: Creative controls
         "recommended_creativity": 9,  # Bold
         "max_safe_creativity": 10,
@@ -174,9 +240,18 @@ PLATFORM_CONFIG: Dict[str, Dict[str, Any]] = {
         "audience_mindset": "Intent-driven, solution seeking",
         "optimization_tips": [
             "Lead with clear value proposition",
-            "Include compelling offer/benefit",
-            "Use action-oriented language"
+            "Include compelling offer/benefit in headline",
+            "Use action-oriented language",
+            "Include price/offer when possible",
+            "Use specific numbers and results",
+            "Match search intent with keyword integration"
         ],
+        "platform_warnings": [
+            "No emojis in Google Ads - they're not displayed",
+            "Avoid excessive punctuation (!!!)",
+            "Don't violate Google Ads policies on superlatives without proof"
+        ],
+        "power_words": ["Save", "Free", "Results", "Guaranteed", "Official"],
         # Phase 4 & 5: Creative controls
         "recommended_creativity": 5,  # Balanced
         "max_safe_creativity": 7,
@@ -266,8 +341,35 @@ CTA_STYLE_EXAMPLES: Dict[CTAStyle, List[str]] = {
 }
 
 def get_platform_limit(platform: str) -> int:
-    """Get character limit for a specific platform."""
+    """Get character limit for a specific platform (simple version)."""
     return PLATFORM_LIMITS.get(platform, 125)  # Default to Facebook limit
+
+def get_platform_limits_detailed(platform: str) -> Dict[str, Dict[str, int]]:
+    """Get detailed character limits for all components of a platform.
+    
+    Returns:
+        Dict with keys like 'primary_text', 'headline', 'description' containing
+        'optimal' and 'max' values for each component.
+    """
+    return PLATFORM_LIMITS_DETAILED.get(platform, PLATFORM_LIMITS_DETAILED[Platform.FACEBOOK])
+
+def get_platform_warnings(platform: str) -> List[str]:
+    """Get platform-specific warnings about what to avoid.
+    
+    Returns:
+        List of warning strings (e.g., policy violations, best practices to avoid).
+    """
+    config = get_platform_config(platform)
+    return config.get("platform_warnings", [])
+
+def get_platform_power_words(platform: str) -> List[str]:
+    """Get recommended power words that perform well on the platform.
+    
+    Returns:
+        List of power words optimized for the platform's audience.
+    """
+    config = get_platform_config(platform)
+    return config.get("power_words", [])
 
 def get_platform_config(platform: str) -> Dict[str, Any]:
     """Get platform-specific configuration."""
