@@ -58,7 +58,7 @@ async def get_credit_balance(
     """
     try:
         credit_service = CreditService(db)
-        credits_info = credit_service.get_user_credits(str(current_user.id))
+        credits_info = credit_service.get_user_credits(current_user.supabase_user_id)
 
         return CreditBalanceResponse(
             credits=credits_info['credits'],
@@ -92,7 +92,7 @@ async def consume_credits(
         credit_service = CreditService(db)
 
         success, result = credit_service.consume_credits_atomic(
-            user_id=str(current_user.id),
+            user_id=current_user.supabase_user_id,
             operation=request.operation,
             quantity=request.quantity,
             description=request.description
@@ -142,7 +142,7 @@ async def get_credit_history(
                 ORDER BY created_at DESC
                 LIMIT :limit
             """),
-            {"user_id": str(current_user.id), "limit": limit}
+            {"user_id": current_user.supabase_user_id, "limit": limit}
         )
 
         transactions = []
@@ -204,7 +204,7 @@ async def refund_credits(
         credit_service = CreditService(db)
 
         success, result = credit_service.refund_credits(
-            user_id=str(current_user.id),
+            user_id=current_user.supabase_user_id,
             operation=operation,
             quantity=quantity,
             reason=reason

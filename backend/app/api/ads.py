@@ -135,7 +135,7 @@ async def analyze_ad(
 
         # ✅ FIXED: Atomic credit consumption with race condition protection
         success, credit_result = credit_service.consume_credits_atomic(
-            user_id=str(current_user.id),
+            user_id=current_user.supabase_user_id,
             operation='FULL_ANALYSIS',
             quantity=1,
             description=f"Analysis for ad: {request.ad.headline[:50]}"
@@ -217,7 +217,7 @@ async def analyze_ad(
         if credits_consumed:
             print(f"🔄 Refunding credits to user {current_user.id} due to analysis failure")
             refund_success, refund_result = credit_service.refund_credits(
-                user_id=str(current_user.id),
+                user_id=current_user.supabase_user_id,
                 operation='FULL_ANALYSIS',
                 quantity=1,
                 reason=f"Analysis failed: {str(e)[:100]}"
